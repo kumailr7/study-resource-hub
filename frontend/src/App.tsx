@@ -24,7 +24,7 @@ interface ErrorResponse {
   error: string;
 }
 // Updating it as per Testing (Backend URL)
-const API_BASE_URL = "https://cs-resources.test/api";
+const API_BASE_URL = "http://localhost:5000/api";
 
 // Date formatting function
 const formatDate = (dateString: string) => {
