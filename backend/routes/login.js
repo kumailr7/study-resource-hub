@@ -4,21 +4,21 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/Users"); // Ensure the correct path and model name
 const router = express.Router();
 
-// Login Endpoint
-router.post("/login", async (req, res) => {
+// Changed to match frontend endpoint /auth/login
+router.post("/auth/login", async (req, res) => {
   const { username, password } = req.body;
 
   try {
     // Check if the user exists
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Validate the password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid password" });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Generate a JWT token
@@ -28,10 +28,15 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    // Return the token and user role
-    res.json({ token, role: user.role });
+    // Return the token, role, and isAuthenticated flag to match frontend expectations
+    res.json({ 
+      token, 
+      role: user.role,
+      isAuthenticated: true,
+      isAdmin: user.role === 'admin'
+    });
   } catch (err) {
-    console.error("Error in /login route:", err);
+    console.error("Error in /auth/login route:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

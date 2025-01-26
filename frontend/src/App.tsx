@@ -1,6 +1,15 @@
-import React, { useState, useEffect } from "react";
-import axios, { AxiosError } from "axios";
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
+import axios from "axios";
 import { ThemeProvider, useTheme } from "./ThemeContext";
+import logo from "./assets/logo.png";
+import LoginPage from "./pages/LoginPage";
+import AdminDashboard from "./pages/AdminDashboard";
+import ProtectedRoute from './components/ProtectedRoute';
+import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from './components/ui/navigation-menu';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { useEffect } from 'react';
+
 
 interface Resource {
   _id: string;
@@ -17,14 +26,25 @@ interface Request {
   resourceName: string;
   resourceType: string;
   requestDate: string;
-  status: "pending" | "approved" | "rejected";
+  status: string; // Adjust the type as needed
 }
 
 interface ErrorResponse {
   error: string;
 }
+
+interface ResourceResponse {
+  data: Resource[];
+  total: number;
+}
+
+interface RequestResponse {
+  data: Request[];
+  total: number;
+}
+
 // Updating it as per Testing (Backend URL)
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://cs-resources.test/api";
 
 // Date formatting function
 const formatDate = (dateString: string) => {
@@ -35,8 +55,33 @@ const formatDate = (dateString: string) => {
   return `${day}-${month}-${year}`;
 };
 
+// Add new interface for authentication
+interface AuthState {
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+}
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/user" element={<ResourceTable />} />
+            <Route path="/" element={<Navigate to="/login" />} />
+            <Route path="*" element={<Navigate to="/login" />} />
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    </AuthProvider>
+  );
+};
+
 // ResourceTable Component
 const ResourceTable: React.FC = () => {
+  const { userIsAdmin } = useAuth();
   const { isDarkTheme, toggleTheme } = useTheme();
   const [resources, setResources] = useState<Resource[]>([]);
   const [requests, setRequests] = useState<Request[]>([]);
@@ -70,12 +115,12 @@ const ResourceTable: React.FC = () => {
   // Fetch resources from the API
   const fetchResources = async () => {
     try {
-      const { data } = await axios.get(
+      const response = await axios.get<ResourceResponse>(
         `${API_BASE_URL}/added-resources?page=${resourcePage}&limit=10`
       );
-      setResources(data.data);
-      setResourceTotal(data.total);
-      setFilteredResources(data.data);
+      setResources(response.data.data);
+      setResourceTotal(response.data.total);
+      setFilteredResources(response.data.data);
     } catch (error) {
       console.error("Error fetching resources:", error);
     }
@@ -84,11 +129,11 @@ const ResourceTable: React.FC = () => {
   // Fetch requests from the API
   const fetchRequests = async () => {
     try {
-      const { data } = await axios.get(
+      const response = await axios.get<RequestResponse>(
         `${API_BASE_URL}/requests?page=${requestPage}&limit=10`
       );
-      setRequests(data.data);
-      setRequestTotal(data.total);
+      setRequests(response.data.data);
+      setRequestTotal(response.data.total);
     } catch (error) {
       console.error("Error fetching requests:", error);
     }
@@ -118,11 +163,15 @@ const ResourceTable: React.FC = () => {
           type: newResourceType,
           tags: newResourceTags,
         };
-        const { data } = await axios.post(
+        await axios.post(
           `${API_BASE_URL}/added-resources`,
           newResource
         );
-        setResources([...resources, data]);
+        
+        // Fetch updated resources
+        await fetchResources();
+        
+        // Reset form fields
         setNewResourceName("");
         setNewResourceLink("");
         setNewResourceCategory("");
@@ -155,15 +204,15 @@ const ResourceTable: React.FC = () => {
           type: newResourceType,
           tags: newResourceTags,
         };
-        const { data } = await axios.put(
+        await axios.put(
           `${API_BASE_URL}/added-resources/${editResourceId}`,
           updatedResource
         );
-        setResources(
-          resources.map((resource) =>
-            resource._id === editResourceId ? data : resource
-          )
-        );
+        
+        // Fetch updated resources
+        await fetchResources();
+        
+        // Reset form fields and edit state
         setEditResourceId(null);
         setNewResourceName("");
         setNewResourceLink("");
@@ -180,7 +229,9 @@ const ResourceTable: React.FC = () => {
   const handleDeleteResource = async (id: string) => {
     try {
       await axios.delete(`${API_BASE_URL}/added-resources/${id}`);
-      setResources(resources.filter((resource) => resource._id !== id));
+      
+      // Fetch updated resources
+      await fetchResources();
     } catch (error) {
       console.error("Error deleting resource:", error);
     }
@@ -200,7 +251,7 @@ const ResourceTable: React.FC = () => {
           resourceType: newRequestResourceType,
           status: "pending",
         };
-        const { data } = await axios.post(
+        const { data } = await axios.post<Request>(
           `${API_BASE_URL}/requests`,
           newRequest
         );
@@ -217,7 +268,7 @@ const ResourceTable: React.FC = () => {
   // Handle Request Status Change Function
   const handleRequestStatusChange = async (id: string, newStatus: string) => {
     try {
-      const { data } = await axios.put(`${API_BASE_URL}/requests/${id}`, {
+      const { data } = await axios.put<Request>(`${API_BASE_URL}/requests/${id}`, {
         status: newStatus,
       });
       setRequests(
@@ -231,10 +282,10 @@ const ResourceTable: React.FC = () => {
  // Handle Fetch Filtered Resources Function
 const fetchFilteredResources = async (tags: string) => {
   try {
-    const { data } = await axios.get(
+    const response = await axios.get<ResourceResponse>(
       `${API_BASE_URL}/added-resources?tags=${tags}`
     );
-    setFilteredResources(data.data);
+    setFilteredResources(response.data.data);
   } catch (error) {
     console.error("Error filtering resources:", error);
   }
@@ -254,7 +305,7 @@ const handleSearch = () => {
 
   // Added UI Elemenets
   return (
-    <ThemeProvider>
+     <ThemeProvider>
       <div
         className={
           isDarkTheme ? "bg-gray-900 text-white" : "bg-white text-gray-900"
@@ -263,44 +314,51 @@ const handleSearch = () => {
         {/* Header */}
         <div
           className={`text-center py-6 ${
-            isDarkTheme ? "bg-blue-800" : "bg-blue-600"
+            isDarkTheme 
+              ? "bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900" 
+              : "bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500"
           } text-white rounded shadow-lg`}
         >
-          <h1 className="text-4xl font-bold">Cloud Study Resources Hub ☁️</h1>
-          <p className="mt-2 text-lg">
-            Manage resources and requests efficiently
-          </p>
-          <div className="flex items-center justify-center mt-4">
-            <span
-              className={`mr-2 ${
-                isDarkTheme ? "text-gray-300" : "text-gray-800"
-              } font-bold`}
+          <img 
+            src={logo} 
+            alt="Cloud Study Resources Hub Logo" 
+            className="h-24 w-auto mx-auto mb-4"
+          />
+          <div className="flex items-center justify-center gap-2">
+            <span className={`text-white font-bold ${isDarkTheme ? 'opacity-50' : ''}`}>Light</span>
+            <button
+              onClick={() => toggleTheme()}
+              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${
+                isDarkTheme ? 'bg-gray-600' : 'bg-yellow-300'
+              }`}
             >
-              Light
-            </span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={isDarkTheme}
-                onChange={toggleTheme}
-              />
-              <div className="w-11 h-6 bg-gray-200 rounded-full shadow-inner"></div>
               <div
-                className={`absolute left-0 w-6 h-6 rounded-full shadow transition-transform duration-200 ease-in-out transform ${
-                  isDarkTheme ? "translate-x-full bg-black" : "bg-yellow-400"
+                className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 ease-in-out ${
+                  isDarkTheme ? 'translate-x-6' : 'translate-x-0'
                 }`}
-              ></div>
-            </label>
-            <span
-              className={`ml-2 ${
-                isDarkTheme ? "text-gray-300" : "text-gray-800"
-              } font-bold`}
-            >
-              Dark
-            </span>
+              />
+            </button>
+            <span className={`text-white font-bold ${isDarkTheme ? '' : 'opacity-50'}`}>Dark</span>
           </div>
         </div>
+
+        {/* Navigation */}
+        <NavigationMenu className="p-4 border-b">
+          <NavigationMenuList className="space-x-6">
+            <NavigationMenuItem>
+              <Link to="/" className="font-medium">
+                Main Dashboard
+              </Link>
+            </NavigationMenuItem>
+            {localStorage.getItem('isAdmin') === 'true' && (
+              <NavigationMenuItem>
+                <Link to="/admin" className="font-medium">
+                  Admin Dashboard
+                </Link>
+              </NavigationMenuItem>
+            )}
+          </NavigationMenuList>
+        </NavigationMenu>
 
         {/* Add Resource Section */}
         <div
@@ -369,7 +427,7 @@ const handleSearch = () => {
             </div>
             <div>
               <label className="block text-sm font-bold">Tags</label>
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   className={`w-3/4 p-2 border rounded-lg focus:outline-none focus:ring-2 ${
@@ -384,7 +442,11 @@ const handleSearch = () => {
                 <button
                   type="button"
                   onClick={handleAddTag}
-                  className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg shadow focus:outline-none focus:shadow-outline ml-2 font-bold"
+                  className={`py-2 px-4 rounded-lg shadow focus:outline-none font-bold ${
+                    isDarkTheme
+                      ? 'bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900'
+                      : 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500'
+                  } text-white`}
                 >
                   Add Tag
                 </button>
@@ -409,7 +471,7 @@ const handleSearch = () => {
               className={`py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
                 editResourceId
                   ? "bg-green-500 hover:bg-green-700"
-                  : "bg-blue-500 hover:bg-blue-700"
+                  : "bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500"
               } text-white font-bold`}
             >
               {editResourceId ? "Update Resource" : "Add Resource"}
@@ -442,11 +504,11 @@ const handleSearch = () => {
             />
             <button
              onClick={handleSearch}
-             className={`ml-2 py-2 px-4 rounded-lg shadow focus:outline-none ${
+             className={`ml-2 py-2 px-4 rounded-lg shadow focus:outline-none font-bold ${
              isDarkTheme
-             ? 'bg-blue-800 hover:bg-blue-900 text-white'
-             : 'bg-blue-600 hover:bg-blue-700 text-white'
-             }`}
+             ? 'bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900'
+             : 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500'
+             } text-white`}
              >
              Search
             </button>
@@ -698,133 +760,69 @@ const handleSearch = () => {
           <div className="text-right mt-4">
             <button
               onClick={handleAddRequest}
-              className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg shadow focus:outline-none focus:shadow-outline font-bold"
+              className={`py-2 px-4 rounded-lg shadow focus:outline-none ${
+                isDarkTheme
+                  ? 'bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900'
+                  : 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500'
+              } text-white font-bold`}
             >
               Request Resource
             </button>
           </div>
 
-          <div
-            className={`overflow-x-auto mt-8 ${
-              isDarkTheme ? "bg-gray-800" : "bg-white"
-            }`}
-          >
+          <div className={`overflow-x-auto mt-8 ${isDarkTheme ? "bg-gray-800" : "bg-white"}`}>
             <table className="min-w-full border-collapse">
               <thead>
                 <tr className={isDarkTheme ? "bg-gray-700" : "bg-gray-100"}>
-                  <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
-                  >
+                  <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
                     User Name
                   </th>
-                  <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
-                  >
+                  <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
                     Resource Name
                   </th>
-                  <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
-                  >
+                  <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
                     Type
                   </th>
-                  <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray600"
-                    } border`}
-                  >
+                  <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
                     Request Date
                   </th>
-                  <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
-                  >
+                  <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
                     Status
                   </th>
-                  <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
-                  >
+                  <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {requests.map((request) => (
-                  <tr
-                    key={request._id}
-                    className={`hover:bg-gray-100 ${
-                      isDarkTheme ? "hover:bg-gray-800" : ""
-                    }`}
-                  >
-                    <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
-                    >
+                  <tr key={request._id} className={`hover:bg-gray-100 ${isDarkTheme ? "hover:bg-gray-800" : ""}`}>
+                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
                       {request.userName}
                     </td>
-                    <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
-                    >
+                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
                       {request.resourceName}
                     </td>
-                    <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
-                    >
+                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
                       {request.resourceType}
                     </td>
-                    <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
-                    >
-                      {formatDate(request.requestDate)}
+                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
+                      {new Date(request.requestDate).toLocaleDateString('en-GB')}
                     </td>
-                    <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
-                    >
-                      <span
-                        className={`font-bold ${
-                          request.status === "approved"
-                            ? "text-green-500"
-                            : "text-yellow-500"
-                        }`}
-                      >
-                        {request.status}
+                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
+                      <span className={request.status === 'approved' ? 'text-green-500 font-bold' : 'text-yellow-500 font-bold'}>
+                        <strong>{request.status}</strong>
                       </span>
                     </td>
-                    <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
-                    >
-                      <button
-                        onClick={() =>
-                          handleRequestStatusChange(
-                            request._id,
-                            request.status === "pending"
-                              ? "approved"
-                              : "pending"
-                          )
-                        }
-                        className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
-                      >
-                        Toggle Status
-                      </button>
+                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
+                      {userIsAdmin && (
+                        <button
+                          onClick={() => handleRequestStatusChange(request._id, request.status === 'approved' ? 'pending' : 'approved')}
+                          className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+                        >
+                          Toggle Status
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -832,10 +830,27 @@ const handleSearch = () => {
             </table>
           </div>
         </div>
+
+        {/* Pagination for Resources */}
+        <div className="mt-4">
+          <button
+            disabled={resourcePage <= 1}
+            onClick={() => setResourcePage(resourcePage - 1)}
+            className="mr-2 bg-gray-300 hover:bg-gray-400 py-1 px-2 rounded"
+          >
+            Previous
+          </button>
+          <button
+            disabled={resourcePage * 10 >= resourceTotal}
+            onClick={() => setResourcePage(resourcePage + 1)}
+            className="bg-gray-300 hover:bg-gray-400 py-1 px-2 rounded"
+          >
+            Next
+          </button>
+        </div>
       </div>
-    </ThemeProvider>
-  );
+   </ThemeProvider>
+ );
 };
 
-export default ResourceTable;
-
+export default App;

@@ -37,34 +37,94 @@ router.post("/register", async (req, res) => {
 });
 
 // Get all users (Admin only)
-router.get("/", authenticate("admin"), async (req, res) => {
+router.get("/users", authenticate("admin"), async (req, res) => {
   try {
-    const users = await User.find({}, "username role"); // Fetch only username and role
-    res.json(users);
+    const users = await User.find({}, "-password").lean();
+    // Transform the data to match frontend expectations
+    const formattedUsers = users.map(user => ({
+      id: user._id,
+      username: user.username,
+      role: user.role,
+      status: user.status || 'active' // Add default status if not present
+    }));
+    res.json(formattedUsers);
   } catch (err) {
     console.error("Error fetching users:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Update a user's role (Admin only)
-router.put("/:id/role", authenticate("admin"), async (req, res) => {
-  const { role } = req.body;
+// Create new user (Admin only)
+router.post("/users", authenticate("admin"), async (req, res) => {
+  const { username, password, role } = req.body;
 
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ error: "Username already exists" });
     }
-    res.json(user);
+
+    const hashedPassword = await bcrypt.hash(password, 8);
+    const newUser = new User({
+      username,
+      password: hashedPassword,
+      role,
+      status: 'active'
+    });
+
+    await newUser.save();
+    
+    const userData = {
+      id: newUser._id,
+      username: newUser.username,
+      role: newUser.role,
+      status: newUser.status
+    };
+
+    res.status(201).json(userData);
   } catch (err) {
-    console.error("Error updating user role:", err);
+    console.error("Error creating user:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Delete a user (Admin only)
-router.delete("/:id", authenticate("admin"), async (req, res) => {
+// Update user (Admin only)
+router.put("/users/:id", authenticate("admin"), async (req, res) => {
+  const { username, role, status } = req.body;
+
+  try {
+    const updateData = {
+      ...(username && { username }),
+      ...(role && { role }),
+      ...(status && { status })
+    };
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, select: "-password" }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userData = {
+      id: user._id,
+      username: user.username,
+      role: user.role,
+      status: user.status
+    };
+
+    res.json(userData);
+  } catch (err) {
+    console.error("Error updating user:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Delete user (Admin only)
+router.delete("/users/:id", authenticate("admin"), async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) {
