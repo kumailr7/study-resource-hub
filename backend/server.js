@@ -33,7 +33,7 @@ app.use(expressMongoSanitize());
 
 // Routes
 app.use("/api", loginRoutes); // Prefix login routes with `/api`
-app.use("/api/users", userRoutes); // Use user routes
+app.use("/api", userRoutes);   // Prefix user routes with `/api`
 
 
 // MongoDB connection
