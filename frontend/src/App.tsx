@@ -68,7 +68,7 @@ const App: React.FC = () => {
         <Router>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} />} />
             <Route path="/user" element={<ResourceTable />} />
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="*" element={<Navigate to="/login" />} />
@@ -552,13 +552,15 @@ const handleSearch = () => {
                   >
                     Tags
                   </th>
-                  <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
-                  >
-                    Actions
-                  </th>
+                  {localStorage.getItem('isAdmin') === 'true' && (
+                    <th
+                      className={`p-3 text-left text-sm font-bold ${
+                        isDarkTheme ? "text-gray-400" : "text-gray-600"
+                      } border`}
+                    >
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -618,24 +620,26 @@ const handleSearch = () => {
                         </span>
                       ))}
                     </td>
-                    <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
-                    >
-                      <button
-                        onClick={() => handleEditResource(resource)}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline mr-2"
+                    {localStorage.getItem('isAdmin') === 'true' && (
+                      <td
+                        className={`p-3 border ${
+                          isDarkTheme ? "text-gray-300" : ""
+                        }`}
                       >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteResource(resource._id)}
-                        className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
-                      >
-                        Delete
-                      </button>
-                    </td>
+                        <button
+                          onClick={() => handleEditResource(resource)}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline mr-2"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteResource(resource._id)}
+                          className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -789,9 +793,11 @@ const handleSearch = () => {
                   <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
                     Status
                   </th>
-                  <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
-                    Actions
-                  </th>
+                  {localStorage.getItem('isAdmin') === 'true' && (
+                    <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
+                      Toggle Status
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -814,16 +820,16 @@ const handleSearch = () => {
                         <strong>{request.status}</strong>
                       </span>
                     </td>
-                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
-                      {userIsAdmin && (
+                    {localStorage.getItem('isAdmin') === 'true' && (
+                      <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
                         <button
                           onClick={() => handleRequestStatusChange(request._id, request.status === 'approved' ? 'pending' : 'approved')}
                           className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
                         >
                           Toggle Status
                         </button>
-                      )}
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

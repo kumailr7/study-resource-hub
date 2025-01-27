@@ -42,6 +42,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch users
         const usersResponse = await axios.get<User[]>(`${API_BASE_URL}/users`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -50,7 +51,7 @@ const AdminDashboard = () => {
         setUsers(usersResponse.data);
         setTotalUsers(usersResponse.data.length);
 
-        // Fetch active resources and pending requests
+        // Fetch active resources
         const resourcesResponse = await axios.get<Resource[]>(`${API_BASE_URL}/resources`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -59,21 +60,14 @@ const AdminDashboard = () => {
         const resources: Resource[] = resourcesResponse.data;
         setActiveResources(resources.filter((resource: Resource) => resource.status === 'active').length);
 
-        const fetchRequests = async () => {
-          try {
-            const response = await axios.get<Request[]>(`${API_BASE_URL}/requests`, {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`
-              }
-            });
-            const requests: Request[] = response.data;
-            setPendingRequests(requests.filter((request: Request) => request.status === 'pending').length);
-          } catch (error) {
-            console.error('Error fetching requests:', error);
+        // Fetch pending requests
+        const requestsResponse = await axios.get<Request[]>(`${API_BASE_URL}/requests`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
           }
-        };
-
-        fetchRequests();
+        });
+        const requests: Request[] = requestsResponse.data;
+        setPendingRequests(requests.filter((request: Request) => request.status === 'pending').length);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
