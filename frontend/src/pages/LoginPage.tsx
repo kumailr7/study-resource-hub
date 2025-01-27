@@ -30,6 +30,8 @@ const LoginPage: React.FC = () => {
 
       setIsAdmin(response.data.isAdmin);
 
+      console.log('Admin status:', response.data.isAdmin);
+
       if (response.data.isAdmin) {
         navigate('/admin');
       } else {
@@ -42,7 +44,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex items-center justify-center bg-white`}>
-      <Card className={`w-full max-w-md bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900`}>
+      <Card className={`w-full max-w-md bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500`}>
         <CardHeader className="flex justify-center">
           <img src={logo} alt="Study Resource Hub Logo" className="h-18 w-auto" />
         </CardHeader>
