@@ -1,0 +1,144 @@
+/* LoginPage.css */
+body {
+  margin: 0;
+  font-family: 'Arial', sans-serif;
+}
+
+.login-container {
+  display: flex;
+  height: 100vh;
+}
+
+.quote-container {
+  flex: 1;
+  background-image: url('./assets/login-unsplash.jpg'); /* Add your image path here */
+  background-size: cover;
+  background-position: center;
+  padding: 40px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+/* Dark overlay for better text readability */
+.quote-container {
+  flex: 1; /* Allow the quote to take up space */
+  padding: 40px; /* Add padding around the quote */
+  color: white; /* Adjust text color for visibility */
+  position: relative;
+}
+
+.quote-title {
+  font-size: 32px; /* Increase font size */
+  font-weight: bold;
+}
+
+.quote-description {
+  font-size: 20px; /* Increase font size for better visibility */
+  line-height: 1.6; /* Improve line spacing */
+  color: white; /* Set text color to white */
+  font-style: italic; /* Make it italic to resemble a quote */
+  max-width: 600px; /* Limit width for better readability */
+  margin-top: 10px; /* Add space above the description */
+}
+
+.login-background {
+  flex: 1;
+  background: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50%;
+}
+
+.login-content {
+  width: 400px;
+  padding: 20px;
+  text-align: center;
+}
+
+.quote-title {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.quote-description {
+  font-size: 18px;
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+.logo {
+  width: 300px;
+  margin: 0 auto 20px;
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+p {
+  margin-bottom: 20px;
+  color: #555;
+}
+
+.input-field {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  margin: 15px 0;
+}
+
+.remember-label {
+  margin-left: 8px;
+  color: #666;
+}
+
+.login-button {
+  width: 100%;
+  padding: 12px;
+  background-color: #2575fc;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+.signup-link {
+  margin-top: 20px;
+  color: #666;
+}
+
+.signup-link a {
+  color: #2575fc;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.welcome-title {
+  font-family: 'Sans-serif'; /* Change font to sans-serif */
+  font-weight: bold; /* Make it bold */
+  font-size: 24px; /* Adjust size as needed */
+  margin-bottom: 10px;
+}
+
+.welcome-description {
+  font-family: 'Georgia', serif; /* Change to an elegant font */
+  font-size: 18px; /* Adjust size as needed */
+  color: #555; /* Adjust color as needed */
+  margin-bottom: 20px;
+}

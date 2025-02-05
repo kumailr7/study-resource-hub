@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
 import axios from "axios";
 import { ThemeProvider, useTheme } from "./ThemeContext";
-import logo from "./assets/logo.png";
+import logo from "./assets/logo-2.png";
 import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from './components/ProtectedRoute';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from './components/ui/navigation-menu';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useEffect } from 'react';
-
+import SignupPage from './pages/SignupPage';
 
 interface Resource {
   _id: string;
@@ -27,6 +27,7 @@ interface Request {
   resourceType: string;
   requestDate: string;
   status: string; // Adjust the type as needed
+  createdAt: string; // Add this field if not already present
 }
 
 interface ErrorResponse {
@@ -68,6 +69,7 @@ const App: React.FC = () => {
         <Router>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
             <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} />} />
             <Route path="/user" element={<ResourceTable />} />
             <Route path="/" element={<Navigate to="/login" />} />
@@ -167,10 +169,10 @@ const ResourceTable: React.FC = () => {
           `${API_BASE_URL}/added-resources`,
           newResource
         );
-        
+
         // Fetch updated resources
         await fetchResources();
-        
+
         // Reset form fields
         setNewResourceName("");
         setNewResourceLink("");
@@ -208,10 +210,10 @@ const ResourceTable: React.FC = () => {
           `${API_BASE_URL}/added-resources/${editResourceId}`,
           updatedResource
         );
-        
+
         // Fetch updated resources
         await fetchResources();
-        
+
         // Reset form fields and edit state
         setEditResourceId(null);
         setNewResourceName("");
@@ -229,7 +231,7 @@ const ResourceTable: React.FC = () => {
   const handleDeleteResource = async (id: string) => {
     try {
       await axios.delete(`${API_BASE_URL}/added-resources/${id}`);
-      
+
       // Fetch updated resources
       await fetchResources();
     } catch (error) {
@@ -279,33 +281,50 @@ const ResourceTable: React.FC = () => {
     }
   };
 
- // Handle Fetch Filtered Resources Function
-const fetchFilteredResources = async (tags: string) => {
-  try {
-    const response = await axios.get<ResourceResponse>(
-      `${API_BASE_URL}/added-resources?tags=${tags}`
-    );
-    setFilteredResources(response.data.data);
-  } catch (error) {
-    console.error("Error filtering resources:", error);
-  }
-};
+  // Handle Fetch Filtered Resources Function
+  const fetchFilteredResources = async (tags: string) => {
+    try {
+      const response = await axios.get<ResourceResponse>(
+        `${API_BASE_URL}/added-resources?tags=${tags}`
+      );
+      setFilteredResources(response.data.data);
+    } catch (error) {
+      console.error("Error filtering resources:", error);
+    }
+  };
 
-// Handle Search Function
-const handleSearch = () => {
-  const tags = searchTags.split(",").map((tag) => tag.trim()); // No lowercase conversion
-  if (tags.length === 0 || !tags[0]) {
-    setFilteredResources(resources);
-  } else {
-    const formattedTags = tags.join(","); // Join tags back to a comma-separated string
-    fetchFilteredResources(formattedTags);
-  }
-};
+  // Handle Search Function
+  const handleSearch = () => {
+    const tags = searchTags.split(",").map((tag) => tag.trim()); // No lowercase conversion
+    if (tags.length === 0 || !tags[0]) {
+      setFilteredResources(resources);
+    } else {
+      const formattedTags = tags.join(","); // Join tags back to a comma-separated string
+      fetchFilteredResources(formattedTags);
+    }
+  };
 
+  // Update the getDaysPending function
+  const getDaysPending = (requestDate: string) => {
+    if (!requestDate) {
+      return "Invalid date";
+    }
+  
+    const requestDateTime = new Date(requestDate).getTime();
+    const currentDateTime = new Date().getTime();
+    const timeDiff = currentDateTime - requestDateTime;
+    const daysPending = Math.floor(timeDiff / (1000 * 3600 * 24));
+    
+    if (daysPending >= 7) {
+      return "Rejected";
+    } else {
+      return `${daysPending}/7 days`;
+    }
+  };
 
   // Added UI Elemenets
   return (
-     <ThemeProvider>
+    <ThemeProvider>
       <div
         className={
           isDarkTheme ? "bg-gray-900 text-white" : "bg-white text-gray-900"
@@ -313,29 +332,26 @@ const handleSearch = () => {
       >
         {/* Header */}
         <div
-          className={`text-center py-6 ${
-            isDarkTheme 
-              ? "bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900" 
+          className={`text-center py-6 ${isDarkTheme
+              ? "bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900"
               : "bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500"
-          } text-white rounded shadow-lg`}
+            } text-white rounded shadow-lg`}
         >
-          <img 
-            src={logo} 
-            alt="Cloud Study Resources Hub Logo" 
-            className="h-24 w-auto mx-auto mb-4"
+          <img
+            src={logo}
+            alt="Cloud Study Resources Hub Logo"
+            className="h-28 w-auto mx-auto mb-4"
           />
           <div className="flex items-center justify-center gap-2">
             <span className={`text-white font-bold ${isDarkTheme ? 'opacity-50' : ''}`}>Light</span>
             <button
               onClick={() => toggleTheme()}
-              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${
-                isDarkTheme ? 'bg-gray-600' : 'bg-yellow-300'
-              }`}
+              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${isDarkTheme ? 'bg-gray-600' : 'bg-yellow-300'
+                }`}
             >
               <div
-                className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 ease-in-out ${
-                  isDarkTheme ? 'translate-x-6' : 'translate-x-0'
-                }`}
+                className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 ease-in-out ${isDarkTheme ? 'translate-x-6' : 'translate-x-0'
+                  }`}
               />
             </button>
             <span className={`text-white font-bold ${isDarkTheme ? '' : 'opacity-50'}`}>Dark</span>
@@ -346,13 +362,13 @@ const handleSearch = () => {
         <NavigationMenu className="p-4 border-b">
           <NavigationMenuList className="space-x-6">
             <NavigationMenuItem>
-              <Link to="/" className="font-medium">
+              <Link to="/" className="font-bold">
                 Main Dashboard
               </Link>
             </NavigationMenuItem>
             {localStorage.getItem('isAdmin') === 'true' && (
               <NavigationMenuItem>
-                <Link to="/admin" className="font-medium">
+                <Link to="/admin" className="font-bold">
                   Admin Dashboard
                 </Link>
               </NavigationMenuItem>
@@ -362,9 +378,8 @@ const handleSearch = () => {
 
         {/* Add Resource Section */}
         <div
-          className={`mt-8 shadow-md rounded-lg p-6 ${
-            isDarkTheme ? "bg-gray-800" : "bg-white"
-          }`}
+          className={`mt-8 shadow-md rounded-lg p-6 ${isDarkTheme ? "bg-gray-800" : "bg-white"
+            }`}
         >
           <h2 className="text-2xl font-bold mb-4">Add New Resources</h2>
           <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -372,11 +387,10 @@ const handleSearch = () => {
               <label className="block text-sm font-bold">Resource Name</label>
               <input
                 type="text"
-                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  isDarkTheme
+                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${isDarkTheme
                     ? "border-gray-600 bg-gray-700"
                     : "border-gray-300"
-                }`}
+                  }`}
                 value={newResourceName}
                 onChange={(e) => setNewResourceName(e.target.value)}
               />
@@ -385,11 +399,10 @@ const handleSearch = () => {
               <label className="block text-sm font-bold">Resource Link</label>
               <input
                 type="text"
-                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  isDarkTheme
+                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${isDarkTheme
                     ? "border-gray-600 bg-gray-700"
                     : "border-gray-300"
-                }`}
+                  }`}
                 value={newResourceLink}
                 onChange={(e) => setNewResourceLink(e.target.value)}
               />
@@ -398,11 +411,10 @@ const handleSearch = () => {
               <label className="block text-sm font-bold">Category</label>
               <input
                 type="text"
-                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  isDarkTheme
+                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${isDarkTheme
                     ? "border-gray-600 bg-gray-700"
                     : "border-gray-300"
-                }`}
+                  }`}
                 value={newResourceCategory}
                 onChange={(e) => setNewResourceCategory(e.target.value)}
               />
@@ -410,11 +422,10 @@ const handleSearch = () => {
             <div>
               <label className="block text-sm font-bold">Type</label>
               <select
-                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  isDarkTheme
+                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${isDarkTheme
                     ? "border-gray-600 bg-gray-700"
                     : "border-gray-300"
-                }`}
+                  }`}
                 value={newResourceType}
                 onChange={(e) => setNewResourceType(e.target.value)}
               >
@@ -430,11 +441,10 @@ const handleSearch = () => {
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  className={`w-3/4 p-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                    isDarkTheme
+                  className={`w-3/4 p-2 border rounded-lg focus:outline-none focus:ring-2 ${isDarkTheme
                       ? "border-gray-600 bg-gray-700"
                       : "border-gray-300"
-                  }`}
+                    }`}
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   placeholder="Add a tag"
@@ -442,11 +452,10 @@ const handleSearch = () => {
                 <button
                   type="button"
                   onClick={handleAddTag}
-                  className={`py-2 px-4 rounded-lg shadow focus:outline-none font-bold ${
-                    isDarkTheme
+                  className={`py-2 px-4 rounded-lg shadow focus:outline-none font-bold ${isDarkTheme
                       ? 'bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900'
                       : 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500'
-                  } text-white`}
+                    } text-white`}
                 >
                   Add Tag
                 </button>
@@ -468,11 +477,10 @@ const handleSearch = () => {
               onClick={
                 editResourceId ? handleUpdateResource : handleAddResource
               }
-              className={`py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
-                editResourceId
+              className={`py-2 px-4 rounded focus:outline-none focus:shadow-outline ${editResourceId
                   ? "bg-green-500 hover:bg-green-700"
                   : "bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500"
-              } text-white font-bold`}
+                } text-white font-bold`}
             >
               {editResourceId ? "Update Resource" : "Add Resource"}
             </button>
@@ -481,82 +489,72 @@ const handleSearch = () => {
 
         {/* Available Resources Section */}
         <div
-          className={`mt-8 shadow-md rounded-lg p-6 ${
-            isDarkTheme ? "bg-gray-800" : "bg-white"
-          }`}
+          className={`mt-8 shadow-md rounded-lg p-6 ${isDarkTheme ? "bg-gray-800" : "bg-white"
+            }`}
         >
           <h2
-            className={`text-2xl font-bold mb-4 ${
-              isDarkTheme ? "text-gray-50" : "text-gray-800"
-            }`}
+            className={`text-2xl font-bold mb-4 ${isDarkTheme ? "text-gray-50" : "text-gray-800"
+              }`}
           >
             Available Resources
           </h2>
           <div className="flex items-center mb-4">
-           <input
-             type="text"
-             placeholder="Search by tags (comma-separated)"
-             value={searchTags}
-             onChange={(e) => setSearchTags(e.target.value)}
-             className={`p-2 border rounded-lg focus:outline-none focus:ring-2 ${
-             isDarkTheme ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-black border-gray-300'
-             }`}
+            <input
+              type="text"
+              placeholder="Search by tags (comma-separated)"
+              value={searchTags}
+              onChange={(e) => setSearchTags(e.target.value)}
+              className={`p-2 border rounded-lg focus:outline-none focus:ring-2 ${isDarkTheme ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-black border-gray-300'
+                }`}
             />
             <button
-             onClick={handleSearch}
-             className={`ml-2 py-2 px-4 rounded-lg shadow focus:outline-none font-bold ${
-             isDarkTheme
-             ? 'bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900'
-             : 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500'
-             } text-white`}
-             >
-             Search
+              onClick={handleSearch}
+              className={`ml-2 py-2 px-4 rounded-lg shadow focus:outline-none font-bold ${isDarkTheme
+                  ? 'bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900'
+                  : 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500'
+                } text-white`}
+            >
+              Search
             </button>
-         </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse">
               <thead>
                 <tr className={isDarkTheme ? "bg-gray-700" : "bg-gray-100"}>
                   <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
+                    className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"
+                      } border`}
                   >
                     Name
                   </th>
                   <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
+                    className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"
+                      } border`}
                   >
                     Link
                   </th>
                   <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
+                    className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"
+                      } border`}
                   >
                     Category
                   </th>
                   <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
+                    className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"
+                      } border`}
                   >
                     Type
                   </th>
                   <th
-                    className={`p-3 text-left text-sm font-bold ${
-                      isDarkTheme ? "text-gray-400" : "text-gray-600"
-                    } border`}
+                    className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"
+                      } border`}
                   >
                     Tags
                   </th>
                   {localStorage.getItem('isAdmin') === 'true' && (
                     <th
-                      className={`p-3 text-left text-sm font-bold ${
-                        isDarkTheme ? "text-gray-400" : "text-gray-600"
-                      } border`}
+                      className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"
+                        } border`}
                     >
                       Actions
                     </th>
@@ -564,52 +562,45 @@ const handleSearch = () => {
                 </tr>
               </thead>
               <tbody>
-              {filteredResources.map((resource) => (
+                {filteredResources.map((resource) => (
                   <tr
                     key={resource._id}
-                    className={`hover:bg-gray-100 ${
-                      isDarkTheme ? "hover:bg-gray-800" : ""
-                    }`}
+                    className={`hover:bg-gray-100 ${isDarkTheme ? "hover:bg-gray-800" : ""
+                      }`}
                   >
                     <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
+                      className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""
+                        }`}
                     >
                       {resource.name}
                     </td>
                     <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
+                      className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""
+                        }`}
                     >
                       <a
                         href={resource.link}
-                        className={`text-blue-600 hover:underline ${
-                          isDarkTheme ? "text-blue-400" : ""
-                        }`}
+                        className={`text-blue-600 hover:underline ${isDarkTheme ? "text-blue-400" : ""
+                          }`}
                       >
                         {resource.link}
                       </a>
                     </td>
                     <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
+                      className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""
+                        }`}
                     >
                       {resource.category}
                     </td>
                     <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
+                      className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""
+                        }`}
                     >
                       {resource.type}
                     </td>
                     <td
-                      className={`p-3 border ${
-                        isDarkTheme ? "text-gray-300" : ""
-                      }`}
+                      className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""
+                        }`}
                     >
                       {resource.tags.map((tag, index) => (
                         <span
@@ -622,22 +613,23 @@ const handleSearch = () => {
                     </td>
                     {localStorage.getItem('isAdmin') === 'true' && (
                       <td
-                        className={`p-3 border ${
-                          isDarkTheme ? "text-gray-300" : ""
-                        }`}
+                        className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""
+                          }`}
                       >
-                        <button
-                          onClick={() => handleEditResource(resource)}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline mr-2"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteResource(resource._id)}
-                          className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
-                        >
-                          Delete
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleEditResource(resource)}
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline mr-2"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteResource(resource._id)}
+                            className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+                          >
+                            Delete
+                          </button>
+                        </>
                       </td>
                     )}
                   </tr>
@@ -667,70 +659,62 @@ const handleSearch = () => {
 
         {/* Requested Resources Section */}
         <div
-          className={`mt-8 shadow-md rounded-lg p-6 ${
-            isDarkTheme ? "bg-gray-800" : "bg-white"
-          }`}
+          className={`mt-8 shadow-md rounded-lg p-6 ${isDarkTheme ? "bg-gray-800" : "bg-white"
+            }`}
         >
           <h2
-            className={`text-2xl font-bold mb-4 ${
-              isDarkTheme ? "text-gray-50" : "text-gray-800"
-            }`}
+            className={`text-2xl font-bold mb-4 ${isDarkTheme ? "text-gray-50" : "text-gray-800"
+              }`}
           >
-            Requested Resources
+            Requested Resources Links
           </h2>
           <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
-                className={`block text-sm font-bold ${
-                  isDarkTheme ? "text-gray-400" : "text-gray-600"
-                }`}
+                className={`block text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"
+                  }`}
               >
                 Your Name
               </label>
               <input
                 type="text"
-                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  isDarkTheme
+                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${isDarkTheme
                     ? "border-gray-600 bg-gray-700"
                     : "border-gray-300"
-                }`}
+                  }`}
                 value={newRequestUserName}
                 onChange={(e) => setNewRequestUserName(e.target.value)}
               />
             </div>
             <div>
               <label
-                className={`block text-sm font-bold ${
-                  isDarkTheme ? "text-gray-400" : "text-gray-600"
-                }`}
+                className={`block text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"
+                  }`}
               >
                 Resource Name
               </label>
               <input
                 type="text"
-                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  isDarkTheme
+                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${isDarkTheme
                     ? "border-gray-600 bg-gray-700"
                     : "border-gray-300"
-                }`}
+                  }`}
                 value={newRequestResourceName}
                 onChange={(e) => setNewRequestResourceName(e.target.value)}
               />
             </div>
             <div>
               <label
-                className={`block text-sm font-bold ${
-                  isDarkTheme ? "text-gray-400" : "text-gray-600"
-                }`}
+                className={`block text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"
+                  }`}
               >
                 Type
               </label>
               <select
-                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  isDarkTheme
+                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${isDarkTheme
                     ? "border-gray-600 bg-gray-700"
                     : "border-gray-300"
-                }`}
+                  }`}
                 value={newRequestResourceType}
                 onChange={(e) => setNewRequestResourceType(e.target.value)}
               >
@@ -743,19 +727,17 @@ const handleSearch = () => {
             </div>
             <div>
               <label
-                className={`block text-sm font-bold ${
-                  isDarkTheme ? "text-gray-400" : "text-gray-600"
-                }`}
+                className={`block text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"
+                  }`}
               >
                 Request Date
               </label>
               <input
                 type="date"
-                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  isDarkTheme
+                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 ${isDarkTheme
                     ? "border-gray-600 bg-gray-700"
                     : "border-gray-300"
-                }`}
+                  }`}
                 value={newRequestDate}
                 onChange={(e) => setNewRequestDate(e.target.value)}
               />
@@ -764,11 +746,10 @@ const handleSearch = () => {
           <div className="text-right mt-4">
             <button
               onClick={handleAddRequest}
-              className={`py-2 px-4 rounded-lg shadow focus:outline-none ${
-                isDarkTheme
+              className={`py-2 px-4 rounded-lg shadow focus:outline-none ${isDarkTheme
                   ? 'bg-gradient-to-r from-pink-900 via-purple-800 to-indigo-900'
                   : 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500'
-              } text-white font-bold`}
+                } text-white font-bold`}
             >
               Request Resource
             </button>
@@ -793,6 +774,9 @@ const handleSearch = () => {
                   <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
                     Status
                   </th>
+                  <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
+                    Days Pending
+                  </th>
                   {localStorage.getItem('isAdmin') === 'true' && (
                     <th className={`p-3 text-left text-sm font-bold ${isDarkTheme ? "text-gray-400" : "text-gray-600"} border`}>
                       Toggle Status
@@ -801,37 +785,58 @@ const handleSearch = () => {
                 </tr>
               </thead>
               <tbody>
-                {requests.map((request) => (
-                  <tr key={request._id} className={`hover:bg-gray-100 ${isDarkTheme ? "hover:bg-gray-800" : ""}`}>
-                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
-                      {request.userName}
-                    </td>
-                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
-                      {request.resourceName}
-                    </td>
-                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
-                      {request.resourceType}
-                    </td>
-                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
-                      {new Date(request.requestDate).toLocaleDateString('en-GB')}
-                    </td>
-                    <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
-                      <span className={request.status === 'approved' ? 'text-green-500 font-bold' : 'text-yellow-500 font-bold'}>
-                        <strong>{request.status}</strong>
-                      </span>
-                    </td>
-                    {localStorage.getItem('isAdmin') === 'true' && (
+                {requests.map((request) => {
+                  console.log("Request createdAt:", request.createdAt); // Debug log
+                  const daysPending = getDaysPending(request.requestDate); // Use the updated function
+                  const isRejected = daysPending === 'Rejected'; // Check if it's rejected
+
+                  return (
+                    <tr key={request._id} className={`hover:bg-gray-100 ${isDarkTheme ? "hover:bg-gray-800" : ""}`}>
                       <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
-                        <button
-                          onClick={() => handleRequestStatusChange(request._id, request.status === 'approved' ? 'pending' : 'approved')}
-                          className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
-                        >
-                          Toggle Status
-                        </button>
+                        {request.userName}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
+                        {request.resourceName}
+                      </td>
+                      <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
+                        {request.resourceType}
+                      </td>
+                      <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
+                        {new Date(request.requestDate).toLocaleDateString('en-GB')}
+                      </td>
+                      <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
+                        <span className={request.status === 'approved' ? 'text-green-500 font-bold' : 'text-yellow-500 font-bold'}>
+                          <strong>{request.status}</strong>
+                        </span>
+                      </td>
+                      <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
+                        {request.status === 'approved' ? (
+                          <span className="bg-green-200 text-black font-bold py-1 px-2 rounded-full">
+                            Approved
+                          </span>
+                        ) : (
+                          <span className={`${
+                            getDaysPending(request.requestDate) === "Rejected" 
+                              ? 'bg-red-200' 
+                              : 'bg-indigo-200'
+                          } text-black font-bold py-1 px-2 rounded-full`}>
+                            {getDaysPending(request.requestDate)}
+                          </span>
+                        )}
+                      </td>
+                      {localStorage.getItem('isAdmin') === 'true' && (
+                        <td className={`p-3 border ${isDarkTheme ? "text-gray-300" : ""}`}>
+                          <button
+                            onClick={() => handleRequestStatusChange(request._id, request.status === 'approved' ? 'pending' : 'approved')}
+                            className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+                          >
+                            Toggle Status
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -855,8 +860,8 @@ const handleSearch = () => {
           </button>
         </div>
       </div>
-   </ThemeProvider>
- );
+    </ThemeProvider>
+  );
 };
 
 export default App;

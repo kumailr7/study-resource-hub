@@ -35,7 +35,7 @@ const AdminDashboard = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [activeResources, setActiveResources] = useState(0);
   const [pendingRequests, setPendingRequests] = useState(0);
-  const { isAdmin } = useAuth();
+  const { userIsAdmin } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Admin');
 
@@ -162,6 +162,12 @@ const AdminDashboard = () => {
             </Table>
           </CardContent>
         </Card>
+        {userIsAdmin && (
+          <div>
+            <h2>Admin Actions</h2>
+            {/* Render admin-specific components or buttons here */}
+          </div>
+        )}
       </div>
     </div>
   );
