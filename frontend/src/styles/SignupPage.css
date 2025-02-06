@@ -1,0 +1,23 @@
+.success-message {
+  font-size: 1.2rem;
+  color: #2ecc71;
+  background-color: #e8f8f5;
+  padding: 15px 20px;
+  margin: 15px 0;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
