@@ -7,9 +7,9 @@ import logo from '../assets/logo-2.png';
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
-    email: '',
     password: '',
     confirmPassword: ''
   });
@@ -24,23 +24,34 @@ const SignupPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check for alphanumeric password
+    const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+    if (!alphanumericRegex.test(formData.password)) {
+      setError('Password must contain only letters and numbers');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/signup`, {
+      const response = await axios.post(`${API_BASE_URL}/register`, {
         username: formData.username,
-        email: formData.email,
-        password: formData.password
+        password: formData.password,
+        role: 'user'
       });
 
       if (response.data) {
-        navigate('/login');
+        setSuccess(true);
+        setError('');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000); // Wait 2 seconds before redirecting
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error during signup');
+      setError(err.response?.data?.error || 'Error during signup');
     }
   };
 
@@ -51,6 +62,12 @@ const SignupPage: React.FC = () => {
           <img src={logo} alt="Logo" className="logo" />
           <h1 className="welcome-title">Create Account</h1>
           {error && <div className="error-message">{error}</div>}
+          {success && (
+            <div className="success-message">
+              <span role="img" aria-label="check">✅</span>
+              Sign up completed! Heading to login page...
+            </div>
+          )}
           
           <form onSubmit={handleSubmit} className="login-form">
             <input
@@ -58,15 +75,6 @@ const SignupPage: React.FC = () => {
               name="username"
               placeholder="Username"
               value={formData.username}
-              onChange={handleChange}
-              className="input-field"
-              required
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              value={formData.email}
               onChange={handleChange}
               className="input-field"
               required

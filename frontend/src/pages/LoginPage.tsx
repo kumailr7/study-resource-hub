@@ -59,29 +59,6 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/auth/google`, {
-        credential: credentialResponse.credential
-      });
-      
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('isAdmin', response.data.isAdmin.toString());
-      
-      if (response.data.isAdmin) {
-        navigate('/admin');
-      } else {
-        navigate('/user');
-      }
-    } catch (err) {
-      setError('Error during Google login');
-    }
-  };
-
-  const handleGoogleError = () => {
-    setError('Google login failed');
-  };
-
   useEffect(() => {
     // Select a random quote from the array
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
@@ -121,17 +98,6 @@ const LoginPage: React.FC = () => {
             </div>
             <button type="submit" className="login-button">Sign In</button>
           </form>
-
-          <div className="divider">OR</div>
-
-          <div className="google-login-container">
-            <GoogleLogin
-              clientId={GOOGLE_CLIENT_ID}
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-            />
-          </div>
-
           <p className="signup-link">
             Don't have an access? Contact the administrator <Link to="/signup">Sign Up</Link>
           </p>
