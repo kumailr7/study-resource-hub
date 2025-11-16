@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   frontend:
@@ -41,12 +40,14 @@ services:
     networks:
       - app-network
 
-  mongo:
-    image: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
+######### You Can use self-hosted MongoDB by uncommenting the following lines #########
+######### Using a cloud-hosted MongoDB Atlas is recommended for production #########
+  # mongo:
+  #   image: mongo
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongo-data:/data/db
 
 networks:
   app-network:
