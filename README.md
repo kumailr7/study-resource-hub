@@ -13,13 +13,50 @@ A web application designed to efficiently manage and share study resources. User
 ## Project Setup
 
 ### 1. Environment Setup
-Create a `.env` file in the backend directory:
+
+#### Backend Environment Variables
+Create a `.env` file in the `backend` directory:
 
 ```bash
-MONGODB_URL=mongodb://localhost:27017/study_resource_hub
+# MongoDB Connection String
+# For Local MongoDB:
+MONGODB_URI=mongodb://localhost:27017/study_resource_hub
+
+# For MongoDB Atlas (Cloud):
+# MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/study_resource_hub?retryWrites=true&w=majority
+
+# Server Port
 PORT=5000
-JWT_SECRET=your_jwt_secret_key
+
+# JWT Secret Key (use a strong, random string for production)
+# Generate a secure secret: openssl rand -base64 32
+JWT_SECRET=your_jwt_secret_key_here_make_it_long_and_random
 ```
+
+**Important Notes:**
+- **MongoDB Local**: Use `mongodb://localhost:27017/study_resource_hub` for local development
+- **MongoDB Atlas**: Replace `<username>`, `<password>`, and cluster URL with your Atlas credentials
+- **JWT Secret**: Generate a secure random string for production. You can use:
+  ```bash
+  openssl rand -base64 32
+  ```
+
+#### Frontend Environment Variables
+Create a `.env` file in the `frontend` directory:
+
+```bash
+# API Base URL
+# For Local Development:
+REACT_APP_API_BASE_URL=http://localhost:5000/api
+
+# For Production/HTTPS:
+# REACT_APP_API_BASE_URL=https://studyhub.local/api
+
+# Google OAuth Client ID (optional)
+REACT_APP_GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID
+```
+
+**Note:** After updating `.env` files, restart your development server for changes to take effect.
 
 ### 2. Running with Docker Compose
 The entire application stack can be run using Docker Compose:
@@ -36,6 +73,8 @@ docker-compose down
 ```
 
 ### 3. MongoDB Setup
+
+#### Option 1: Local MongoDB with Docker
 Run MongoDB using Docker:
 ```bash
 # Pull MongoDB image
@@ -44,6 +83,23 @@ docker pull mongo
 # Run MongoDB container
 docker run -d -p 27017:27017 --name study-resource-mongodb mongo
 ```
+
+Then use this connection string in your `backend/.env`:
+```bash
+MONGODB_URI=mongodb://localhost:27017/study_resource_hub
+```
+
+#### Option 2: MongoDB Atlas (Cloud)
+1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+2. Create a new cluster
+3. Create a database user and set a password
+4. Whitelist your IP address (or use `0.0.0.0/0` for development)
+5. Get your connection string from the "Connect" button
+6. Update your `backend/.env` with the Atlas connection string:
+```bash
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/study_resource_hub?retryWrites=true&w=majority
+```
+Replace `<username>`, `<password>`, and the cluster URL with your actual credentials.
 
 ### 4. Database Migrations
 To set up the initial database collections and seed data:
@@ -130,10 +186,65 @@ server {
 }
 ```
 
-3. SSL Certificate Setup:
-- Place your SSL certificates in the `nginx/certs` directory
+3. SSL Certificate Setup with mkcert (Local Development):
+
+For local development with HTTPS, you can use `mkcert` to create locally-trusted certificates:
+
+**Install mkcert:**
+```bash
+# On macOS
+brew install mkcert
+
+# On Linux
+# Ubuntu/Debian
+sudo apt install libnss3-tools
+wget -O mkcert https://github.com/FiloSottile/mkcert/releases/latest/download/mkcert-v1.4.4-linux-amd64
+chmod +x mkcert
+sudo mv mkcert /usr/local/bin/
+
+# On Windows (using Chocolatey)
+choco install mkcert
+```
+
+**Create Local CA and Certificates:**
+```bash
+# Install the local CA (one-time setup)
+mkcert -install
+
+# Navigate to nginx certs directory
+cd nginx/certs
+
+# Generate certificate for your local domain (e.g., studyhub.local)
+mkcert studyhub.local
+
+# This creates:
+# - studyhub.local.pem (certificate)
+# - studyhub.local-key.pem (private key)
+```
+
+**Update nginx.conf:**
+Ensure your `nginx.conf` references the correct certificate files:
+```nginx
+ssl_certificate /etc/nginx/certs/studyhub.local.pem;
+ssl_certificate_key /etc/nginx/certs/studyhub.local-key.pem;
+```
+
+**Update /etc/hosts (for local domain):**
+Add your local domain to `/etc/hosts`:
+```bash
+# Linux/macOS
+sudo nano /etc/hosts
+
+# Add this line:
+127.0.0.1    studyhub.local
+```
+
+**For Production SSL Certificates:**
+- Use Let's Encrypt with certbot for free SSL certificates
+- Or use certificates from your certificate authority
+- Place certificates in the `nginx/certs` directory
 - Update the `nginx.conf` with your domain name
-- Ensure proper permissions on certificate files
+- Ensure proper permissions on certificate files (chmod 600 for keys)
 
 4. Custom Domain Setup:
 - Point your domain's DNS A record to your server's IP address

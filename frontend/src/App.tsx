@@ -10,6 +10,7 @@ import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from './compon
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useEffect } from 'react';
 import SignupPage from './pages/SignupPage';
+import { API_BASE_URL } from './config';
 
 interface Resource {
   _id: string;
@@ -43,9 +44,6 @@ interface RequestResponse {
   data: Request[];
   total: number;
 }
-
-// Updating it as per Testing (Backend URL)
-const API_BASE_URL = "https://cs-resources.test/api";
 
 // Date formatting function
 const formatDate = (dateString: string) => {
