@@ -927,11 +927,16 @@ const ResourceTable: React.FC = () => {
     setUploadProgress(0);
     try {
       const { data } = await axios.post<{ uploadUrl: string; publicUrl: string }>(`${API_BASE_URL}/upload-url`, { fileName, contentType: file.type });
-      await axios.put(data.uploadUrl, file, {
-        headers: { 'Content-Type': file.type },
-        onUploadProgress: (e) => {
-          if (e.total) setUploadProgress(Math.round((e.loaded * 100) / e.total));
-        },
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', data.uploadUrl);
+        xhr.setRequestHeader('Content-Type', file.type);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setUploadProgress(Math.round((e.loaded * 100) / e.total));
+        };
+        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
+        xhr.onerror = () => reject(new Error('Upload network error'));
+        xhr.send(file);
       });
       setEditRecordingLink(data.publicUrl);
       setUploadStatus('done');
