@@ -351,17 +351,13 @@ const ResourceTable: React.FC = () => {
   const [suggType, setSuggType] = useState("Resource");
 
   // Study Groups state
-  const [studyGroups, setStudyGroups] = useState<StudyGroup[]>(() => {
-    try { return JSON.parse(localStorage.getItem('dojo_study_groups') || '[]'); } catch { return []; }
-  });
+  const [studyGroups, setStudyGroups] = useState<StudyGroup[]>([]);
   const [sgTitle, setSgTitle] = useState('');
   const [sgAgenda, setSgAgenda] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Schedule state
-  const [sessions, setSessions] = useState<Session[]>(() => {
-    try { return JSON.parse(localStorage.getItem('dojo_sessions') || '[]'); } catch { return []; }
-  });
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionAuthor, setSessionAuthor] = useState("");
   const [sessionTopic, setSessionTopic] = useState("");
   const [sessionDate, setSessionDate] = useState("");
@@ -379,12 +375,8 @@ const ResourceTable: React.FC = () => {
   const [viewAllResources, setViewAllResources] = useState(false);
   const [newResourceAddedBy, setNewResourceAddedBy] = useState('');
   const [sgScheduledAt, setSgScheduledAt] = useState('');
-  const [myRegisteredSessions, setMyRegisteredSessions] = useState<Record<string, boolean>>(() => {
-    try { return JSON.parse(localStorage.getItem('dojo_my_sessions') || '{}'); } catch { return {}; }
-  });
-  const [myJoinedGroups, setMyJoinedGroups] = useState<Record<string, boolean>>(() => {
-    try { return JSON.parse(localStorage.getItem('dojo_my_groups') || '{}'); } catch { return {}; }
-  });
+  const [myRegisteredSessions, setMyRegisteredSessions] = useState<Record<string, boolean>>({});
+  const [myJoinedGroups, setMyJoinedGroups] = useState<Record<string, boolean>>({});
   const [collections, setCollections] = useState<ResourceCollection[]>(() => {
     try { return JSON.parse(localStorage.getItem('dojo_collections') || '[]'); } catch { return []; }
   });
@@ -500,23 +492,25 @@ const ResourceTable: React.FC = () => {
     },
   ];
   const CHALLENGE_MAX_SLOTS = 15;
-  const [challengeParticipants, setChallengeParticipants] = useState<Record<string, number>>(() => {
-    try { return JSON.parse(localStorage.getItem('dojo_challenge_participants') || '{}'); } catch { return {}; }
-  });
-  const [joinedChallenges, setJoinedChallenges] = useState<Record<string, boolean>>(() => {
-    try { return JSON.parse(localStorage.getItem('dojo_joined_challenges') || '{}'); } catch { return {}; }
-  });
+  const [challengeParticipants, setChallengeParticipants] = useState<Record<string, number>>({});
+  const [joinedChallenges, setJoinedChallenges] = useState<Record<string, boolean>>({});
   const [selectedChallenge, setSelectedChallenge] = useState<string | null>(null);
-  const handleJoinChallenge = (id: string) => {
+  const handleJoinChallenge = async (id: string) => {
     if (joinedChallenges[id]) return;
     const current = challengeParticipants[id] || 0;
     if (current >= CHALLENGE_MAX_SLOTS) return;
-    const updated = { ...challengeParticipants, [id]: current + 1 };
-    const updatedJoined = { ...joinedChallenges, [id]: true };
-    setChallengeParticipants(updated);
-    setJoinedChallenges(updatedJoined);
-    localStorage.setItem('dojo_challenge_participants', JSON.stringify(updated));
-    localStorage.setItem('dojo_joined_challenges', JSON.stringify(updatedJoined));
+    const userId = user?.id;
+    if (!userId) return;
+    try {
+      await axios.post(`${API_BASE_URL}/challenge-participants`, { challengeId: id, userId });
+      setChallengeParticipants(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+      setJoinedChallenges(prev => ({ ...prev, [id]: true }));
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        // Already joined — just update local state
+        setJoinedChallenges(prev => ({ ...prev, [id]: true }));
+      }
+    }
   };
   const getChallengeStatus = (c: typeof CHALLENGES[0]) => {
     const now = Date.now();
@@ -592,6 +586,39 @@ const ResourceTable: React.FC = () => {
     fetchResources();
     fetchRequests();
   }, [resourcePage, requestPage]);
+
+  // Fetch sessions, study groups, challenge participants from MongoDB
+  useEffect(() => {
+    const fetchShared = async () => {
+      try {
+        const [sessRes, sgRes, cpRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/sessions`),
+          axios.get(`${API_BASE_URL}/study-groups`),
+          axios.get(`${API_BASE_URL}/challenge-participants${user?.id ? `?userId=${user.id}` : ''}`),
+        ]);
+        setSessions(sessRes.data.map((s: any) => ({ ...s, id: s._id })));
+        setStudyGroups(sgRes.data.map((g: any) => ({ ...g, id: g._id })));
+        setChallengeParticipants(cpRes.data.counts || {});
+        setJoinedChallenges(cpRes.data.joined || {});
+        // Rebuild my registered sessions from returned data
+        const myReg: Record<string, boolean> = {};
+        const myGrp: Record<string, boolean> = {};
+        if (user?.id) {
+          sessRes.data.forEach((s: any) => {
+            if ((s.registeredUsers || []).includes(user.id)) myReg[s._id] = true;
+          });
+          sgRes.data.forEach((g: any) => {
+            if ((g.members || []).includes(user.id)) myGrp[g._id] = true;
+          });
+        }
+        setMyRegisteredSessions(myReg);
+        setMyJoinedGroups(myGrp);
+      } catch (err) {
+        console.error('Error fetching shared data:', err);
+      }
+    };
+    fetchShared();
+  }, [user?.id]);
 
   // Fetch resources from the API
   const fetchResources = async () => {
@@ -819,35 +846,35 @@ const ResourceTable: React.FC = () => {
     localStorage.setItem('dojo_suggestions', JSON.stringify(updated));
   };
 
-  const handleCreateStudyGroup = () => {
+  const handleCreateStudyGroup = async () => {
     if (!sgTitle.trim()) return;
     const shortCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const group: StudyGroup = {
-      id: Date.now().toString(),
-      title: sgTitle.trim(),
-      agenda: sgAgenda.trim(),
-      shortCode,
-      createdAt: new Date().toISOString(),
-      isActive: true,
-      memberCount: 0,
-      scheduledAt: sgScheduledAt,
-    };
-    const updated = [group, ...studyGroups];
-    setStudyGroups(updated);
-    localStorage.setItem('dojo_study_groups', JSON.stringify(updated));
-    setSgTitle(''); setSgAgenda(''); setSgScheduledAt('');
+    try {
+      const res = await axios.post(`${API_BASE_URL}/study-groups`, {
+        title: sgTitle.trim(),
+        agenda: sgAgenda.trim(),
+        shortCode,
+        isActive: true,
+        memberCount: 0,
+        scheduledAt: sgScheduledAt,
+      });
+      setStudyGroups(prev => [{ ...res.data, id: res.data._id }, ...prev]);
+      setSgTitle(''); setSgAgenda(''); setSgScheduledAt('');
+    } catch (err) { console.error('Error creating study group:', err); }
   };
 
-  const handleDeleteStudyGroup = (id: string) => {
-    const updated = studyGroups.filter(g => g.id !== id);
-    setStudyGroups(updated);
-    localStorage.setItem('dojo_study_groups', JSON.stringify(updated));
+  const handleDeleteStudyGroup = async (id: string) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/study-groups/${id}`);
+      setStudyGroups(prev => prev.filter(g => g.id !== id));
+    } catch (err) { console.error('Error deleting study group:', err); }
   };
 
-  const handleToggleStudyGroup = (id: string) => {
-    const updated = studyGroups.map(g => g.id === id ? { ...g, isActive: !g.isActive } : g);
-    setStudyGroups(updated);
-    localStorage.setItem('dojo_study_groups', JSON.stringify(updated));
+  const handleToggleStudyGroup = async (id: string) => {
+    try {
+      const res = await axios.patch(`${API_BASE_URL}/study-groups/${id}/toggle`);
+      setStudyGroups(prev => prev.map(g => g.id === id ? { ...res.data, id: res.data._id } : g));
+    } catch (err) { console.error('Error toggling study group:', err); }
   };
 
   const getJoinLink = (code: string) => `${window.location.origin}/join/${code}`;
@@ -864,35 +891,36 @@ const ResourceTable: React.FC = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  const handleAddSession = () => {
+  const handleAddSession = async () => {
     if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime || !sessionLink) return;
-    const newSession: Session = {
-      id: Date.now().toString(),
-      author: sessionAuthor, topic: sessionTopic,
-      date: sessionDate, time: sessionTime,
-      tag: sessionTag, meetingLink: sessionLink, platform: sessionPlatform,
-      agenda: sessionAgenda, willRecord: sessionWillRecord, recordingLink: '', aiSummary: '',
-      hostLinkedIn: sessionLinkedIn, attendeeCount: 0,
-    };
-    const updated = [...sessions, newSession];
-    setSessions(updated);
-    localStorage.setItem('dojo_sessions', JSON.stringify(updated));
-    setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
-    setSessionTime(""); setSessionTag(""); setSessionLink("");
-    setSessionPlatform('Google Meet'); setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn("");
+    try {
+      const res = await axios.post(`${API_BASE_URL}/sessions`, {
+        author: sessionAuthor, topic: sessionTopic,
+        date: sessionDate, time: sessionTime,
+        tag: sessionTag, meetingLink: sessionLink, platform: sessionPlatform,
+        agenda: sessionAgenda, willRecord: sessionWillRecord, recordingLink: '', aiSummary: '',
+        hostLinkedIn: sessionLinkedIn, attendeeCount: 0,
+      });
+      setSessions(prev => [...prev, { ...res.data, id: res.data._id }]);
+      setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
+      setSessionTime(""); setSessionTag(""); setSessionLink("");
+      setSessionPlatform('Google Meet'); setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn("");
+    } catch (err) { console.error('Error adding session:', err); }
   };
 
-  const handleDeleteSession = (id: string) => {
-    const updated = sessions.filter(s => s.id !== id);
-    setSessions(updated);
-    localStorage.setItem('dojo_sessions', JSON.stringify(updated));
+  const handleDeleteSession = async (id: string) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/sessions/${id}`);
+      setSessions(prev => prev.filter(s => s.id !== id));
+    } catch (err) { console.error('Error deleting session:', err); }
   };
 
-  const handleUpdateRecording = (id: string, recordingLink: string, aiSummary: string) => {
-    const updated = sessions.map(s => s.id === id ? { ...s, recordingLink, aiSummary } : s);
-    setSessions(updated);
-    localStorage.setItem('dojo_sessions', JSON.stringify(updated));
-    setSelectedSession(prev => prev?.id === id ? { ...prev, recordingLink, aiSummary } : prev);
+  const handleUpdateRecording = async (id: string, recordingLink: string, aiSummary: string) => {
+    try {
+      const res = await axios.patch(`${API_BASE_URL}/sessions/${id}/recording`, { recordingLink, aiSummary });
+      setSessions(prev => prev.map(s => s.id === id ? { ...res.data, id: res.data._id } : s));
+      setSelectedSession(prev => prev?.id === id ? { ...prev, recordingLink, aiSummary } : prev);
+    } catch (err) { console.error('Error updating recording:', err); }
   };
 
   const fetchAllResources = async () => {
@@ -902,46 +930,48 @@ const ResourceTable: React.FC = () => {
     } catch (error) { console.error("Error fetching all resources:", error); }
   };
 
-  const handleRegisterSession = (id: string) => {
-    const updated = sessions.map(s => s.id === id ? { ...s, attendeeCount: (s.attendeeCount || 0) + 1 } : s);
-    setSessions(updated);
-    localStorage.setItem('dojo_sessions', JSON.stringify(updated));
-    const myReg = { ...myRegisteredSessions, [id]: true };
-    setMyRegisteredSessions(myReg);
-    localStorage.setItem('dojo_my_sessions', JSON.stringify(myReg));
-    setSelectedSession(prev => prev?.id === id ? { ...prev, attendeeCount: (prev.attendeeCount || 0) + 1 } : prev);
+  const handleRegisterSession = async (id: string) => {
+    const userId = user?.id;
+    if (!userId) return;
+    try {
+      const res = await axios.patch(`${API_BASE_URL}/sessions/${id}/register`, { userId, action: 'register' });
+      setSessions(prev => prev.map(s => s.id === id ? { ...res.data, id: res.data._id } : s));
+      setMyRegisteredSessions(prev => ({ ...prev, [id]: true }));
+      setSelectedSession(prev => prev?.id === id ? { ...prev, attendeeCount: res.data.attendeeCount } : prev);
+    } catch (err) { console.error('Error registering for session:', err); }
   };
 
-  const handleUnregisterSession = (id: string) => {
-    const updated = sessions.map(s => s.id === id ? { ...s, attendeeCount: Math.max(0, (s.attendeeCount || 0) - 1) } : s);
-    setSessions(updated);
-    localStorage.setItem('dojo_sessions', JSON.stringify(updated));
-    const myReg = { ...myRegisteredSessions, [id]: false };
-    setMyRegisteredSessions(myReg);
-    localStorage.setItem('dojo_my_sessions', JSON.stringify(myReg));
-    setSelectedSession(prev => prev?.id === id ? { ...prev, attendeeCount: Math.max(0, (prev.attendeeCount || 0) - 1) } : prev);
+  const handleUnregisterSession = async (id: string) => {
+    const userId = user?.id;
+    if (!userId) return;
+    try {
+      const res = await axios.patch(`${API_BASE_URL}/sessions/${id}/register`, { userId, action: 'unregister' });
+      setSessions(prev => prev.map(s => s.id === id ? { ...res.data, id: res.data._id } : s));
+      setMyRegisteredSessions(prev => ({ ...prev, [id]: false }));
+      setSelectedSession(prev => prev?.id === id ? { ...prev, attendeeCount: res.data.attendeeCount } : prev);
+    } catch (err) { console.error('Error unregistering from session:', err); }
   };
 
   const GROUP_MEMBER_LIMIT = 15;
 
-  const handleJoinGroup = (id: string) => {
-    const group = studyGroups.find(g => g.id === id);
-    if (!group || (group.memberCount || 0) >= GROUP_MEMBER_LIMIT) return;
-    const updated = studyGroups.map(g => g.id === id ? { ...g, memberCount: (g.memberCount || 0) + 1 } : g);
-    setStudyGroups(updated);
-    localStorage.setItem('dojo_study_groups', JSON.stringify(updated));
-    const myG = { ...myJoinedGroups, [id]: true };
-    setMyJoinedGroups(myG);
-    localStorage.setItem('dojo_my_groups', JSON.stringify(myG));
+  const handleJoinGroup = async (id: string) => {
+    const userId = user?.id;
+    if (!userId) return;
+    try {
+      const res = await axios.patch(`${API_BASE_URL}/study-groups/${id}/membership`, { userId, action: 'join' });
+      setStudyGroups(prev => prev.map(g => g.id === id ? { ...res.data, id: res.data._id } : g));
+      setMyJoinedGroups(prev => ({ ...prev, [id]: true }));
+    } catch (err) { console.error('Error joining group:', err); }
   };
 
-  const handleLeaveGroup = (id: string) => {
-    const updated = studyGroups.map(g => g.id === id ? { ...g, memberCount: Math.max(0, (g.memberCount || 0) - 1) } : g);
-    setStudyGroups(updated);
-    localStorage.setItem('dojo_study_groups', JSON.stringify(updated));
-    const myG = { ...myJoinedGroups, [id]: false };
-    setMyJoinedGroups(myG);
-    localStorage.setItem('dojo_my_groups', JSON.stringify(myG));
+  const handleLeaveGroup = async (id: string) => {
+    const userId = user?.id;
+    if (!userId) return;
+    try {
+      const res = await axios.patch(`${API_BASE_URL}/study-groups/${id}/membership`, { userId, action: 'leave' });
+      setStudyGroups(prev => prev.map(g => g.id === id ? { ...res.data, id: res.data._id } : g));
+      setMyJoinedGroups(prev => ({ ...prev, [id]: false }));
+    } catch (err) { console.error('Error leaving group:', err); }
   };
 
   const handleCreateCollection = () => {

@@ -69,7 +69,163 @@ mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTop
     process.exit(1);
   });
 
-// Define schemas and models
+// ── New collections: Sessions, Study Groups, Challenge Participants ──
+
+const sessionSchema = new mongoose.Schema({
+  author: { type: String, required: true },
+  topic: { type: String, required: true },
+  date: { type: String, required: true },
+  time: { type: String, required: true },
+  tag: { type: String, default: '' },
+  meetingLink: { type: String, required: true },
+  platform: { type: String, default: 'Google Meet' },
+  agenda: { type: String, default: '' },
+  willRecord: { type: Boolean, default: false },
+  recordingLink: { type: String, default: '' },
+  aiSummary: { type: String, default: '' },
+  hostLinkedIn: { type: String, default: '' },
+  attendeeCount: { type: Number, default: 0 },
+  registeredUsers: { type: [String], default: [] },
+}, { timestamps: true });
+
+const studyGroupSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  agenda: { type: String, default: '' },
+  shortCode: { type: String, required: true, unique: true },
+  isActive: { type: Boolean, default: true },
+  memberCount: { type: Number, default: 0 },
+  scheduledAt: { type: String, default: '' },
+  members: { type: [String], default: [] },
+}, { timestamps: true });
+
+const challengeParticipantSchema = new mongoose.Schema({
+  challengeId: { type: String, required: true },
+  userId: { type: String, required: true },
+}, { timestamps: true });
+challengeParticipantSchema.index({ challengeId: 1, userId: 1 }, { unique: true });
+
+const SessionModel = mongoose.model('Session', sessionSchema);
+const StudyGroup = mongoose.model('StudyGroup', studyGroupSchema);
+const ChallengeParticipant = mongoose.model('ChallengeParticipant', challengeParticipantSchema);
+
+// ── Sessions routes ──
+app.get('/api/sessions', asyncHandler(async (req, res) => {
+  const sessions = await SessionModel.find().sort({ createdAt: -1 });
+  res.json(sessions);
+}));
+
+app.post('/api/sessions', asyncHandler(async (req, res) => {
+  const s = new SessionModel(req.body);
+  await s.save();
+  res.status(201).json(s);
+}));
+
+app.delete('/api/sessions/:id', asyncHandler(async (req, res) => {
+  const deleted = await SessionModel.findByIdAndDelete(req.params.id);
+  if (!deleted) return res.status(404).json({ error: 'Session not found' });
+  res.json({ message: 'Session deleted' });
+}));
+
+app.patch('/api/sessions/:id/recording', asyncHandler(async (req, res) => {
+  const { recordingLink, aiSummary } = req.body;
+  const updated = await SessionModel.findByIdAndUpdate(
+    req.params.id, { recordingLink, aiSummary }, { new: true }
+  );
+  if (!updated) return res.status(404).json({ error: 'Session not found' });
+  res.json(updated);
+}));
+
+app.patch('/api/sessions/:id/register', asyncHandler(async (req, res) => {
+  const { userId, action } = req.body; // action: 'register' | 'unregister'
+  const session = await SessionModel.findById(req.params.id);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const alreadyRegistered = session.registeredUsers.includes(userId);
+  if (action === 'register' && !alreadyRegistered) {
+    session.registeredUsers.push(userId);
+    session.attendeeCount = Math.max(session.attendeeCount, 0) + 1;
+  } else if (action === 'unregister' && alreadyRegistered) {
+    session.registeredUsers = session.registeredUsers.filter(u => u !== userId);
+    session.attendeeCount = Math.max(0, session.attendeeCount - 1);
+  }
+  await session.save();
+  res.json(session);
+}));
+
+// ── Study Groups routes ──
+app.get('/api/study-groups', asyncHandler(async (req, res) => {
+  const groups = await StudyGroup.find().sort({ createdAt: -1 });
+  res.json(groups);
+}));
+
+app.post('/api/study-groups', asyncHandler(async (req, res) => {
+  const g = new StudyGroup(req.body);
+  await g.save();
+  res.status(201).json(g);
+}));
+
+app.delete('/api/study-groups/:id', asyncHandler(async (req, res) => {
+  const deleted = await StudyGroup.findByIdAndDelete(req.params.id);
+  if (!deleted) return res.status(404).json({ error: 'Study group not found' });
+  res.json({ message: 'Study group deleted' });
+}));
+
+app.patch('/api/study-groups/:id/toggle', asyncHandler(async (req, res) => {
+  const group = await StudyGroup.findById(req.params.id);
+  if (!group) return res.status(404).json({ error: 'Study group not found' });
+  group.isActive = !group.isActive;
+  await group.save();
+  res.json(group);
+}));
+
+app.patch('/api/study-groups/:id/membership', asyncHandler(async (req, res) => {
+  const { userId, action } = req.body; // action: 'join' | 'leave'
+  const group = await StudyGroup.findById(req.params.id);
+  if (!group) return res.status(404).json({ error: 'Study group not found' });
+
+  const alreadyMember = group.members.includes(userId);
+  if (action === 'join' && !alreadyMember) {
+    if (group.memberCount >= 15) return res.status(400).json({ error: 'Group is full' });
+    group.members.push(userId);
+    group.memberCount += 1;
+  } else if (action === 'leave' && alreadyMember) {
+    group.members = group.members.filter(u => u !== userId);
+    group.memberCount = Math.max(0, group.memberCount - 1);
+  }
+  await group.save();
+  res.json(group);
+}));
+
+// ── Challenge Participants routes ──
+app.get('/api/challenge-participants', asyncHandler(async (req, res) => {
+  const participants = await ChallengeParticipant.find();
+  // Return counts per challengeId and optionally which ones current user joined
+  const { userId } = req.query;
+  const counts: Record<string, number> = {};
+  const joined: Record<string, boolean> = {};
+  for (const p of participants) {
+    counts[p.challengeId] = (counts[p.challengeId] || 0) + 1;
+    if (userId && p.userId === userId) joined[p.challengeId] = true;
+  }
+  res.json({ counts, joined });
+}));
+
+app.post('/api/challenge-participants', asyncHandler(async (req, res) => {
+  const { challengeId, userId } = req.body;
+  if (!challengeId || !userId) return res.status(400).json({ error: 'challengeId and userId required' });
+  // Check slot limit
+  const count = await ChallengeParticipant.countDocuments({ challengeId });
+  if (count >= 15) return res.status(400).json({ error: 'Challenge is full' });
+  try {
+    const p = await ChallengeParticipant.create({ challengeId, userId });
+    res.status(201).json(p);
+  } catch (e: any) {
+    if (e.code === 11000) return res.status(409).json({ error: 'Already joined' });
+    throw e;
+  }
+}));
+
+// ── Define schemas and models ──
 const requestSchema = new mongoose.Schema({
   userName: String,
   resourceName: String,
