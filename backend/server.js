@@ -201,8 +201,8 @@ app.get('/api/challenge-participants', asyncHandler(async (req, res) => {
   const participants = await ChallengeParticipant.find();
   // Return counts per challengeId and optionally which ones current user joined
   const { userId } = req.query;
-  const counts: Record<string, number> = {};
-  const joined: Record<string, boolean> = {};
+  const counts = {};
+  const joined = {};
   for (const p of participants) {
     counts[p.challengeId] = (counts[p.challengeId] || 0) + 1;
     if (userId && p.userId === userId) joined[p.challengeId] = true;
@@ -219,7 +219,7 @@ app.post('/api/challenge-participants', asyncHandler(async (req, res) => {
   try {
     const p = await ChallengeParticipant.create({ challengeId, userId });
     res.status(201).json(p);
-  } catch (e: any) {
+  } catch (e) {
     if (e.code === 11000) return res.status(409).json({ error: 'Already joined' });
     throw e;
   }
