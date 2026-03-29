@@ -27,6 +27,12 @@ router.post('/upload-url', async (req, res) => {
     return res.status(400).json({ error: 'Only video/audio files are allowed' });
   }
 
+  const MAX_BYTES = 500 * 1024 * 1024; // 500 MB
+  const { fileSize } = req.body;
+  if (fileSize && Number(fileSize) > MAX_BYTES) {
+    return res.status(400).json({ error: 'File exceeds 500 MB limit' });
+  }
+
   const command = new PutObjectCommand({
     Bucket: process.env.R2_BUCKET,
     Key: fileName,

@@ -919,14 +919,19 @@ const ResourceTable: React.FC = () => {
     } catch (err) { console.error('Error deleting session:', err); }
   };
 
+  const MAX_UPLOAD_MB = 500;
   const handleR2Upload = async (sessionId: string, sessionTopic: string, file: File) => {
+    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      alert(`File too large. Maximum allowed size is ${MAX_UPLOAD_MB} MB.`);
+      return;
+    }
     const slug = sessionTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const ext = file.name.split('.').pop() || 'mp4';
     const fileName = `${slug}-${Date.now()}.${ext}`;
     setUploadStatus('uploading');
     setUploadProgress(0);
     try {
-      const { data } = await axios.post<{ uploadUrl: string; publicUrl: string }>(`${API_BASE_URL}/upload-url`, { fileName, contentType: file.type });
+      const { data } = await axios.post<{ uploadUrl: string; publicUrl: string }>(`${API_BASE_URL}/upload-url`, { fileName, contentType: file.type, fileSize: file.size });
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', data.uploadUrl);
