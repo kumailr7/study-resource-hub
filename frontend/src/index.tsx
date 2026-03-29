@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ThemeProvider } from './ThemeContext';
 import { ClerkProvider } from '@clerk/clerk-react';
+import { Analytics } from '@vercel/analytics/react';
 
 const clerkPublishableKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY || process.env.VITE_CLERK_PUBLISHABLE_KEY;
 if (!clerkPublishableKey) {
@@ -20,5 +21,6 @@ root.render(
         <App />
       </ThemeProvider>
     </ClerkProvider>
+    <Analytics />
   </React.StrictMode>
 );
