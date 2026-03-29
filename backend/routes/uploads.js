@@ -17,15 +17,25 @@ const s3 = new S3Client({
 // Returns: { uploadUrl, publicUrl }
 router.post('/upload-url', async (req, res) => {
   const { fileName, contentType } = req.body;
-  if (!fileName || !contentType) {
-    return res.status(400).json({ error: 'fileName and contentType required' });
+  if (!fileName) {
+    return res.status(400).json({ error: 'fileName required' });
   }
 
-  // Only allow video/audio content types
-  const allowed = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', 'audio/mpeg', 'audio/webm'];
-  if (!allowed.includes(contentType)) {
-    return res.status(400).json({ error: 'Only video/audio files are allowed' });
+  // Allow by MIME type or by file extension (browsers report mkv inconsistently)
+  const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska',
+    'video/mkv', 'video/avi', 'video/x-msvideo', 'audio/mpeg', 'audio/webm',
+    'application/octet-stream'];
+  const allowedExts = ['mp4', 'webm', 'mov', 'mkv', 'avi', 'mp3', 'm4a'];
+  const ext = (fileName.split('.').pop() || '').toLowerCase();
+
+  const typeOk = !contentType || allowedTypes.includes(contentType);
+  const extOk = allowedExts.includes(ext);
+  if (!typeOk && !extOk) {
+    return res.status(400).json({ error: 'Only video/audio files are allowed (mp4, webm, mkv, mov, avi)' });
   }
+
+  // Use a safe content type if browser sends something odd
+  const safeContentType = allowedTypes.includes(contentType) ? contentType : 'application/octet-stream';
 
   const MAX_BYTES = 500 * 1024 * 1024; // 500 MB
   const { fileSize } = req.body;
@@ -36,7 +46,7 @@ router.post('/upload-url', async (req, res) => {
   const command = new PutObjectCommand({
     Bucket: process.env.R2_BUCKET,
     Key: fileName,
-    ContentType: contentType,
+    ContentType: safeContentType,
   });
 
   const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });

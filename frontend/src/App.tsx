@@ -2145,7 +2145,7 @@ const ResourceTable: React.FC = () => {
                                      uploadStatus === 'done' ? 'Uploaded ✓ — pick another?' :
                                      uploadStatus === 'error' ? 'Upload failed — retry' :
                                      'Choose video file (mp4 / webm)'}
-                                    <input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska"
+                                    <input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mkv,.mp4,.webm,.mov,.avi"
                                       className="hidden"
                                       disabled={uploadStatus === 'uploading'}
                                       onChange={e => {
