@@ -74,3 +74,4 @@ Thumbs.db
 
 # PEM files 
 /nginx/certs/*
+vault/
