@@ -12,6 +12,7 @@ const envalid = require('envalid');
 // Import 
 const loginRoutes = require("./routes/login"); // Adjust path as needed
 const userRoutes = require("./routes/users"); // Adjust path as needed
+const uploadRoutes = require("./routes/uploads");
 
 // Load environment variables
 config();
@@ -59,6 +60,7 @@ app.use(expressMongoSanitize());
 // Routes
 app.use("/api", loginRoutes); // Prefix login routes with `/api`
 app.use("/api", userRoutes);   // Prefix user routes with `/api`
+app.use("/api", uploadRoutes); // R2 presigned upload URLs
 
 
 // MongoDB connection

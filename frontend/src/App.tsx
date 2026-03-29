@@ -371,6 +371,8 @@ const ResourceTable: React.FC = () => {
   const [sessionWillRecord, setSessionWillRecord] = useState(false);
   const [editRecordingLink, setEditRecordingLink] = useState("");
   const [editAiSummary, setEditAiSummary] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [sessionLinkedIn, setSessionLinkedIn] = useState("");
   const [viewAllResources, setViewAllResources] = useState(false);
   const [newResourceAddedBy, setNewResourceAddedBy] = useState('');
@@ -578,6 +580,8 @@ const ResourceTable: React.FC = () => {
   useEffect(() => {
     setEditRecordingLink(selectedSession?.recordingLink || "");
     setEditAiSummary(selectedSession?.aiSummary || "");
+    setUploadStatus('idle');
+    setUploadProgress(0);
   }, [selectedSession?.id]);
 
   // Fetch resources and requests
@@ -913,6 +917,29 @@ const ResourceTable: React.FC = () => {
       await axios.delete(`${API_BASE_URL}/sessions/${id}`);
       setSessions(prev => prev.filter(s => s.id !== id));
     } catch (err) { console.error('Error deleting session:', err); }
+  };
+
+  const handleR2Upload = async (sessionId: string, sessionTopic: string, file: File) => {
+    const slug = sessionTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const ext = file.name.split('.').pop() || 'mp4';
+    const fileName = `${slug}-${Date.now()}.${ext}`;
+    setUploadStatus('uploading');
+    setUploadProgress(0);
+    try {
+      const { data } = await axios.post(`${API_BASE_URL}/upload-url`, { fileName, contentType: file.type });
+      await axios.put(data.uploadUrl, file, {
+        headers: { 'Content-Type': file.type },
+        onUploadProgress: (e) => {
+          if (e.total) setUploadProgress(Math.round((e.loaded * 100) / e.total));
+        },
+      });
+      setEditRecordingLink(data.publicUrl);
+      setUploadStatus('done');
+      setUploadProgress(100);
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setUploadStatus('error');
+    }
   };
 
   const handleUpdateRecording = async (id: string, recordingLink: string, aiSummary: string) => {
@@ -2095,8 +2122,37 @@ const ResourceTable: React.FC = () => {
                             )}
                             {isPast && (
                               <div className="space-y-3">
+                                {/* R2 file upload */}
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Upload Recording to R2</label>
+                                  <label className={`flex items-center justify-center gap-2 w-full py-3 border border-dashed cursor-pointer transition-colors text-xs font-bold uppercase tracking-widest
+                                    ${uploadStatus === 'uploading' ? 'border-secondary text-secondary cursor-not-allowed' :
+                                      uploadStatus === 'done' ? 'border-green-500 text-green-400' :
+                                      uploadStatus === 'error' ? 'border-red-500 text-red-400' :
+                                      'border-outline-variant text-slate-500 hover:border-secondary hover:text-secondary'}`}>
+                                    <Video size={13} />
+                                    {uploadStatus === 'uploading' ? `Uploading… ${uploadProgress}%` :
+                                     uploadStatus === 'done' ? 'Uploaded ✓ — pick another?' :
+                                     uploadStatus === 'error' ? 'Upload failed — retry' :
+                                     'Choose video file (mp4 / webm)'}
+                                    <input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska"
+                                      className="hidden"
+                                      disabled={uploadStatus === 'uploading'}
+                                      onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleR2Upload(selectedSession.id, selectedSession.topic, file);
+                                      }} />
+                                  </label>
+                                  {uploadStatus === 'uploading' && (
+                                    <div className="w-full bg-surface-container-high h-1">
+                                      <div className="h-1 bg-secondary transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Or paste a link manually */}
                                 <div className="space-y-1">
-                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Recording Link</label>
+                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Or paste recording URL</label>
                                   <input type="url" placeholder="https://..." value={editRecordingLink} onChange={e => setEditRecordingLink(e.target.value)}
                                     className="w-full bg-surface-container border-b border-outline-variant focus:border-secondary px-0 py-2 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
                                 </div>
@@ -2105,8 +2161,10 @@ const ResourceTable: React.FC = () => {
                                   <textarea rows={3} placeholder="Paste an AI-generated summary of the session..." value={editAiSummary} onChange={e => setEditAiSummary(e.target.value)}
                                     className="w-full bg-surface-container border-b border-outline-variant focus:border-secondary px-0 py-2 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors resize-none" />
                                 </div>
-                                <button onClick={() => handleUpdateRecording(selectedSession.id, editRecordingLink, editAiSummary)}
-                                  className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-on-secondary bg-secondary hover:opacity-90 transition-opacity">
+                                <button
+                                  disabled={!editRecordingLink || uploadStatus === 'uploading'}
+                                  onClick={() => handleUpdateRecording(selectedSession.id, editRecordingLink, editAiSummary)}
+                                  className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-on-secondary bg-secondary hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">
                                   Save Recording Info
                                 </button>
                               </div>
