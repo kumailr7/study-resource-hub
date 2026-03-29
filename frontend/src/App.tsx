@@ -596,9 +596,9 @@ const ResourceTable: React.FC = () => {
     const fetchShared = async () => {
       try {
         const [sessRes, sgRes, cpRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/sessions`),
-          axios.get(`${API_BASE_URL}/study-groups`),
-          axios.get(`${API_BASE_URL}/challenge-participants${user?.id ? `?userId=${user.id}` : ''}`),
+          axios.get<any[]>(`${API_BASE_URL}/sessions`),
+          axios.get<any[]>(`${API_BASE_URL}/study-groups`),
+          axios.get<{ counts: Record<string, number>; joined: Record<string, boolean> }>(`${API_BASE_URL}/challenge-participants${user?.id ? `?userId=${user.id}` : ''}`),
         ]);
         setSessions(sessRes.data.map((s: any) => ({ ...s, id: s._id })));
         setStudyGroups(sgRes.data.map((g: any) => ({ ...g, id: g._id })));
