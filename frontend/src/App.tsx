@@ -854,7 +854,7 @@ const ResourceTable: React.FC = () => {
     if (!sgTitle.trim()) return;
     const shortCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     try {
-      const res = await axios.post(`${API_BASE_URL}/study-groups`, {
+      const res = await axios.post<any>(`${API_BASE_URL}/study-groups`, {
         title: sgTitle.trim(),
         agenda: sgAgenda.trim(),
         shortCode,
@@ -876,7 +876,7 @@ const ResourceTable: React.FC = () => {
 
   const handleToggleStudyGroup = async (id: string) => {
     try {
-      const res = await axios.patch(`${API_BASE_URL}/study-groups/${id}/toggle`);
+      const res = await axios.patch<any>(`${API_BASE_URL}/study-groups/${id}/toggle`);
       setStudyGroups(prev => prev.map(g => g.id === id ? { ...res.data, id: res.data._id } : g));
     } catch (err) { console.error('Error toggling study group:', err); }
   };
@@ -898,7 +898,7 @@ const ResourceTable: React.FC = () => {
   const handleAddSession = async () => {
     if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime || !sessionLink) return;
     try {
-      const res = await axios.post(`${API_BASE_URL}/sessions`, {
+      const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
         author: sessionAuthor, topic: sessionTopic,
         date: sessionDate, time: sessionTime,
         tag: sessionTag, meetingLink: sessionLink, platform: sessionPlatform,
@@ -926,7 +926,7 @@ const ResourceTable: React.FC = () => {
     setUploadStatus('uploading');
     setUploadProgress(0);
     try {
-      const { data } = await axios.post(`${API_BASE_URL}/upload-url`, { fileName, contentType: file.type });
+      const { data } = await axios.post<{ uploadUrl: string; publicUrl: string }>(`${API_BASE_URL}/upload-url`, { fileName, contentType: file.type });
       await axios.put(data.uploadUrl, file, {
         headers: { 'Content-Type': file.type },
         onUploadProgress: (e) => {
@@ -944,7 +944,7 @@ const ResourceTable: React.FC = () => {
 
   const handleUpdateRecording = async (id: string, recordingLink: string, aiSummary: string) => {
     try {
-      const res = await axios.patch(`${API_BASE_URL}/sessions/${id}/recording`, { recordingLink, aiSummary });
+      const res = await axios.patch<any>(`${API_BASE_URL}/sessions/${id}/recording`, { recordingLink, aiSummary });
       setSessions(prev => prev.map(s => s.id === id ? { ...res.data, id: res.data._id } : s));
       setSelectedSession(prev => prev?.id === id ? { ...prev, recordingLink, aiSummary } : prev);
     } catch (err) { console.error('Error updating recording:', err); }
@@ -961,7 +961,7 @@ const ResourceTable: React.FC = () => {
     const userId = user?.id;
     if (!userId) return;
     try {
-      const res = await axios.patch(`${API_BASE_URL}/sessions/${id}/register`, { userId, action: 'register' });
+      const res = await axios.patch<any>(`${API_BASE_URL}/sessions/${id}/register`, { userId, action: 'register' });
       setSessions(prev => prev.map(s => s.id === id ? { ...res.data, id: res.data._id } : s));
       setMyRegisteredSessions(prev => ({ ...prev, [id]: true }));
       setSelectedSession(prev => prev?.id === id ? { ...prev, attendeeCount: res.data.attendeeCount } : prev);
@@ -972,7 +972,7 @@ const ResourceTable: React.FC = () => {
     const userId = user?.id;
     if (!userId) return;
     try {
-      const res = await axios.patch(`${API_BASE_URL}/sessions/${id}/register`, { userId, action: 'unregister' });
+      const res = await axios.patch<any>(`${API_BASE_URL}/sessions/${id}/register`, { userId, action: 'unregister' });
       setSessions(prev => prev.map(s => s.id === id ? { ...res.data, id: res.data._id } : s));
       setMyRegisteredSessions(prev => ({ ...prev, [id]: false }));
       setSelectedSession(prev => prev?.id === id ? { ...prev, attendeeCount: res.data.attendeeCount } : prev);
@@ -985,7 +985,7 @@ const ResourceTable: React.FC = () => {
     const userId = user?.id;
     if (!userId) return;
     try {
-      const res = await axios.patch(`${API_BASE_URL}/study-groups/${id}/membership`, { userId, action: 'join' });
+      const res = await axios.patch<any>(`${API_BASE_URL}/study-groups/${id}/membership`, { userId, action: 'join' });
       setStudyGroups(prev => prev.map(g => g.id === id ? { ...res.data, id: res.data._id } : g));
       setMyJoinedGroups(prev => ({ ...prev, [id]: true }));
     } catch (err) { console.error('Error joining group:', err); }
@@ -995,7 +995,7 @@ const ResourceTable: React.FC = () => {
     const userId = user?.id;
     if (!userId) return;
     try {
-      const res = await axios.patch(`${API_BASE_URL}/study-groups/${id}/membership`, { userId, action: 'leave' });
+      const res = await axios.patch<any>(`${API_BASE_URL}/study-groups/${id}/membership`, { userId, action: 'leave' });
       setStudyGroups(prev => prev.map(g => g.id === id ? { ...res.data, id: res.data._id } : g));
       setMyJoinedGroups(prev => ({ ...prev, [id]: false }));
     } catch (err) { console.error('Error leaving group:', err); }
