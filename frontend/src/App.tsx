@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
 import axios from "axios";
-import { useClerk } from '@clerk/clerk-react';
+import { useClerk, useUser } from '@clerk/clerk-react';
 import { ThemeProvider, useTheme } from "./ThemeContext";
 import logo from "./assets/logo-2.png";
 import LoginPage from "./pages/LoginPage";
@@ -319,6 +319,7 @@ const App: React.FC = () => {
 const ResourceTable: React.FC = () => {
   const { userIsAdmin } = useAuth();
   const { signOut } = useClerk();
+  const { user } = useUser();
   const { isDarkTheme, toggleTheme } = useTheme();
   const [currentSection, setCurrentSection] = useState<Section>('dashboard');
   const [resources, setResources] = useState<Resource[]>([]);
@@ -1032,7 +1033,27 @@ const ResourceTable: React.FC = () => {
             </div>
           )}
 
-          <div className="px-4 pt-6 space-y-1">
+          {/* User profile block */}
+          <div className="px-4 mx-4 mb-4 p-3 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ background: '#2a2a35' }}>
+              {user?.imageUrl
+                ? <img src={user.imageUrl} alt="avatar" className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-primary">
+                    {(user?.firstName?.[0] || user?.emailAddresses?.[0]?.emailAddress?.[0] || '?').toUpperCase()}
+                  </div>
+              }
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white truncate">
+                {user?.fullName || user?.firstName || 'User'}
+              </p>
+              <p className="text-[10px] text-slate-500 truncate">
+                {user?.primaryEmailAddress?.emailAddress || ''}
+              </p>
+            </div>
+          </div>
+
+          <div className="px-4 pt-2 space-y-1">
             <button className="w-full flex items-center gap-4 px-4 py-2 text-slate-500 hover:text-secondary hover:bg-[#1c1c24] text-sm">
               <HelpCircle size={16} /><span>Help</span>
             </button>
@@ -1064,8 +1085,13 @@ const ResourceTable: React.FC = () => {
                 <button onClick={() => toggleTheme()} className="hover:bg-surface-container-highest p-2 transition-colors">
                   {isDarkTheme ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
-                <div className="w-10 h-10 bg-surface-container-highest overflow-hidden">
-                  <img src={logo} alt="Profile" className="w-full h-full object-cover" />
+                <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ background: '#2a2a35' }}>
+                  {user?.imageUrl
+                    ? <img src={user.imageUrl} alt="avatar" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-primary">
+                        {(user?.firstName?.[0] || user?.emailAddresses?.[0]?.emailAddress?.[0] || '?').toUpperCase()}
+                      </div>
+                  }
                 </div>
               </div>
             </div>
