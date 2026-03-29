@@ -33,6 +33,7 @@ const allowedOrigins = [
   'http://studyhub.local',
   'https://studyhub.local',
   'https://hub.devops-dojo.ninja',
+  'https://study-resource-hub-bice.vercel.app',
 ];
 
 const corsOptions = {
