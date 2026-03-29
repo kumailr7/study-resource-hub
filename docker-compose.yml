@@ -8,6 +8,9 @@ services:
       - CHOKIDAR_USEPOLLING=true
     ports:
       - "3000:3000"
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
     depends_on:
       - backend
     networks:
@@ -18,7 +21,7 @@ services:
       context: ./backend
     container_name: backend_resource
     ports:
-      - "5000:5000"
+      - "5001:5000"
     env_file:
       - ./backend/.env
     networks:
@@ -29,8 +32,8 @@ services:
     restart: unless-stopped
     image: nginx:alpine
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
       - ./nginx/certs:/etc/nginx/certs
@@ -40,19 +43,6 @@ services:
     networks:
       - app-network
 
-######### You Can use self-hosted MongoDB by uncommenting the following lines #########
-######### Using a cloud-hosted MongoDB Atlas is recommended for production #########
-  # mongo:
-  #   image: mongo
-  #   ports:
-  #     - "27017:27017"
-  #   volumes:
-  #     - mongo-data:/data/db
-
 networks:
   app-network:
     driver: bridge
-
-
-volumes:
- mongo-data:

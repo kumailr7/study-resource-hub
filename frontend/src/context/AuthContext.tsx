@@ -1,45 +1,35 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useContext } from "react";
+import { useUser } from "@clerk/clerk-react";
 
 interface AuthContextType {
   isAuthenticated: boolean;
   userIsAdmin: boolean;
-  login: (username: string, password: string) => void;
-  logout: () => void;
+  isLoaded: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  isAuthenticated: false,
+  userIsAdmin: false,
+  isLoaded: false,
+});
 
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userIsAdmin, setUserIsAdmin] = useState(false);
-
-  const login = (username: string, password: string) => {
-    setIsAuthenticated(true);
-    setUserIsAdmin(true);
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-    setUserIsAdmin(false);
-  };
+  const { user, isLoaded, isSignedIn } = useUser();
+  const userIsAdmin = (user?.publicMetadata as { role?: string })?.role === 'admin';
 
   return (
-    <AuthContext.Provider
-      value={{ isAuthenticated, userIsAdmin, login, logout }}
-    >
+    <AuthContext.Provider value={{
+      isAuthenticated: !!isSignedIn,
+      userIsAdmin,
+      isLoaded,
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

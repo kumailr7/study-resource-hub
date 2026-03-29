@@ -25,6 +25,7 @@
     "@radix-ui/react-toggle": "^1.0.3",
     "@radix-ui/react-toggle-group": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
+    "@clerk/clerk-react": "^5.0.0",
     "@react-oauth/google": "^0.12.1",
     "axios": "^1.12.0",
     "class-variance-authority": "^0.7.1",
@@ -40,7 +41,8 @@
     "recharts": "^3.0.0",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
-    "vaul": "^0.9.0"
+    "vaul": "^0.9.0",
+    "three": "^0.169.0"
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
@@ -48,7 +50,8 @@
     "@types/react": "^18.3.26",
     "@types/react-dom": "^18.3.7",
     "@types/react-router-dom": "^5.3.3",
-    "typescript": "^4.9.5"
+    "typescript": "^4.9.5",
+    "@types/three": "^0.169.0"
   },
   "main": "/index.tsx",
   "scripts": {

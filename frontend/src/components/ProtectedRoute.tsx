@@ -1,16 +1,28 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 
 interface ProtectedRouteProps {
   component: React.FC;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ component: Component }) => {
-  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  const { isLoaded, isSignedIn, user } = useUser();
 
-  console.log('Is Admin:', isAdmin);
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center">
+        <div className="text-slate-500 text-sm animate-pulse">Loading...</div>
+      </div>
+    );
+  }
 
-  return isAdmin ? <Component /> : <Navigate to="/login" />;
+  if (!isSignedIn) return <Navigate to="/login" replace />;
+
+  const isAdmin = (user?.publicMetadata as { role?: string })?.role === 'admin';
+  if (!isAdmin) return <Navigate to="/user" replace />;
+
+  return <Component />;
 };
 
 export default ProtectedRoute;

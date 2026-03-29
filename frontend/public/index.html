@@ -3,9 +3,74 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study Resources Hub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Devops Dojo Hub</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
     <link rel="icon" type="image/png" href="/favicon.ico" />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "outline": "#76747b",
+              "on-secondary-container": "#f0dcff",
+              "error-container": "#a70138",
+              "surface-variant": "#25252c",
+              "error": "#ff6e84",
+              "surface-container-high": "#1f1f26",
+              "primary-fixed": "#ff6bb9",
+              "secondary": "#bf81ff",
+              "primary-dim": "#ff65b7",
+              "on-secondary": "#32005c",
+              "secondary-fixed": "#e4c6ff",
+              "surface-container": "#19191f",
+              "surface-container-low": "#131318",
+              "on-surface-variant": "#acaab1",
+              "primary-container": "#ff6bb9",
+              "surface-tint": "#ff86c2",
+              "on-primary-container": "#4a002e",
+              "inverse-surface": "#fbf8ff",
+              "on-error": "#490013",
+              "secondary-fixed-dim": "#dab4ff",
+              "on-tertiary-fixed": "#270048",
+              "primary": "#ff86c2",
+              "on-background": "#f8f5fd",
+              "surface-bright": "#2c2b33",
+              "surface-dim": "#0e0e13",
+              "on-secondary-fixed": "#4e008a",
+              "secondary-container": "#7701d0",
+              "tertiary-fixed": "#ce9aff",
+              "surface": "#0e0e13",
+              "inverse-primary": "#b70079",
+              "surface-container-lowest": "#000000",
+              "tertiary": "#cc97ff",
+              "tertiary-container": "#c285fb",
+              "background": "#0e0e13",
+              "outline-variant": "#48474d",
+              "on-primary": "#5f003d",
+              "on-surface": "#f8f5fd",
+              "surface-container-highest": "#25252c"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk", "sans-serif"],
+              "body": ["Manrope", "sans-serif"],
+              "label": ["Manrope", "sans-serif"]
+            },
+            borderRadius: { "DEFAULT": "0px", "sm": "0px", "md": "0px", "lg": "0px", "xl": "0px", "2xl": "0px", "3xl": "0px", "full": "9999px" }
+          }
+        }
+      }
+    </script>
+    <style>
+      .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: #0e0e13; }
+      ::-webkit-scrollbar-thumb { background: #25252c; border-radius: 0px; }
+      .glass-panel { background: rgba(37,37,44,0.4); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+      .neon-glow-primary:hover { box-shadow: 0 0 20px rgba(255,134,194,0.3); }
+    </style>
   </head>
   <body>
     <div id="root"></div>

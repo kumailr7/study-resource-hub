@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudyLuminous - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error-dim": "#d73357",
+                        "outline": "#76747b",
+                        "on-secondary-container": "#f0dcff",
+                        "error-container": "#a70138",
+                        "surface-variant": "#25252c",
+                        "error": "#ff6e84",
+                        "on-tertiary-container": "#360061",
+                        "surface-container-high": "#1f1f26",
+                        "primary-fixed": "#ff6bb9",
+                        "secondary": "#bf81ff",
+                        "on-secondary-fixed-variant": "#7500cc",
+                        "primary-dim": "#ff65b7",
+                        "on-primary-fixed": "#000000",
+                        "on-error-container": "#ffb2b9",
+                        "on-secondary": "#32005c",
+                        "inverse-on-surface": "#55545a",
+                        "secondary-fixed": "#e4c6ff",
+                        "surface-container": "#19191f",
+                        "surface-container-low": "#131318",
+                        "on-primary-fixed-variant": "#5b003a",
+                        "on-surface-variant": "#acaab1",
+                        "primary-container": "#ff6bb9",
+                        "surface-tint": "#ff86c2",
+                        "on-primary-container": "#4a002e",
+                        "inverse-surface": "#fbf8ff",
+                        "on-error": "#490013",
+                        "secondary-fixed-dim": "#dab4ff",
+                        "tertiary-fixed-dim": "#c588fe",
+                        "on-tertiary-fixed": "#270048",
+                        "primary": "#ff86c2",
+                        "tertiary-dim": "#bf83f8",
+                        "on-background": "#f8f5fd",
+                        "surface-bright": "#2c2b33",
+                        "surface-dim": "#0e0e13",
+                        "on-secondary-fixed": "#4e008a",
+                        "on-tertiary": "#47007b",
+                        "secondary-container": "#7701d0",
+                        "tertiary-fixed": "#ce9aff",
+                        "surface": "#0e0e13",
+                        "inverse-primary": "#b70079",
+                        "secondary-dim": "#9c42f4",
+                        "surface-container-lowest": "#000000",
+                        "tertiary": "#cc97ff",
+                        "tertiary-container": "#c285fb",
+                        "background": "#0e0e13",
+                        "on-tertiary-fixed-variant": "#54118a",
+                        "outline-variant": "#48474d",
+                        "primary-fixed-dim": "#fe4bb1",
+                        "on-primary": "#5f003d",
+                        "on-surface": "#f8f5fd",
+                        "surface-container-highest": "#25252c"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Manrope"],
+                        "label": ["Manrope"]
+                    },
+                    borderRadius: { "DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0e0e13; }
+        ::-webkit-scrollbar-thumb { background: #25252c; border-radius: 0px; }
+        .glass-panel {
+            background: rgba(37, 37, 44, 0.4);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+        .neon-glow-primary:hover {
+            box-shadow: 0 0 20px rgba(255, 134, 194, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-[#131318] flex flex-col py-8 z-50">
+<div class="px-8 mb-12">
+<span class="text-xl font-bold text-[#ff86c2] uppercase tracking-widest font-headline">Luminous</span>
+<p class="text-[10px] text-slate-500 tracking-[0.2em] mt-1 uppercase">Study Monolith</p>
+</div>
+<nav class="flex-1 px-4 space-y-2">
+<!-- Active State: Dashboard -->
+<a class="flex items-center gap-4 px-4 py-3 bg-[#25252c] text-[#ff86c2] font-bold transition-all duration-300 ease-in-out group" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">grid_view</span>
+<span class="font-['Manrope'] text-sm font-medium tracking-wide">Dashboard</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-slate-500 hover:text-[#bf81ff] hover:bg-[#1c1c24] transition-all duration-300 ease-in-out group" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-['Manrope'] text-sm font-medium tracking-wide">Library</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-slate-500 hover:text-[#bf81ff] hover:bg-[#1c1c24] transition-all duration-300 ease-in-out group" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-['Manrope'] text-sm font-medium tracking-wide">Schedule</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-slate-500 hover:text-[#bf81ff] hover:bg-[#1c1c24] transition-all duration-300 ease-in-out group" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-['Manrope'] text-sm font-medium tracking-wide">Analytics</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-slate-500 hover:text-[#bf81ff] hover:bg-[#1c1c24] transition-all duration-300 ease-in-out group" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-['Manrope'] text-sm font-medium tracking-wide">Resources</span>
+</a>
+</nav>
+<div class="px-6 mb-8">
+<button class="w-full bg-secondary text-on-secondary py-3 text-xs font-extrabold uppercase tracking-widest hover:opacity-90 transition-opacity">
+                Upgrade to Pro
+            </button>
+</div>
+<div class="px-4 pt-6 space-y-1">
+<a class="flex items-center gap-4 px-4 py-2 text-slate-500 hover:text-[#bf81ff] hover:bg-[#1c1c24] text-sm" href="#">
+<span class="material-symbols-outlined text-lg">help_outline</span>
+<span>Help</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-2 text-slate-500 hover:text-[#bf81ff] hover:bg-[#1c1c24] text-sm" href="#">
+<span class="material-symbols-outlined text-lg">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- Top Bar -->
+<header class="flex justify-between items-center w-full px-12 h-20 bg-[#131318] sticky top-0 z-40">
+<h1 class="text-2xl font-black tracking-tighter text-[#ff86c2] font-headline">StudyLuminous</h1>
+<div class="flex items-center gap-8">
+<div class="relative hidden lg:block">
+<input class="bg-surface-container-low border-none focus:ring-1 focus:ring-primary w-64 text-sm px-4 py-2 text-on-surface" placeholder="Search resources..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-2 text-slate-500 text-xl">search</span>
+</div>
+<div class="flex items-center gap-6 text-slate-400">
+<button class="hover:bg-[#25252c] p-2 transition-colors duration-200"><span class="material-symbols-outlined">notifications</span></button>
+<button class="hover:bg-[#25252c] p-2 transition-colors duration-200"><span class="material-symbols-outlined">settings</span></button>
+<div class="w-10 h-10 bg-surface-container-highest overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="portrait of a focused student with a cinematic neon purple backlight and dark tech background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB--akEZdTKikIproenYxVDoJs78NXipzxlT_eMAqjlFSNnU4JIx46ujmNf3ueHboNOLsagN-MfwS7r-nHntl_C8JtkrTPulhkmchXbVnpE-UoHkGm5CoYGcp6ybAVgF5qGKozGuFhkxrpodK7kzRcsZWv0viGAjDgLshZteoifsHmdH1TB2n5rpPVQ6VB6vucGEp7bsBfV5Ee2nyXvfqAZ0xcOBv-I85SUlBAfnWH7sNlzWuEwnMBGPRWe77-m5-GBmArAjsRgjnAA"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="p-12 space-y-12">
+<!-- Hero Stats: Bento Grid Style -->
+<section class="grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-8 bg-surface-container-low p-8 relative overflow-hidden group">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -mr-32 -mt-32 transition-all duration-700 group-hover:bg-primary/20"></div>
+<div class="absolute bottom-0 left-0 w-48 h-48 bg-secondary/5 blur-[80px] -ml-24 -mb-24"></div>
+<div class="relative z-10">
+<span class="text-[10px] font-bold text-primary uppercase tracking-[0.3em] mb-4 block">Current Status</span>
+<h2 class="text-4xl xl:text-5xl 2xl:text-6xl font-black font-headline text-on-surface mb-6 leading-none tracking-tight" style="letter-spacing: -0.02em;">Resource Master <span class="text-outline-variant">/</span> Lv. 24</h2>
+<div class="flex items-end gap-12">
+<div>
+<p class="text-sm text-on-surface-variant mb-1">Knowledge Coverage</p>
+<p class="text-3xl font-bold font-headline text-secondary">88.4%</p>
+</div>
+<div class="flex-1 h-2 bg-surface-container-highest mb-3">
+<div class="h-full bg-gradient-to-r from-primary to-secondary w-[88.4%] shadow-[0_0_15px_rgba(255,134,194,0.4)]"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 grid grid-rows-2 gap-6">
+<div class="bg-surface-container-high p-6 flex flex-col justify-between border-l-4 border-primary">
+<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Requests</span>
+<div class="flex justify-between items-baseline">
+<span class="text-4xl font-black font-headline text-on-surface">12</span>
+<span class="text-primary text-xs font-bold">+2 today</span>
+</div>
+</div>
+<div class="bg-surface-container-high p-6 flex flex-col justify-between border-l-4 border-secondary">
+<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Available Materials</span>
+<div class="flex justify-between items-baseline">
+<span class="text-4xl font-black font-headline text-on-surface">458</span>
+<span class="text-secondary text-xs font-bold">Updated 5m ago</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Layout: Form + Table -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Form: New Resource -->
+<section class="col-span-12 xl:col-span-4 space-y-6">
+<div class="bg-surface-container p-8">
+<h3 class="text-xl font-bold font-headline text-on-surface mb-8 flex items-center gap-3" style="letter-spacing: -0.01em;">
+<span class="material-symbols-outlined text-primary">add_box</span>
+                            Contribute Resource
+                        </h3>
+<form class="space-y-6">
+<div class="space-y-1">
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Resource Name</label>
+<input class="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-3 text-sm text-on-surface placeholder:text-slate-600" placeholder="e.g. Advanced Quantum Mechanics" type="text"/>
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Category</label>
+<select class="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-3 text-sm text-on-surface">
+<option>Theoretical Physics</option>
+<option>Mathematics</option>
+<option>Computer Science</option>
+<option>Biology</option>
+</select>
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Access Link</label>
+<input class="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-3 text-sm text-on-surface placeholder:text-slate-600" placeholder="https://drive.google.com/..." type="url"/>
+</div>
+<button class="w-full bg-primary text-on-primary py-4 text-xs font-black uppercase tracking-[0.2em] neon-glow-primary transition-all" type="submit">
+                                Upload Resource
+                            </button>
+</form>
+</div>
+<!-- Visual Accent Card -->
+<div class="relative h-48 bg-surface-container-lowest overflow-hidden">
+<img alt="Decorative Gradient" class="w-full h-full object-cover opacity-60" data-alt="vibrant neon purple and magenta smoke flowing against a pitch black background with fine cinematic grain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDd_whdhmu7S4hYiAJQcevCdN24nYVbGnWdme2CSXlzLN1K_NJ5Ycn3ipaVyiAgrsOmaDC04byb1rOp21trvEaEMtP0zTcPAGzA1kvNTBfNSTyxjFWYGSVBhDElSyQdOz0bYrbfSQnSM4_VhDfJD5EHEbCdrtwjmOV39JVoqf71Ck12D6QcgzQ3r18RzovexCr922XxqOFYnwaJpPYpMiRk-EjBz8uIOewS1vzknyVKPZuB-b4V0_Jsxv_FHOYHzMGBCSGe4X2xq27C"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent"></div>
+<div class="absolute bottom-6 left-6">
+<p class="text-xs font-bold text-secondary uppercase tracking-widest mb-1">Weekly Challenge</p>
+<p class="text-lg font-headline font-bold text-on-surface">The Physics Sprint</p>
+</div>
+</div>
+</section>
+<!-- Tables: Available & Requested Resources -->
+<section class="col-span-12 xl:col-span-8 space-y-12">
+<!-- Available Resources Table -->
+<div>
+<div class="flex justify-between items-end mb-6">
+<div>
+<h3 class="text-2xl font-black font-headline text-on-surface">Available Resources</h3>
+<p class="text-sm text-slate-500">Recently verified materials</p>
+</div>
+<button class="text-[10px] font-bold text-primary uppercase tracking-[0.2em] hover:underline underline-offset-8">View All</button>
+</div>
+<div class="overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-high">
+<tr>
+<th class="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Resource</th>
+<th class="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</th>
+<th class="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Uploader</th>
+<th class="py-4 px-6 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="bg-surface-container-low hover:bg-[#1c1c24] transition-colors group">
+<td class="py-5 px-6">
+<p class="text-sm font-bold text-on-surface">Calculus III Summary</p>
+<p class="text-xs text-slate-500">PDF Document • 4.2MB</p>
+</td>
+<td class="py-5 px-6">
+<span class="px-3 py-1 bg-secondary-container/20 text-secondary text-[10px] font-bold uppercase">Mathematics</span>
+</td>
+<td class="py-5 px-6">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 bg-surface-container-highest"></div>
+<span class="text-xs text-on-surface-variant">Alex Rivera</span>
+</div>
+</td>
+<td class="py-5 px-6 text-right">
+<button class="material-symbols-outlined text-slate-500 hover:text-primary transition-colors">download</button>
+</td>
+</tr>
+<tr class="hover:bg-[#1c1c24] transition-colors group">
+<td class="py-5 px-6">
+<p class="text-sm font-bold text-on-surface">Machine Learning Ethics</p>
+<p class="text-xs text-slate-500">Slide Deck • 12.8MB</p>
+</td>
+<td class="py-5 px-6">
+<span class="px-3 py-1 bg-secondary-container/20 text-secondary text-[10px] font-bold uppercase">Computer Science</span>
+</td>
+<td class="py-5 px-6">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 bg-surface-container-highest"></div>
+<span class="text-xs text-on-surface-variant">Sarah Chen</span>
+</div>
+</td>
+<td class="py-5 px-6 text-right">
+<button class="material-symbols-outlined text-slate-500 hover:text-primary transition-colors">download</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Requested Resources -->
+<div>
+<div class="flex justify-between items-end mb-6">
+<div>
+<h3 class="text-2xl font-black font-headline text-on-surface">Requested Resources</h3>
+<p class="text-sm text-slate-500">Materials sought by the community</p>
+</div>
+<button class="text-[10px] font-bold text-primary uppercase tracking-[0.2em] hover:underline underline-offset-8">Request New</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-surface-container-high p-6 flex items-start justify-between group">
+<div>
+<span class="text-[10px] font-bold text-primary uppercase tracking-widest mb-2 block">Physics</span>
+<h4 class="text-sm font-bold text-on-surface">Advanced Thermodynamics Notes</h4>
+<p class="text-xs text-slate-500 mt-1">Requested by 4 users</p>
+</div>
+<button class="bg-surface-container-highest p-2 text-primary hover:bg-primary hover:text-on-primary transition-all">
+<span class="material-symbols-outlined text-lg">volunteer_activism</span>
+</button>
+</div>
+<div class="bg-surface-container-high p-6 flex items-start justify-between group">
+<div>
+<span class="text-[10px] font-bold text-primary uppercase tracking-widest mb-2 block">Biology</span>
+<h4 class="text-sm font-bold text-on-surface">Molecular Genetics Workbook</h4>
+<p class="text-xs text-slate-500 mt-1">Requested by 9 users</p>
+</div>
+<button class="bg-surface-container-highest p-2 text-primary hover:bg-primary hover:text-on-primary transition-all">
+<span class="material-symbols-outlined text-lg">volunteer_activism</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- FAB Action (Contextual to Dashboard) -->
+<button class="fixed bottom-12 right-12 w-16 h-16 bg-primary text-on-primary flex items-center justify-center shadow-[0_0_40px_rgba(255,134,194,0.4)] hover:shadow-[0_0_60px_rgba(255,134,194,0.6)] hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</body></html>

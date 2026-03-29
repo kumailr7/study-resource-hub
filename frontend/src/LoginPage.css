@@ -1,144 +1,205 @@
 /* LoginPage.css */
+:root {
+  --background: #0e0e13;
+  --surface-lowest: #000000;
+  --surface-dim: #0e0e13;
+  --surface: #131318;
+  --surface-high: #25252c;
+  --primary: #ff86c2;
+  --secondary: #bf81ff;
+  --on-surface: #f8f5fd;
+  --on-surface-variant: #acaab1;
+  --outline-variant: rgba(72, 71, 77, 0.5);
+  --error: #ff6e84;
+}
+
+* {
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
 body {
   margin: 0;
-  font-family: 'Arial', sans-serif;
+  font-family: 'Manrope', sans-serif;
+  background-color: var(--background);
+  color: var(--on-surface);
 }
 
 .login-container {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.quote-container,
+.login-background {
+  flex: 1;
+  min-width: 0;
 }
 
 .quote-container {
-  flex: 1;
-  background-image: url('./assets/login-unsplash.jpg'); /* Add your image path here */
+  display: none;
+  position: relative;
+  background-image: linear-gradient(rgba(14,14,19,0.7), rgba(14,14,19,0.7)), url('./assets/login-unsplash.jpg');
   background-size: cover;
   background-position: center;
-  padding: 40px;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  position: relative;
+  color: var(--on-surface);
+  padding: 4rem;
 }
 
-/* Dark overlay for better text readability */
-.quote-container {
-  flex: 1; /* Allow the quote to take up space */
-  padding: 40px; /* Add padding around the quote */
-  color: white; /* Adjust text color for visibility */
+.quote-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(145deg, rgba(14,14,19,0.45), rgba(255, 134, 194,0.10));
+  z-index: 0;
+}
+
+.quote-content {
   position: relative;
+  z-index: 1;
+  max-width: 520px;
+}
+
+.quote-tag {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.85rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
 }
 
 .quote-title {
-  font-size: 32px; /* Increase font size */
-  font-weight: bold;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 3.8rem;
+  line-height: 1.03;
+  margin: 0;
+  color: #fff;
 }
 
 .quote-description {
-  font-size: 20px; /* Increase font size for better visibility */
-  line-height: 1.6; /* Improve line spacing */
-  color: white; /* Set text color to white */
-  font-style: italic; /* Make it italic to resemble a quote */
-  max-width: 600px; /* Limit width for better readability */
-  margin-top: 10px; /* Add space above the description */
+  margin-top: 1.25rem;
+  color: var(--on-surface-variant);
+  font-size: 1.25rem;
+  font-style: italic;
 }
 
 .login-background {
-  flex: 1;
-  background: white;
+  background: var(--background);
   display: flex;
-  justify-content: center;
   align-items: center;
-  width: 50%;
+  justify-content: center;
+  padding: 2.5rem;
 }
 
-.login-content {
-  width: 400px;
-  padding: 20px;
-  text-align: center;
-}
-
-.quote-title {
-  font-size: 32px;
-  font-weight: bold;
-  margin-bottom: 20px;
-}
-
-.quote-description {
-  font-size: 18px;
-  line-height: 1.6;
-  max-width: 600px;
+.login-card {
+  width: min(480px, 100%);
+  background: linear-gradient(180deg, var(--surface-high), #1a1a24);
+  box-shadow: 0 40px 70px rgba(0, 0, 0, 0.35);
+  padding: 2.5rem;
+  border: 1px solid rgba(255, 134, 194, 0.12);
 }
 
 .logo {
-  width: 300px;
-  margin: 0 auto 20px;
+  width: 160px;
+  margin-bottom: 1.25rem;
 }
 
-h1 {
-  font-size: 24px;
-  margin-bottom: 10px;
+.welcome-title {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2.7rem;
+  line-height: 1.05;
+  color: #fff;
 }
 
-p {
-  margin-bottom: 20px;
-  color: #555;
+.welcome-description {
+  margin-top: 0.5rem;
+  color: var(--on-surface-variant);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.login-form {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.9rem;
 }
 
 .input-field {
+  background: var(--surface);
+  border: 0 solid transparent;
+  border-bottom: 2px solid var(--outline-variant);
+  color: var(--on-surface);
+  padding: 0.95rem 0.85rem;
   width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-sizing: border-box;
+  font-size: 1rem;
+}
+
+.input-field:focus {
+  outline: none;
+  border-bottom-color: var(--primary);
+  box-shadow: 0 0 18px rgba(255, 134, 194, 0.22);
+}
+
+.login-button {
+  background: linear-gradient(120deg, var(--primary), var(--secondary));
+  border: none;
+  color: var(--on-surface);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.95rem;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.login-button:hover,
+.login-button:focus-visible {
+  box-shadow: 0 0 28px rgba(255, 134, 194, 0.34);
+  transform: translateY(-1px);
 }
 
 .remember-me {
   display: flex;
   align-items: center;
-  margin: 15px 0;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
 }
 
-.remember-label {
-  margin-left: 8px;
-  color: #666;
-}
-
-.login-button {
-  width: 100%;
-  padding: 12px;
-  background-color: #2575fc;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  margin-top: 10px;
+.error-message,
+.success-message {
+  border-radius: 0;
+  background: rgba(255, 105, 149, 0.14);
+  color: #ffd4eb;
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
 }
 
 .signup-link {
-  margin-top: 20px;
-  color: #666;
+  color: var(--on-surface-variant);
+  margin-top: 1rem;
+  font-size: 0.9rem;
 }
 
 .signup-link a {
-  color: #2575fc;
-  text-decoration: none;
-  font-weight: bold;
+  color: var(--primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
-.welcome-title {
-  font-family: 'Sans-serif'; /* Change font to sans-serif */
-  font-weight: bold; /* Make it bold */
-  font-size: 24px; /* Adjust size as needed */
-  margin-bottom: 10px;
-}
-
-.welcome-description {
-  font-family: 'Georgia', serif; /* Change to an elegant font */
-  font-size: 18px; /* Adjust size as needed */
-  color: #555; /* Adjust color as needed */
-  margin-bottom: 20px;
+@media (min-width: 1024px) {
+  .quote-container {
+    display: block;
+  }
+  .login-background {
+    flex: 1;
+  }
 }

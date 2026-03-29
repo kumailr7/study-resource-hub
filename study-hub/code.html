@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>STUDY_LAB - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error-dim": "#d73357",
+              "outline": "#76747b",
+              "on-secondary-container": "#f0dcff",
+              "error-container": "#a70138",
+              "surface-variant": "#25252c",
+              "error": "#ff6e84",
+              "surface-container-high": "#1f1f26",
+              "primary-fixed": "#ff6bb9",
+              "on-tertiary-container": "#360061",
+              "secondary": "#bf81ff",
+              "on-secondary-fixed-variant": "#7500cc",
+              "primary-dim": "#ff65b7",
+              "on-primary-fixed": "#000000",
+              "on-error-container": "#ffb2b9",
+              "on-secondary": "#32005c",
+              "inverse-on-surface": "#55545a",
+              "secondary-fixed": "#e4c6ff",
+              "surface-container": "#19191f",
+              "surface-container-low": "#131318",
+              "on-surface-variant": "#acaab1",
+              "on-primary-fixed-variant": "#5b003a",
+              "primary-container": "#ff6bb9",
+              "surface-tint": "#ff86c2",
+              "on-primary-container": "#4a002e",
+              "inverse-surface": "#fbf8ff",
+              "on-error": "#490013",
+              "secondary-fixed-dim": "#dab4ff",
+              "tertiary-fixed-dim": "#c588fe",
+              "on-tertiary-fixed": "#270048",
+              "primary": "#ff86c2",
+              "tertiary-dim": "#bf83f8",
+              "on-background": "#f8f5fd",
+              "surface-bright": "#2c2b33",
+              "surface-dim": "#0e0e13",
+              "on-secondary-fixed": "#4e008a",
+              "on-tertiary": "#47007b",
+              "secondary-container": "#7701d0",
+              "tertiary-fixed": "#ce9aff",
+              "surface": "#0e0e13",
+              "inverse-primary": "#b70079",
+              "secondary-dim": "#9c42f4",
+              "tertiary-container": "#c285fb",
+              "tertiary": "#cc97ff",
+              "surface-container-lowest": "#000000",
+              "on-tertiary-fixed-variant": "#54118a",
+              "background": "#0e0e13",
+              "primary-fixed-dim": "#fe4bb1",
+              "outline-variant": "#48474d",
+              "on-primary": "#5f003d",
+              "on-surface": "#f8f5fd",
+              "surface-container-highest": "#25252c"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "0rem", "lg": "0rem", "xl": "0rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .font-headline { font-family: 'Space Grotesk', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom neon glow for active states */
+        .neon-glow:hover {
+            box-shadow: 0 0 20px rgba(255, 134, 194, 0.4);
+        }
+        /* Glass effect */
+        .glass-overlay {
+            background: rgba(14, 14, 19, 0.7);
+            backdrop-filter: blur(40px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background selection:bg-primary selection:text-on-primary">
+<main class="flex min-h-screen">
+<!-- Visual Column -->
+<section class="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-surface-container-lowest">
+<!-- Background Image with detailed prompt -->
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover opacity-60" data-alt="abstract architectural 3D render with sharp geometric slabs glowing in neon magenta and deep violet light against an obsidian background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBL_PGs1zoCB75HQtA4T4HD7lpEo6kgqv1nLggNaMB0gXXeC9abi3aeYIJCzPo4gxo8pa1u0-AR-HkarfFtZZah-FA_8hRRfgbp4iCeHkou2oQCpSNkazlr6AxdI6o5idn-qnVgtM4qn3n_48fOcSnsOz3Wr7jHXpMwShurZoIyHZYbyrTRrgBiWNHTIyDnEwWyynBUMtbuik88z4pJm0CoEUSAZkLo_WKrvmCWTszTLFUK17_3glVqBITJZBRUgUNnPljoPC_Hjg5J"/>
+<!-- Neon Light Source Overlay -->
+<div class="absolute inset-0 bg-gradient-to-tr from-background via-transparent to-primary/20"></div>
+</div>
+<!-- Content Overlay -->
+<div class="relative z-10 flex flex-col justify-between p-24 w-full">
+<div>
+<span class="text-primary font-headline font-bold text-2xl tracking-tighter uppercase">STUDY_LAB</span>
+</div>
+<div class="max-w-xl">
+<h1 class="text-on-surface font-headline font-bold text-7xl leading-[0.9] tracking-tighter mb-8">
+                        Master Your<br/><span class="text-secondary">Knowledge.</span>
+</h1>
+<p class="text-on-surface-variant text-xl font-light leading-relaxed max-w-md">
+                        The luminous monolith of modern learning. Architectural precision meets cognitive acceleration.
+                    </p>
+</div>
+<div class="flex items-center gap-4">
+<div class="h-[2px] w-12 bg-primary"></div>
+<span class="text-primary text-xs font-headline uppercase tracking-[0.2em]">Established 2024</span>
+</div>
+</div>
+</section>
+<!-- Form Column -->
+<section class="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 md:px-12 lg:px-24 bg-background">
+<div class="w-full max-w-md space-y-12">
+<!-- Branding Mobile Only -->
+<div class="lg:hidden mb-12">
+<span class="text-primary font-headline font-bold text-2xl tracking-tighter uppercase">STUDY_LAB</span>
+</div>
+<!-- Header -->
+<header class="space-y-4">
+<h2 class="text-on-surface font-headline font-bold text-5xl tracking-tighter">Sign In</h2>
+<p class="text-on-surface-variant text-sm font-medium">
+                        Enter your credentials to access your premium workspace.
+                    </p>
+</header>
+<!-- Form -->
+<form class="space-y-8">
+<!-- Email Field -->
+<div class="space-y-2 group">
+<label class="text-xs font-headline uppercase tracking-widest text-on-surface-variant group-focus-within:text-primary transition-colors" for="email">Email Address</label>
+<input class="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-primary focus:ring-0 text-on-surface px-0 py-4 transition-all duration-300 placeholder:text-outline-variant" id="email" placeholder="name@studylab.ai" type="email"/>
+</div>
+<!-- Password Field -->
+<div class="space-y-2 group">
+<div class="flex justify-between items-center">
+<label class="text-xs font-headline uppercase tracking-widest text-on-surface-variant group-focus-within:text-primary transition-colors" for="password">Password</label>
+<a class="text-[10px] font-headline uppercase text-secondary hover:text-primary transition-colors" href="#">Forgot Access?</a>
+</div>
+<input class="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-primary focus:ring-0 text-on-surface px-0 py-4 transition-all duration-300 placeholder:text-outline-variant" id="password" placeholder="••••••••" type="password"/>
+</div>
+<!-- Action Buttons -->
+<div class="space-y-4 pt-4">
+<button class="w-full bg-primary text-on-primary font-headline font-bold text-sm uppercase tracking-widest py-5 transition-all duration-300 neon-glow active:scale-[0.98]" type="submit">
+                            Sign In
+                        </button>
+<div class="relative flex items-center justify-center py-4">
+<div class="absolute inset-0 flex items-center"><div class="w-full border-t border-outline-variant/30"></div></div>
+<span class="relative bg-background px-4 text-[10px] font-headline uppercase text-on-surface-variant tracking-[0.2em]">OR CONTINUE WITH</span>
+</div>
+<button class="w-full bg-surface-container-highest text-on-surface font-headline font-bold text-sm uppercase tracking-widest py-5 flex items-center justify-center gap-3 transition-all duration-300 hover:bg-surface-bright border border-outline-variant/20" type="button">
+<svg class="w-5 h-5" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="currentColor"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="currentColor"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="currentColor"></path>
+</svg>
+                            Google
+                        </button>
+</div>
+</form>
+<!-- Footer Link -->
+<footer class="text-center pt-8">
+<p class="text-on-surface-variant text-xs">
+                        Don't have an account yet? 
+                        <a class="text-primary font-bold uppercase tracking-wider ml-1 hover:underline" href="#">Register</a>
+</p>
+</footer>
+</div>
+</section>
+</main>
+<!-- Structural Decoration: Neon Beam -->
+<div class="fixed top-0 left-1/2 -translate-x-1/2 w-[1px] h-32 bg-gradient-to-b from-primary to-transparent opacity-40"></div>
+<div class="fixed bottom-0 right-8 w-1 h-32 bg-surface-container-highest">
+<div class="w-full h-1/2 bg-secondary"></div>
+</div>
+</body></html>

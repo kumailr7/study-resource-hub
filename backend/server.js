@@ -24,8 +24,32 @@ cleanEnv(process.env, {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://localhost:5001',
+  'http://studyhub.local',
+  'https://studyhub.local',
+  'https://hub.devops-dojo.ninja',
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests like curl/postman with no origin
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS policy does not allow access from ${origin}`), false);
+  },
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
@@ -58,6 +82,7 @@ const addedResourceSchema = new mongoose.Schema({
   category: String,
   type: String,
   tags: { type: [String], default: [] },
+  addedBy: { type: String, default: '' },
 });
 
 const Request = mongoose.model('Request', requestSchema);
@@ -82,6 +107,7 @@ const validateResource = (data) => {
     category: Joi.string().required(),
     type: Joi.string().required(),
     tags: Joi.array().items(Joi.string()),
+    addedBy: Joi.string().allow('').optional(),
   });
   return schema.validate(data);
 };

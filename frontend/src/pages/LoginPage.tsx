@@ -1,106 +1,231 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { GoogleLogin } from '@react-oauth/google';
-import { useTheme } from '../ThemeContext';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../components/ui/card';
-import { Alert, AlertTitle, AlertDescription } from '../components/ui/alert';
-import axios from 'axios';
-import { API_BASE_URL, GOOGLE_CLIENT_ID } from '../config';
+import React from 'react';
+import { Navigate, useLocation, Link } from 'react-router-dom';
+import { SignIn, SignUp, useUser, AuthenticateWithRedirectCallback } from '@clerk/clerk-react';
 import logo from '../assets/logo-2.png';
-import '../LoginPage.css';
 import backgroundImage from '../assets/login-unsplash.jpg';
-
-interface LoginResponse {
-  token: string;
-  isAdmin: boolean;
-}
-
-const quotes = [
-  "Get everything you want if you work hard, trust the process, and stick to the plan.",
-  "Success is not the key to happiness. Happiness is the key to success.",
-  "The only way to do great work is to love what you do.",
-  "Believe you can and you're halfway there.",
-  "Your limitation—it's only your imagination.",
-  "Push yourself, because no one else is going to do it for you.",
-  "Great things never come from comfort zones.",
-  "Dream it. Wish it. Do it.",
-  "Success doesn't just find you. You have to go out and get it.",
-  "The harder you work for something, the greater you'll feel when you achieve it."
-];
+import SplitText from '../components/SplitText';
 
 const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [error, setError] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [quote, setQuote] = useState('');
+  const { isLoaded, isSignedIn } = useUser();
+  const location = useLocation();
+  const showSignup = location.pathname.startsWith('/signup');
+  const isSSOCallback = location.pathname.includes('/sso-callback');
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await axios.post<LoginResponse>(`${API_BASE_URL}/auth/login`, { username, password });
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('isAdmin', response.data.isAdmin.toString());
+  if (isSSOCallback) {
+    return (
+      <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center text-[#f8f5fd]">
+        <p className="animate-pulse">Completing sign-in...</p>
+        <AuthenticateWithRedirectCallback />
+      </div>
+    );
+  }
 
-      setIsAdmin(response.data.isAdmin);
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center text-[#f8f5fd]">
+        <p className="animate-pulse">Loading authentication...</p>
+      </div>
+    );
+  }
 
-      console.log('Admin status:', response.data.isAdmin);
-
-      if (response.data.isAdmin) {
-        navigate('/admin');
-      } else {
-        navigate('/user');
-      }
-    } catch (err) {
-      setError('Invalid credentials');
-    }
-  };
-
-  useEffect(() => {
-    // Select a random quote from the array
-    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-    setQuote(randomQuote);
-  }, []);
+  if (isSignedIn) {
+    return <Navigate to="/user" replace />;
+  }
 
   return (
-    <div className="login-container" style={{ backgroundImage: `url(${backgroundImage})` }}>
-      <div className="quote-container">
-        <h2 className="quote-title">Get Everything You Want Via Links</h2>
-        <p className="quote-description">{quote}</p>
-      </div>
-      <div className="login-background">
-        <div className="login-content">
-          <img src={logo} alt="Logo" className="logo" />
-          <h1 className="welcome-title">Welcome Back</h1>
-          <p className="welcome-description">Enter your credentials or use Google to login</p>
-          {error && <div className="error-message">{error}</div>}
-          <form onSubmit={handleLogin} className="login-form">
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="input-field"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-field"
-            />
-            <div className="remember-me">
-              <input type="checkbox" id="remember" />
-              <label htmlFor="remember" className="remember-label">Remember me</label>
-            </div>
-            <button type="submit" className="login-button">Sign In</button>
-          </form>
-          <p className="signup-link">
-            Don't have an access? Contact the administrator <Link to="/signup">Sign Up</Link>
+    <div className="min-h-screen flex" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+
+      {/* ── Left half: image + overlay + branding ── */}
+      <div
+        className="hidden lg:flex w-1/2 flex-col justify-between relative overflow-hidden"
+        style={{
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        {/* Dark gradient overlay */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(135deg, rgba(14,14,19,0.82) 0%, rgba(14,14,19,0.55) 50%, rgba(255,134,194,0.18) 100%)',
+          }}
+        />
+
+        {/* Pink glow blobs */}
+        <div className="absolute top-0 left-0 w-64 h-64 blur-[120px] opacity-30 pointer-events-none" style={{ background: '#ff86c2' }} />
+        <div className="absolute bottom-0 right-0 w-48 h-48 blur-[100px] opacity-20 pointer-events-none" style={{ background: '#bf81ff' }} />
+
+        {/* Top: logo + name */}
+        <div className="relative z-10 p-12">
+          <div className="flex items-center gap-3 mb-2">
+            <img src={logo} alt="Logo" className="w-10 h-10 object-cover" />
+            <SplitText text="Devops Dojo Hub" className="text-white text-xl font-black uppercase tracking-widest" delay={50} />
+          </div>
+          <p className="text-white/40 text-xs tracking-widest uppercase">Community · Resources · Collaboration</p>
+        </div>
+
+        {/* Middle: big headline */}
+        <div className="relative z-10 px-12">
+          <style>{`
+            @keyframes neonPulse {
+              0%   { text-shadow: 0 0 8px rgba(255,134,194,0.6), 0 0 20px rgba(255,134,194,0.4), 0 0 40px rgba(191,129,255,0.3); }
+              50%  { text-shadow: 0 0 16px rgba(255,134,194,1),   0 0 40px rgba(255,134,194,0.7), 0 0 80px rgba(191,129,255,0.5); }
+              100% { text-shadow: 0 0 8px rgba(255,134,194,0.6), 0 0 20px rgba(255,134,194,0.4), 0 0 40px rgba(191,129,255,0.3); }
+            }
+            @keyframes neonPulsePink {
+              0%   { text-shadow: 0 0 10px rgba(255,134,194,0.8), 0 0 30px rgba(255,134,194,0.5), 0 0 60px rgba(255,134,194,0.3); }
+              50%  { text-shadow: 0 0 20px rgba(255,134,194,1),   0 0 50px rgba(255,134,194,0.8), 0 0 100px rgba(255,134,194,0.4); }
+              100% { text-shadow: 0 0 10px rgba(255,134,194,0.8), 0 0 30px rgba(255,134,194,0.5), 0 0 60px rgba(255,134,194,0.3); }
+            }
+            .glow-heading { color: #fff; animation: neonPulse 3s ease-in-out infinite; }
+            .glow-sub     { color: #ff86c2; animation: neonPulsePink 3s ease-in-out infinite; }
+            .glow-paragraph { color: #e8e2ff; opacity: 0.95; }
+          `}</style>
+          <h1 className="text-5xl font-black leading-[1.1] tracking-tight flex flex-col gap-1">
+            <SplitText text="Level Up Your" className="glow-heading" delay={40} />
+            <SplitText text="DevOps" className="glow-sub" delay={40} />
+            <SplitText text="Skills." className="glow-heading" delay={40} />
+          </h1>
+          <p className="text-white/75 text-sm mt-5 leading-relaxed max-w-xs glow-paragraph">
+            Access curated resources, join live study sessions, and collaborate with the community.
           </p>
+        </div>
+
+        {/* Bottom: feature pills */}
+        <div className="relative z-10 p-12 space-y-3">
+          {[
+            { icon: '📚', label: 'Shared Resources' },
+            { icon: '🗓️', label: 'Scheduled Sessions' },
+            { icon: '👥', label: 'Study Groups' },
+          ].map(item => (
+            <div key={item.label} className="flex items-center gap-3">
+              <span
+                className="text-xs px-3 py-1.5 font-bold uppercase tracking-widest"
+                style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(6px)' }}
+              >
+                {item.icon} {item.label}
+              </span>
+            </div>
+          ))}
+          <p className="text-white/20 text-[10px] uppercase tracking-widest pt-4">
+            © {new Date().getFullYear()} Devops Dojo Hub
+          </p>
+        </div>
+      </div>
+
+      {/* ── Right half: Clerk SignIn ── */}
+      <div
+        className="flex-1 lg:w-1/2 flex items-center justify-center p-8 relative"
+        style={{ background: '#0e0e13' }}
+      >
+        {/* Subtle background texture */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/4 right-1/4 w-72 h-72 blur-[160px] opacity-10" style={{ background: '#ff86c2' }} />
+          <div className="absolute bottom-1/4 left-1/4 w-48 h-48 blur-[120px] opacity-8" style={{ background: '#bf81ff' }} />
+        </div>
+
+        <div className="relative z-10 w-full max-w-md">
+          {showSignup ? (
+            <>
+              <SignUp
+                routing="path"
+                path="/signup"
+                signInUrl="/login"
+                afterSignUpUrl="/user"
+                appearance={{
+                  variables: {
+                    colorPrimary: '#ff86c2',
+                    colorBackground: '#19191f',
+                    colorInputBackground: '#ffffff',
+                    colorInputText: '#111111',
+                    colorText: '#f8f5fd',
+                    fontFamily: '"Space Grotesk", sans-serif',
+                    fontFamilyButtons: '"Space Grotesk", sans-serif',
+                  },
+                  elements: {
+                    socialButtonsBlockButton: {
+                      fontFamily: '"Space Grotesk", sans-serif',
+                      fontWeight: '600',
+                      backgroundColor: '#2a2a35',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#f8f5fd',
+                    },
+                    socialButtonsBlockButtonText: {
+                      fontFamily: '"Space Grotesk", sans-serif',
+                      fontWeight: '600',
+                      color: '#f8f5fd',
+                    },
+                    formFieldInput: {
+                      backgroundColor: '#ffffff',
+                      color: '#111111',
+                      fontWeight: '600',
+                      border: '1px solid #ddd',
+                    },
+                    otpCodeFieldInput: {
+                      backgroundColor: '#ffffff',
+                      color: '#111111',
+                      fontWeight: '700',
+                      border: '2px solid #ddd',
+                    },
+                  },
+                }}
+              />
+              <p className="text-xs text-[#888] text-center mt-3">
+                Already have an account? <Link to="/login" className="text-[#ff86c2]">Sign in</Link>
+              </p>
+            </>
+          ) : (
+            <>
+              <SignIn
+                routing="path"
+                path="/login"
+                signUpUrl="/signup"
+                afterSignInUrl="/user"
+                appearance={{
+                  variables: {
+                    colorPrimary: '#ff86c2',
+                    colorBackground: '#19191f',
+                    colorInputBackground: '#ffffff',
+                    colorInputText: '#111111',
+                    colorText: '#f8f5fd',
+                    colorTextSecondary: '#76747b',
+                    fontFamily: '"Space Grotesk", sans-serif',
+                    fontFamilyButtons: '"Space Grotesk", sans-serif',
+                  },
+                  elements: {
+                    socialButtonsBlockButton: {
+                      fontFamily: '"Space Grotesk", sans-serif',
+                      fontWeight: '600',
+                      backgroundColor: '#2a2a35',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#f8f5fd',
+                    },
+                    socialButtonsBlockButtonText: {
+                      fontFamily: '"Space Grotesk", sans-serif',
+                      fontWeight: '600',
+                      color: '#f8f5fd',
+                    },
+                    formFieldInput: {
+                      backgroundColor: '#ffffff',
+                      color: '#111111',
+                      fontWeight: '600',
+                      border: '1px solid #ddd',
+                    },
+                    otpCodeFieldInput: {
+                      backgroundColor: '#ffffff',
+                      color: '#111111',
+                      fontWeight: '700',
+                      border: '2px solid #ddd',
+                    },
+                  },
+                }}
+              />
+              <p className="text-xs text-[#888] text-center mt-3">
+                Don't have an account? <Link to="/signup" className="text-[#ff86c2]">Sign up</Link>
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>
