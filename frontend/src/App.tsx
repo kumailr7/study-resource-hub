@@ -2302,7 +2302,7 @@ const ResourceTable: React.FC = () => {
                               <div className="w-1.5 h-1.5 flex-shrink-0" style={{ background: s.tag ? getTagColor(s.tag) : platformColor[s.platform] }}></div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-bold text-on-surface truncate">{s.topic}</p>
-                                <p className="text-[10px] text-slate-500">{s.date} · {s.time} · <span className="text-slate-400">{s.attendeeCount || 0} attending</span></p>
+                                <p className="text-[10px] text-slate-500">{s.date} · {s.time} · <span className="text-slate-400">{s.attendeeCount || 0} attending</span>{s.recordingDeleted && <span className="text-red-400 ml-1">· rec. removed</span>}</p>
                               </div>
                               <span className="text-[9px] text-slate-600 group-hover:text-primary transition-colors whitespace-nowrap">click for more info</span>
                             </button>
@@ -2354,6 +2354,11 @@ const ResourceTable: React.FC = () => {
                                         className="flex items-center gap-1.5 text-slate-400 hover:text-secondary font-bold text-xs hover:underline underline-offset-2 whitespace-nowrap transition-colors">
                                         ↓ Download
                                       </a>
+                                    </div>
+                                  : s.recordingDeleted
+                                  ? <div className="space-y-0.5">
+                                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-400 uppercase tracking-wider">⚠ Unavailable</span>
+                                      {s.recordingDeleteReason && <p className="text-[10px] text-slate-500 leading-snug max-w-[180px]">{s.recordingDeleteReason}</p>}
                                     </div>
                                   : <span className="text-[10px] text-slate-600 italic">Not uploaded yet</span>
                                 }
