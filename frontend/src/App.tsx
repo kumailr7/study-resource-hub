@@ -563,7 +563,20 @@ const ResourceTable: React.FC = () => {
 
     const sessionResults = sessions.filter(s =>
       match(s.topic) || match(s.tag || '') || match(s.author)
-    ).map(s => ({ section: 'Sessions', label: s.topic, sub: `${s.tag} · ${s.date}`, href: s.meetingLink }));
+    ).map(s => {
+      const sessionMs = new Date(`${s.date}T${s.time}`).getTime();
+      const diffDays = Math.round((sessionMs - Date.now()) / 86400000);
+      const timeLabel = diffDays === 0 ? 'Today'
+        : diffDays > 0 ? `in ${diffDays} day${diffDays > 1 ? 's' : ''}`
+        : `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''} ago`;
+      return {
+        section: 'Sessions',
+        label: s.topic,
+        sub: `${s.tag || s.platform} · ${timeLabel}`,
+        href: null,
+        sessionId: s.id,
+      };
+    });
 
     const sgResults = studyGroups.filter(g =>
       match(g.title) || match(g.agenda || '')
@@ -3066,7 +3079,12 @@ const ResourceTable: React.FC = () => {
                                   setShowSearchOverlay(false);
                                   setGlobalQuery('');
                                   setCurrentSection(sectionKey as Section);
-                                  if (item.href) window.open(item.href, '_blank');
+                                  if ((item as any).sessionId) {
+                                    const s = sessions.find(s => s.id === (item as any).sessionId);
+                                    if (s) setSelectedSession(s);
+                                  } else if (item.href) {
+                                    window.open(item.href, '_blank');
+                                  }
                                 }}
                               />
                             );
