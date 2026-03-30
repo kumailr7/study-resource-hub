@@ -328,6 +328,7 @@ const ResourceTable: React.FC = () => {
   const { user } = useUser();
   const { isDarkTheme, toggleTheme } = useTheme();
   const [currentSection, setCurrentSection] = useState<Section>('dashboard');
+  const [showCommunityModal, setShowCommunityModal] = useState(false);
   const [resources, setResources] = useState<Resource[]>([]);
   const [requests, setRequests] = useState<Request[]>([]);
   const [newResourceName, setNewResourceName] = useState("");
@@ -1230,6 +1231,49 @@ const ResourceTable: React.FC = () => {
             {navItem('studygroups', Users, 'Study Groups')}
             {userIsAdmin && navItem('analytics', LineChart, 'Analytics')}
             {navItem('resources', Package, 'Resources')}
+
+            {/* WhatsApp Community Button */}
+            <div className="pt-4">
+              <BorderGlow color="#22c55e" speed={3} glowBlur={12}>
+                <button
+                  onClick={() => setShowCommunityModal(true)}
+                  className="w-full px-4 py-3 text-left relative overflow-hidden group"
+                  style={{
+                    background: 'linear-gradient(135deg, #0f1f12 0%, #1a0d2e 100%)',
+                    border: '1px solid rgba(34,197,94,0.25)',
+                  }}
+                >
+                  {/* Animated pulse blob */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(34,197,94,0.15) 0%, rgba(168,85,247,0.1) 60%, transparent 100%)' }} />
+                  {/* Shimmer sweep */}
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', }} />
+                  <div className="relative z-10 flex items-center gap-3">
+                    {/* WhatsApp icon */}
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 relative"
+                      style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}>
+                      <div className="absolute inset-0 rounded-full animate-ping opacity-30"
+                        style={{ background: '#22c55e' }} />
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.553 4.113 1.519 5.845L.057 23.899a.5.5 0 00.611.611l6.054-1.462A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.93a9.918 9.918 0 01-5.058-1.374l-.363-.215-3.759.908.924-3.758-.236-.374A9.927 9.927 0 012.07 12C2.07 6.508 6.508 2.07 12 2.07S21.93 6.508 21.93 12 17.492 21.93 12 21.93z"/>
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black uppercase tracking-widest leading-none"
+                        style={{ background: 'linear-gradient(90deg, #22c55e, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        Join Community
+                      </p>
+                      <p className="text-[9px] text-slate-500 mt-0.5 font-medium">+200 members · DevOps Dojo</p>
+                    </div>
+                    <svg className="ml-auto flex-shrink-0 text-slate-600 group-hover:text-green-400 transition-colors" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </div>
+                </button>
+              </BorderGlow>
+            </div>
           </nav>
 
           {userIsAdmin && (
@@ -2127,10 +2171,10 @@ const ResourceTable: React.FC = () => {
                         <PlatformIcon platform={sessionPlatform} size={16} />
                         <select value={sessionPlatform} onChange={e => setSessionPlatform(e.target.value as Session['platform'])}
                           className="flex-1 bg-transparent py-2.5 text-sm text-on-surface outline-none transition-colors">
-                          <option>Google Meet</option>
-                          <option>Zoom</option>
-                          <option>Teams</option>
-                          <option>Other</option>
+                          <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Google Meet</option>
+                          <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Zoom</option>
+                          <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Teams</option>
+                          <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Other</option>
                         </select>
                       </div>
                     </div>
@@ -2923,6 +2967,96 @@ const ResourceTable: React.FC = () => {
                 </BorderGlow>
               </div>
 
+              {/* Requested Resources */}
+              {(() => {
+                const nameCounts: Record<string, number> = {};
+                requests.forEach(r => {
+                  const key = r.resourceName?.toLowerCase().trim();
+                  if (key) nameCounts[key] = (nameCounts[key] || 0) + 1;
+                });
+                const isDup = (r: Request) => nameCounts[r.resourceName?.toLowerCase().trim()] > 1;
+                const isStaleReq = (r: Request) => {
+                  const d = new Date(r.createdAt || r.requestDate);
+                  return !isNaN(d.getTime()) && (Date.now() - d.getTime()) > 7 * 86400000 && r.status === 'pending';
+                };
+                return (
+                  <div>
+                    <div className="flex justify-between items-end mb-6">
+                      <div>
+                        <h3 className="text-2xl font-black font-headline text-on-surface">Requested Resources</h3>
+                        <p className="text-sm text-slate-500">Materials sought by the community</p>
+                      </div>
+                      <button onClick={() => setShowRequestModal(true)} className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] hover:underline underline-offset-8">Request New</button>
+                    </div>
+                    {/* Filter out requests that have been fulfilled by an uploaded resource */}
+                    {(() => {
+                      const uploadedNames = new Set(resources.map(r => r.name.toLowerCase().trim()));
+                      const unfulfilledRequests = requests.filter(r => !uploadedNames.has(r.resourceName?.toLowerCase().trim()));
+                      if (unfulfilledRequests.length === 0) return (
+                        <div className="py-16 text-center border border-dashed border-outline-variant">
+                          <p className="text-2xl mb-2">✓</p>
+                          <p className="text-sm font-bold text-on-surface">All requests fulfilled</p>
+                          <p className="text-xs text-slate-500 mt-1">Every requested resource has been uploaded by the community.</p>
+                        </div>
+                      );
+                      return null;
+                    })()}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {requests.filter(r => !new Set(resources.map(res => res.name.toLowerCase().trim())).has(r.resourceName?.toLowerCase().trim())).map(request => {
+                        const upvoteCount = request.upvotes?.length || 0;
+                        const isHighPriority = upvoteCount >= 5;
+                        const hasUpvoted = request.upvotes?.includes(user?.id || '') || false;
+                        return (
+                        <div key={request._id} className={`bg-surface-container-high p-6 flex items-start justify-between relative overflow-hidden
+                          ${isHighPriority ? 'border-l-2 border-orange-400' : isDup(request) ? 'border-l-2 border-primary' : isStaleReq(request) ? 'border-l-2 border-red-500' : ''}`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{request.resourceType}</span>
+                              {isHighPriority && (
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 text-orange-400 bg-orange-400/10">🔥 High Priority</span>
+                              )}
+                              {isDup(request) && (
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 text-primary bg-primary/10">⚠ Duplicate</span>
+                              )}
+                              {isStaleReq(request) && (
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 text-red-400 bg-red-400/10">Overdue</span>
+                              )}
+                            </div>
+                            <h4 className="text-sm font-bold text-on-surface">{request.resourceName}</h4>
+                            <p className="text-xs text-slate-500 mt-1">by {request.userName}</p>
+                            {request.notes && (
+                              <p className="text-xs text-slate-400 mt-2 leading-relaxed">{request.notes}</p>
+                            )}
+                            <div className="flex items-center gap-3 mt-3 flex-wrap">
+                              <span className={`text-[10px] font-bold uppercase px-3 py-1 ${
+                                request.status==='approved'||request.status==='fulfilled'?'bg-green-500/20 text-green-400'
+                                :request.status==='rejected'?'bg-red-500/20 text-red-400'
+                                :'bg-yellow-500/20 text-yellow-400'}`}>
+                                {request.status === 'fulfilled' ? 'Done' : request.status}
+                              </span>
+                              <button
+                                onClick={() => handleUpvoteRequest(request._id)}
+                                className={`flex items-center gap-1.5 text-[10px] font-bold uppercase px-3 py-1 transition-all ${
+                                  hasUpvoted
+                                    ? 'bg-primary/20 text-primary'
+                                    : 'bg-surface-container-highest text-slate-500 hover:text-primary hover:bg-primary/10'
+                                }`}
+                              >
+                                👍 {hasUpvoted ? 'Voted' : 'Need This'} · {upvoteCount}
+                              </button>
+                            </div>
+                          </div>
+                          <button className="bg-surface-container-highest p-2 text-primary hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 ml-3">
+                            <Pin size={16} />
+                          </button>
+                        </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Contribute form */}
               <div className="bg-surface-container p-8">
                 <h3 className="text-xl font-bold font-headline text-on-surface mb-8 flex items-center gap-3">
@@ -3097,99 +3231,109 @@ const ResourceTable: React.FC = () => {
                 </div>
               )}
 
-              {/* Requested Resources */}
-              {(() => {
-                const nameCounts: Record<string, number> = {};
-                requests.forEach(r => {
-                  const key = r.resourceName?.toLowerCase().trim();
-                  if (key) nameCounts[key] = (nameCounts[key] || 0) + 1;
-                });
-                const isDup = (r: Request) => nameCounts[r.resourceName?.toLowerCase().trim()] > 1;
-                const isStaleReq = (r: Request) => {
-                  const d = new Date(r.createdAt || r.requestDate);
-                  return !isNaN(d.getTime()) && (Date.now() - d.getTime()) > 7 * 86400000 && r.status === 'pending';
-                };
-                return (
-                  <div>
-                    <div className="flex justify-between items-end mb-6">
-                      <div>
-                        <h3 className="text-2xl font-black font-headline text-on-surface">Requested Resources</h3>
-                        <p className="text-sm text-slate-500">Materials sought by the community</p>
-                      </div>
-                      <button onClick={() => setShowRequestModal(true)} className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] hover:underline underline-offset-8">Request New</button>
-                    </div>
-                    {/* Filter out requests that have been fulfilled by an uploaded resource */}
-                    {(() => {
-                      const uploadedNames = new Set(resources.map(r => r.name.toLowerCase().trim()));
-                      const unfulfilledRequests = requests.filter(r => !uploadedNames.has(r.resourceName?.toLowerCase().trim()));
-                      if (unfulfilledRequests.length === 0) return (
-                        <div className="py-16 text-center border border-dashed border-outline-variant">
-                          <p className="text-2xl mb-2">✓</p>
-                          <p className="text-sm font-bold text-on-surface">All requests fulfilled</p>
-                          <p className="text-xs text-slate-500 mt-1">Every requested resource has been uploaded by the community.</p>
-                        </div>
-                      );
-                      return null;
-                    })()}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {requests.filter(r => !new Set(resources.map(res => res.name.toLowerCase().trim())).has(r.resourceName?.toLowerCase().trim())).map(request => {
-                        const upvoteCount = request.upvotes?.length || 0;
-                        const isHighPriority = upvoteCount >= 5;
-                        const hasUpvoted = request.upvotes?.includes(user?.id || '') || false;
-                        return (
-                        <div key={request._id} className={`bg-surface-container-high p-6 flex items-start justify-between relative overflow-hidden
-                          ${isHighPriority ? 'border-l-2 border-orange-400' : isDup(request) ? 'border-l-2 border-primary' : isStaleReq(request) ? 'border-l-2 border-red-500' : ''}`}>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{request.resourceType}</span>
-                              {isHighPriority && (
-                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 text-orange-400 bg-orange-400/10">🔥 High Priority</span>
-                              )}
-                              {isDup(request) && (
-                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 text-primary bg-primary/10">⚠ Duplicate</span>
-                              )}
-                              {isStaleReq(request) && (
-                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 text-red-400 bg-red-400/10">Overdue</span>
-                              )}
-                            </div>
-                            <h4 className="text-sm font-bold text-on-surface">{request.resourceName}</h4>
-                            <p className="text-xs text-slate-500 mt-1">by {request.userName}</p>
-                            {request.notes && (
-                              <p className="text-xs text-slate-400 mt-2 leading-relaxed">{request.notes}</p>
-                            )}
-                            <div className="flex items-center gap-3 mt-3 flex-wrap">
-                              <span className={`text-[10px] font-bold uppercase px-3 py-1 ${
-                                request.status==='approved'||request.status==='fulfilled'?'bg-green-500/20 text-green-400'
-                                :request.status==='rejected'?'bg-red-500/20 text-red-400'
-                                :'bg-yellow-500/20 text-yellow-400'}`}>
-                                {request.status === 'fulfilled' ? 'Done' : request.status}
-                              </span>
-                              <button
-                                onClick={() => handleUpvoteRequest(request._id)}
-                                className={`flex items-center gap-1.5 text-[10px] font-bold uppercase px-3 py-1 transition-all ${
-                                  hasUpvoted
-                                    ? 'bg-primary/20 text-primary'
-                                    : 'bg-surface-container-highest text-slate-500 hover:text-primary hover:bg-primary/10'
-                                }`}
-                              >
-                                👍 {hasUpvoted ? 'Voted' : 'Need This'} · {upvoteCount}
-                              </button>
-                            </div>
-                          </div>
-                          <button className="bg-surface-container-highest p-2 text-primary hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 ml-3">
-                            <Pin size={16} />
-                          </button>
-                        </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
           )}
 
         </main>
+
+        {/* Community Join Modal */}
+        {showCommunityModal && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+            style={{ background: 'rgba(14,14,19,0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+            onClick={e => { if (e.target === e.currentTarget) setShowCommunityModal(false); }}
+          >
+            <BorderGlow color="#22c55e" speed={4} glowBlur={18} style={{ width: '100%', maxWidth: 480 }}>
+              <div className="relative overflow-hidden p-8" style={{ background: 'linear-gradient(160deg, #0d1f10 0%, #12082a 60%, #0d0d14 100%)' }}>
+                {/* Background glow blobs */}
+                <div className="absolute top-0 right-0 w-48 h-48 blur-[80px] pointer-events-none" style={{ background: 'rgba(34,197,94,0.12)' }} />
+                <div className="absolute bottom-0 left-0 w-48 h-48 blur-[80px] pointer-events-none" style={{ background: 'rgba(168,85,247,0.12)' }} />
+
+                {/* Close */}
+                <button onClick={() => setShowCommunityModal(false)}
+                  className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-10">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+
+                {/* WhatsApp logo + pulse */}
+                <div className="flex justify-center mb-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: '#22c55e' }} />
+                    <div className="absolute inset-0 rounded-full animate-pulse opacity-15" style={{ background: '#a855f7', animationDelay: '0.5s' }} />
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center relative"
+                      style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', boxShadow: '0 0 32px rgba(34,197,94,0.4), 0 0 60px rgba(168,85,247,0.2)' }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.553 4.113 1.519 5.845L.057 23.899a.5.5 0 00.611.611l6.054-1.462A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.93a9.918 9.918 0 01-5.058-1.374l-.363-.215-3.759.908.924-3.758-.236-.374A9.927 9.927 0 012.07 12C2.07 6.508 6.508 2.07 12 2.07S21.93 6.508 21.93 12 17.492 21.93 12 21.93z"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Heading */}
+                <div className="text-center mb-6">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 mb-3 text-[9px] font-black uppercase tracking-[0.2em]"
+                    style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', color: '#22c55e' }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                    200+ Members · Active Community
+                  </div>
+                  <h2 className="text-2xl font-black font-headline mb-2"
+                    style={{ background: 'linear-gradient(90deg, #22c55e, #a855f7, #22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundSize: '200%' }}>
+                    DevOps Dojo Community
+                  </h2>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    Join a growing community of <span className="text-green-400 font-semibold">200+ tech enthusiasts</span> where we discuss DevOps, Cloud, Kubernetes, Terraform, and everything in between — plus off-topic catch-ups and networking.
+                  </p>
+                </div>
+
+                {/* Perks */}
+                <div className="space-y-2 mb-6">
+                  {[
+                    { icon: '🚀', text: 'Deep-dive tech discussions — DevOps, Cloud, K8s & more' },
+                    { icon: '💬', text: 'Off-topic catch-ups, memes, and community vibes' },
+                    { icon: '🤝', text: 'Network with engineers across the industry' },
+                    { icon: '📢', text: 'Be first to hear about sessions & resources' },
+                  ].map(({ icon, text }) => (
+                    <div key={text} className="flex items-start gap-3 px-3 py-2"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <span className="text-sm flex-shrink-0">{icon}</span>
+                      <p className="text-xs text-slate-400">{text}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CTA Buttons */}
+                <div className="space-y-3">
+                  <a
+                    href="https://chat.whatsapp.com/HgdRuGAmLEr0BFoAVDrPkI"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center gap-3 w-full py-3.5 font-black text-sm uppercase tracking-widest transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                    style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: 'white', boxShadow: '0 0 24px rgba(34,197,94,0.4)' }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.553 4.113 1.519 5.845L.057 23.899a.5.5 0 00.611.611l6.054-1.462A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.93a9.918 9.918 0 01-5.058-1.374l-.363-.215-3.759.908.924-3.758-.236-.374A9.927 9.927 0 012.07 12C2.07 6.508 6.508 2.07 12 2.07S21.93 6.508 21.93 12 17.492 21.93 12 21.93z"/>
+                    </svg>
+                    Join the Group
+                  </a>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText('https://chat.whatsapp.com/HgdRuGAmLEr0BFoAVDrPkI'); }}
+                    className="flex items-center justify-center gap-2 w-full py-3 font-bold text-xs uppercase tracking-widest transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+                    style={{ background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)', color: '#a855f7' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                    </svg>
+                    Copy Invite Link to Share
+                  </button>
+                </div>
+              </div>
+            </BorderGlow>
+          </div>
+        )}
 
         {/* Request New Modal */}
         {showRequestModal && (
