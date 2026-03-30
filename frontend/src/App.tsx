@@ -2132,10 +2132,16 @@ const ResourceTable: React.FC = () => {
                               }
                             </div>
                             {selectedSession.recordingLink && (
-                              <a href={selectedSession.recordingLink} target="_blank" rel="noreferrer"
-                                className="flex items-center gap-2 text-secondary text-xs font-bold hover:underline underline-offset-2">
-                                <Video size={13} /> Watch Recording
-                              </a>
+                              <div className="flex items-center gap-4">
+                                <a href={selectedSession.recordingLink} target="_blank" rel="noreferrer"
+                                  className="flex items-center gap-2 text-secondary text-xs font-bold hover:underline underline-offset-2">
+                                  <Video size={13} /> Watch Recording
+                                </a>
+                                <a href={selectedSession.recordingLink} download
+                                  className="flex items-center gap-2 text-slate-400 hover:text-secondary text-xs font-bold hover:underline underline-offset-2 transition-colors">
+                                  ↓ Download
+                                </a>
+                              </div>
                             )}
                             {isPast && (
                               <div className="space-y-3">
@@ -2254,10 +2260,16 @@ const ResourceTable: React.FC = () => {
                               <td className="px-5 py-3 text-slate-400 whitespace-nowrap">{s.date}</td>
                               <td className="px-5 py-3" onClick={e => e.stopPropagation()}>
                                 {s.recordingLink
-                                  ? <a href={s.recordingLink} target="_blank" rel="noreferrer"
-                                      className="flex items-center gap-1.5 text-secondary font-bold text-xs hover:underline underline-offset-2 whitespace-nowrap">
-                                      <Video size={12} /> Watch Recording
-                                    </a>
+                                  ? <div className="flex items-center gap-3">
+                                      <a href={s.recordingLink} target="_blank" rel="noreferrer"
+                                        className="flex items-center gap-1.5 text-secondary font-bold text-xs hover:underline underline-offset-2 whitespace-nowrap">
+                                        <Video size={12} /> Watch
+                                      </a>
+                                      <a href={s.recordingLink} download
+                                        className="flex items-center gap-1.5 text-slate-400 hover:text-secondary font-bold text-xs hover:underline underline-offset-2 whitespace-nowrap transition-colors">
+                                        ↓ Download
+                                      </a>
+                                    </div>
                                   : <span className="text-[10px] text-slate-600 italic">Not uploaded yet</span>
                                 }
                               </td>
