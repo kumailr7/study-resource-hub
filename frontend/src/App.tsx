@@ -1080,7 +1080,7 @@ const ResourceTable: React.FC = () => {
   // Added UI Elements
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-background text-on-background font-body">
+      <div className="min-h-screen bg-background text-on-background font-body" data-theme={isDarkTheme ? 'dark' : 'light'}>
 
 
         {/* ── Sidebar ── */}
