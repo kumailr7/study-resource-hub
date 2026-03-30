@@ -561,7 +561,7 @@ const ResourceTable: React.FC = () => {
     const resResults = resources.filter(r =>
       match(r.name) || match(r.category || '') || match(r.type || '') ||
       (r.tags || []).some((tag: string) => match(tag))
-    ).map(r => ({ section: 'Resources', label: r.name, sub: (r.tags || []).join(', ') || r.category, href: r.link }));
+    ).map(r => ({ section: 'Resources', label: r.name, sub: (r.tags || []).join(', ') || r.category, href: r.link, sessionId: undefined }));
 
     const sessionResults = sessions.filter(s =>
       match(s.topic) || match(s.tag || '') || match(s.author)
@@ -582,11 +582,11 @@ const ResourceTable: React.FC = () => {
 
     const sgResults = studyGroups.filter(g =>
       match(g.title) || match(g.agenda || '')
-    ).map(g => ({ section: 'Study Groups', label: g.title, sub: g.agenda, href: null }));
+    ).map(g => ({ section: 'Study Groups', label: g.title, sub: g.agenda, href: null, sessionId: undefined }));
 
     const suggResults = suggestions.filter(s =>
       match(s.suggestion) || match(s.type || '') || match(s.author)
-    ).map(s => ({ section: 'Challenges', label: s.suggestion, sub: `${s.type} · by ${s.author}`, href: null }));
+    ).map(s => ({ section: 'Challenges', label: s.suggestion, sub: `${s.type} · by ${s.author}`, href: null, sessionId: undefined }));
 
     return [...resResults, ...sessionResults, ...sgResults, ...suggResults];
   })();
