@@ -925,9 +925,16 @@ const ResourceTable: React.FC = () => {
       alert(`File too large. Maximum allowed size is ${MAX_UPLOAD_MB} MB.`);
       return;
     }
-    const slug = sessionTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    // Find the session to get author and tag
+    const session = sessions.find(s => s.id === sessionId);
+    const slug = (str: string) => str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const topicSlug = slug(sessionTopic);
+    const authorSlug = slug(session?.author || 'unknown');
+    const tagSlug = slug(session?.tag || 'general');
+    const now = new Date();
+    const timestamp = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${now.getFullYear()}`;
     const ext = file.name.split('.').pop() || 'mp4';
-    const fileName = `${slug}-${Date.now()}.${ext}`;
+    const fileName = `${authorSlug}-${tagSlug}-${topicSlug}-${timestamp}.${ext}`;
     setUploadStatus('uploading');
     setUploadProgress(0);
     try {
