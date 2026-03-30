@@ -966,6 +966,8 @@ const ResourceTable: React.FC = () => {
       setEditRecordingLink(data.publicUrl);
       setUploadStatus('done');
       setUploadProgress(100);
+      // Auto-save to MongoDB immediately after upload
+      await handleUpdateRecording(sessionId, data.publicUrl, editAiSummary);
     } catch (err) {
       console.error('Upload failed:', err);
       setUploadStatus('error');
@@ -2156,7 +2158,7 @@ const ResourceTable: React.FC = () => {
                                 </a>
                               </div>
                             )}
-                            {isPast && (
+                            {isPast && !selectedSession.recordingLink && (
                               <div className="space-y-3">
                                 {/* R2 file upload */}
                                 <div className="space-y-2">
@@ -2168,9 +2170,9 @@ const ResourceTable: React.FC = () => {
                                       'border-outline-variant text-slate-500 hover:border-secondary hover:text-secondary'}`}>
                                     <Video size={13} />
                                     {uploadStatus === 'uploading' ? `Uploading… ${uploadProgress}%` :
-                                     uploadStatus === 'done' ? 'Uploaded ✓ — pick another?' :
+                                     uploadStatus === 'done' ? 'Uploaded ✓ — saving…' :
                                      uploadStatus === 'error' ? 'Upload failed — retry' :
-                                     'Choose video file (mp4 / webm)'}
+                                     'Choose video file (mp4 / webm / mkv)'}
                                     <input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mkv,.mp4,.webm,.mov,.avi"
                                       className="hidden"
                                       disabled={uploadStatus === 'uploading'}
@@ -2185,15 +2187,8 @@ const ResourceTable: React.FC = () => {
                                     </div>
                                   )}
                                 </div>
-
-                                {/* Or paste a link manually */}
                                 <div className="space-y-1">
-                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Or paste recording URL</label>
-                                  <input type="url" placeholder="https://..." value={editRecordingLink} onChange={e => setEditRecordingLink(e.target.value)}
-                                    className="w-full bg-surface-container border-b border-outline-variant focus:border-secondary px-0 py-2 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">AI Summary</label>
+                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">AI Summary (optional)</label>
                                   <textarea rows={3} placeholder="Paste an AI-generated summary of the session..." value={editAiSummary} onChange={e => setEditAiSummary(e.target.value)}
                                     className="w-full bg-surface-container border-b border-outline-variant focus:border-secondary px-0 py-2 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors resize-none" />
                                 </div>
@@ -2201,7 +2196,22 @@ const ResourceTable: React.FC = () => {
                                   disabled={!editRecordingLink || uploadStatus === 'uploading'}
                                   onClick={() => handleUpdateRecording(selectedSession.id, editRecordingLink, editAiSummary)}
                                   className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-on-secondary bg-secondary hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">
-                                  Save Recording Info
+                                  Save Recording
+                                </button>
+                              </div>
+                            )}
+                            {/* Allow replacing recording if already uploaded */}
+                            {isPast && selectedSession.recordingLink && (
+                              <div className="space-y-3">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">AI Summary</label>
+                                  <textarea rows={3} placeholder="Paste an AI-generated summary of the session..." value={editAiSummary} onChange={e => setEditAiSummary(e.target.value)}
+                                    className="w-full bg-surface-container border-b border-outline-variant focus:border-secondary px-0 py-2 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors resize-none" />
+                                </div>
+                                <button
+                                  onClick={() => handleUpdateRecording(selectedSession.id, selectedSession.recordingLink, editAiSummary)}
+                                  className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-on-secondary bg-secondary hover:opacity-90 transition-opacity">
+                                  Save Summary
                                 </button>
                               </div>
                             )}
