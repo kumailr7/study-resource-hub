@@ -2443,10 +2443,12 @@ const ResourceTable: React.FC = () => {
                         );
                       })()}
 
-                      <button onClick={() => handleDeleteSession(selectedSession.id)}
-                        className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-red-400 transition-colors">
-                        Remove Session
-                      </button>
+                      {userIsAdmin && (
+                        <button onClick={() => handleDeleteSession(selectedSession.id)}
+                          className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-red-400 transition-colors">
+                          Remove Session
+                        </button>
+                      )}
                     </div>
                     );
                   })() : (
