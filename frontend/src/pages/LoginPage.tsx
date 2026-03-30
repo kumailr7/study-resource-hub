@@ -16,6 +16,7 @@ const LoginPage: React.FC = () => {
   const isSSOCallback = location.pathname.includes('/sso-callback');
 
   const [turnstileVerified, setTurnstileVerified] = useState(false);
+  const [turnstileError, setTurnstileError] = useState(false);
 
   if (isSSOCallback) {
     return (
@@ -148,13 +149,26 @@ const LoginPage: React.FC = () => {
                 <p className="text-white/40 text-sm">Verifying you're human before continuing</p>
               </div>
 
-              <Turnstile
-                siteKey={TURNSTILE_SITE_KEY}
-                onSuccess={() => setTurnstileVerified(true)}
-                onError={() => setTurnstileVerified(false)}
-                onExpire={() => setTurnstileVerified(false)}
-                options={{ theme: 'dark', size: 'normal' }}
-              />
+              {!turnstileError ? (
+                <Turnstile
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onSuccess={() => setTurnstileVerified(true)}
+                  onError={() => setTurnstileError(true)}
+                  onExpire={() => setTurnstileVerified(false)}
+                  options={{ theme: 'dark', size: 'normal' }}
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <p className="text-red-400 text-sm">Verification failed. Please try again.</p>
+                  <button
+                    onClick={() => setTurnstileError(false)}
+                    className="px-4 py-2 text-sm font-semibold text-white rounded-lg"
+                    style={{ background: 'linear-gradient(135deg, #6b21a8, #db2777)' }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
 
               <p className="text-white/20 text-xs">
                 Protected by{' '}

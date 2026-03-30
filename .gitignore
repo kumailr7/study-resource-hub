@@ -75,3 +75,4 @@ Thumbs.db
 # PEM files 
 /nginx/certs/*
 vault/
+init-vault.sh
