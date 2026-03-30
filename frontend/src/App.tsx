@@ -101,6 +101,8 @@ interface Session {
   aiSummary: string;
   hostLinkedIn: string;
   attendeeCount: number;
+  recordingDeleted?: boolean;
+  recordingDeleteReason?: string;
 }
 
 interface Suggestion {
@@ -595,6 +597,8 @@ const ResourceTable: React.FC = () => {
     setEditAiSummary(selectedSession?.aiSummary || "");
     setUploadStatus('idle');
     setUploadProgress(0);
+    setShowDeleteRecordingConfirm(false);
+    setDeleteRecordingReason('');
   }, [selectedSession?.id]);
 
   // Fetch resources and requests
@@ -972,6 +976,19 @@ const ResourceTable: React.FC = () => {
       console.error('Upload failed:', err);
       setUploadStatus('error');
     }
+  };
+
+  const [deleteRecordingReason, setDeleteRecordingReason] = useState('');
+  const [showDeleteRecordingConfirm, setShowDeleteRecordingConfirm] = useState(false);
+
+  const handleDeleteRecording = async (id: string) => {
+    try {
+      const res = await axios.patch<any>(`${API_BASE_URL}/sessions/${id}/recording/delete`, { reason: deleteRecordingReason || 'Removed by admin' });
+      setSessions(prev => prev.map(s => s.id === id ? { ...res.data, id: res.data._id } : s));
+      setSelectedSession(prev => prev?.id === id ? { ...prev, ...res.data, id: res.data._id } : prev);
+      setShowDeleteRecordingConfirm(false);
+      setDeleteRecordingReason('');
+    } catch (err) { console.error('Error deleting recording:', err); }
   };
 
   const handleUpdateRecording = async (id: string, recordingLink: string, aiSummary: string) => {
@@ -2143,9 +2160,23 @@ const ResourceTable: React.FC = () => {
                               <p className="text-[10px] font-bold text-secondary uppercase tracking-widest">Recording</p>
                               {selectedSession.recordingLink
                                 ? <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider">● Available</span>
+                                : selectedSession.recordingDeleted
+                                ? <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">● Unavailable</span>
                                 : <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{isPast ? '○ Pending Upload' : '○ Planned'}</span>
                               }
                             </div>
+
+                            {/* Recording deleted notice */}
+                            {selectedSession.recordingDeleted && !selectedSession.recordingLink && (
+                              <div className="flex items-start gap-3 p-3 bg-red-500/10 border border-red-500/20">
+                                <span className="text-red-400 text-lg leading-none">⚠</span>
+                                <div>
+                                  <p className="text-xs font-bold text-red-400">Recording Unavailable</p>
+                                  <p className="text-xs text-slate-400 mt-0.5">{selectedSession.recordingDeleteReason || 'This recording has been removed by an admin.'}</p>
+                                </div>
+                              </div>
+                            )}
+
                             {selectedSession.recordingLink && (
                               <div className="flex items-center gap-4">
                                 <a href={selectedSession.recordingLink} target="_blank" rel="noreferrer"
@@ -2156,6 +2187,37 @@ const ResourceTable: React.FC = () => {
                                   className="flex items-center gap-2 text-slate-400 hover:text-secondary text-xs font-bold hover:underline underline-offset-2 transition-colors">
                                   ↓ Download
                                 </a>
+                                {/* Admin: delete recording */}
+                                {userIsAdmin && !showDeleteRecordingConfirm && (
+                                  <button onClick={() => setShowDeleteRecordingConfirm(true)}
+                                    className="text-[10px] text-slate-600 hover:text-red-400 font-bold uppercase tracking-widest transition-colors ml-auto">
+                                    Remove
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Admin delete confirm */}
+                            {userIsAdmin && showDeleteRecordingConfirm && (
+                              <div className="space-y-2 p-3 border border-red-500/30 bg-red-500/5">
+                                <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Remove Recording</p>
+                                <input
+                                  type="text"
+                                  placeholder="Reason (e.g. Copyright issue, re-upload needed)"
+                                  value={deleteRecordingReason}
+                                  onChange={e => setDeleteRecordingReason(e.target.value)}
+                                  className="w-full bg-transparent border-b border-red-500/30 focus:border-red-400 px-0 py-1.5 text-xs text-on-surface placeholder-slate-600 outline-none"
+                                />
+                                <div className="flex gap-3">
+                                  <button onClick={() => handleDeleteRecording(selectedSession.id)}
+                                    className="text-[10px] font-black uppercase tracking-widest text-white bg-red-500 px-4 py-2 hover:bg-red-600 transition-colors">
+                                    Confirm Remove
+                                  </button>
+                                  <button onClick={() => { setShowDeleteRecordingConfirm(false); setDeleteRecordingReason(''); }}
+                                    className="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 transition-colors">
+                                    Cancel
+                                  </button>
+                                </div>
                               </div>
                             )}
                             {isPast && !selectedSession.recordingLink && (

@@ -88,6 +88,8 @@ const sessionSchema = new mongoose.Schema({
   hostLinkedIn: { type: String, default: '' },
   attendeeCount: { type: Number, default: 0 },
   registeredUsers: { type: [String], default: [] },
+  recordingDeleted: { type: Boolean, default: false },
+  recordingDeleteReason: { type: String, default: '' },
 }, { timestamps: true });
 
 const studyGroupSchema = new mongoose.Schema({
@@ -128,10 +130,21 @@ app.delete('/api/sessions/:id', asyncHandler(async (req, res) => {
   res.json({ message: 'Session deleted' });
 }));
 
+app.patch('/api/sessions/:id/recording/delete', asyncHandler(async (req, res) => {
+  const { reason } = req.body;
+  const updated = await SessionModel.findByIdAndUpdate(
+    req.params.id,
+    { recordingLink: '', recordingDeleted: true, recordingDeleteReason: reason || 'Removed by admin' },
+    { new: true }
+  );
+  if (!updated) return res.status(404).json({ error: 'Session not found' });
+  res.json(updated);
+}));
+
 app.patch('/api/sessions/:id/recording', asyncHandler(async (req, res) => {
   const { recordingLink, aiSummary } = req.body;
   const updated = await SessionModel.findByIdAndUpdate(
-    req.params.id, { recordingLink, aiSummary }, { new: true }
+    req.params.id, { recordingLink, aiSummary, recordingDeleted: false, recordingDeleteReason: '' }, { new: true }
   );
   if (!updated) return res.status(404).json({ error: 'Session not found' });
   res.json(updated);
