@@ -243,7 +243,7 @@ const ResourceRow: React.FC<{
 };
 
 const SearchResultRow: React.FC<{
-  item: { label: string; sub?: string | null; href: string | null; section: string };
+  item: { label: string; sub?: string | null; href: string | null; section: string; sessionId?: string };
   accentColor: string;
   sec: string;
   onSelect: () => void;
@@ -3089,8 +3089,8 @@ const ResourceTable: React.FC = () => {
                                   setShowSearchOverlay(false);
                                   setGlobalQuery('');
                                   setCurrentSection(sectionKey as Section);
-                                  if ((item as any).sessionId) {
-                                    const s = sessions.find(s => s.id === (item as any).sessionId);
+                                  if (item.sessionId) {
+                                    const s = sessions.find(s => s.id === item.sessionId);
                                     if (s) setSelectedSession(s);
                                   } else if (item.href) {
                                     window.open(item.href, '_blank');
