@@ -245,8 +245,10 @@ const requestSchema = new mongoose.Schema({
   userName: String,
   resourceName: String,
   resourceType: String,
+  notes: { type: String, default: '' },
   requestDate: { type: Date, default: Date.now },
   status: { type: String, default: 'pending' },
+  upvotes: { type: [String], default: [] },
 });
 const addedResourceSchema = new mongoose.Schema({
   name: String,
@@ -266,6 +268,7 @@ const validateRequest = (data) => {
     userName: Joi.string().required(),
     resourceName: Joi.string().required(),
     resourceType: Joi.string().required(),
+    notes: Joi.string().allow('').optional(),
     requestDate: Joi.date().optional(),
     status: Joi.string().valid('pending', 'approved', 'rejected').default('pending'),
   });
@@ -314,6 +317,22 @@ app.put('/api/requests/:id', asyncHandler(async (req, res) => {
   const updatedRequest = await Request.findByIdAndUpdate(req.params.id, req.body, { new: true });
   if (!updatedRequest) return res.status(404).json({ error: 'Request not found' });
   res.json(updatedRequest);
+}));
+
+// Upvote / un-upvote a request
+app.patch('/api/requests/:id/upvote', asyncHandler(async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const request = await Request.findById(req.params.id);
+  if (!request) return res.status(404).json({ error: 'Request not found' });
+  const already = request.upvotes.includes(userId);
+  if (already) {
+    request.upvotes = request.upvotes.filter(u => u !== userId);
+  } else {
+    request.upvotes.push(userId);
+  }
+  await request.save();
+  res.json({ upvotes: request.upvotes });
 }));
 
 // Delete a request

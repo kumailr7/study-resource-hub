@@ -58,9 +58,11 @@ interface Request {
   userName: string;
   resourceName: string;
   resourceType: string;
+  notes?: string;
   requestDate: string;
-  status: string; // Adjust the type as needed
-  createdAt: string; // Add this field if not already present
+  status: string;
+  createdAt: string;
+  upvotes?: string[];
 }
 
 interface ErrorResponse {
@@ -101,6 +103,7 @@ interface Session {
   aiSummary: string;
   hostLinkedIn: string;
   attendeeCount: number;
+  registeredUsers?: string[];
   recordingDeleted?: boolean;
   recordingDeleteReason?: string;
 }
@@ -334,6 +337,7 @@ const ResourceTable: React.FC = () => {
   const [newRequestUserName, setNewRequestUserName] = useState("");
   const [newRequestResourceName, setNewRequestResourceName] = useState("");
   const [newRequestResourceType, setNewRequestResourceType] = useState("");
+  const [newRequestNotes, setNewRequestNotes] = useState("");
   const [editResourceId, setEditResourceId] = useState<string | null>(null);
   const [searchTags, setSearchTags] = useState<string>("");
   const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
@@ -780,6 +784,7 @@ const ResourceTable: React.FC = () => {
           userName: newRequestUserName,
           resourceName: newRequestResourceName,
           resourceType: newRequestResourceType,
+          notes: newRequestNotes,
           status: "pending",
         };
         const { data } = await axios.post<Request>(
@@ -790,6 +795,7 @@ const ResourceTable: React.FC = () => {
         setNewRequestUserName("");
         setNewRequestResourceName("");
         setNewRequestResourceType("");
+        setNewRequestNotes("");
         setShowRequestModal(false);
       } catch (error) {
         console.error("Error adding request:", error);
@@ -1026,6 +1032,15 @@ const ResourceTable: React.FC = () => {
       setMyRegisteredSessions(prev => ({ ...prev, [id]: false }));
       setSelectedSession(prev => prev?.id === id ? { ...prev, attendeeCount: res.data.attendeeCount } : prev);
     } catch (err) { console.error('Error unregistering from session:', err); }
+  };
+
+  const handleUpvoteRequest = async (id: string) => {
+    const userId = user?.id;
+    if (!userId) return;
+    try {
+      const { data } = await axios.patch<{ upvotes: string[] }>(`${API_BASE_URL}/requests/${id}/upvote`, { userId });
+      setRequests(prev => prev.map(r => r._id === id ? { ...r, upvotes: data.upvotes } : r));
+    } catch (err) { console.error('Error upvoting request:', err); }
   };
 
   const GROUP_MEMBER_LIMIT = 15;
@@ -2296,17 +2311,30 @@ const ResourceTable: React.FC = () => {
                       {sessions.length > 0 && (
                         <div className="space-y-1">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">All Sessions</p>
-                          {[...sessions].sort((a,b) => new Date(a.date+'T'+a.time).getTime()-new Date(b.date+'T'+b.time).getTime()).map(s => (
-                            <button key={s.id} onClick={() => setSelectedSession(s)}
-                              className="w-full flex items-center gap-3 px-3 py-2 bg-surface-container-high hover:bg-surface-container-highest transition-colors text-left group">
-                              <div className="w-1.5 h-1.5 flex-shrink-0" style={{ background: s.tag ? getTagColor(s.tag) : platformColor[s.platform] }}></div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-on-surface truncate">{s.topic}</p>
-                                <p className="text-[10px] text-slate-500">{s.date} · {s.time} · <span className="text-slate-400">{s.attendeeCount || 0} attending</span>{s.recordingDeleted && <span className="text-red-400 ml-1">· rec. removed</span>}</p>
-                              </div>
-                              <span className="text-[9px] text-slate-600 group-hover:text-primary transition-colors whitespace-nowrap">click for more info</span>
-                            </button>
-                          ))}
+                          {[...sessions].sort((a,b) => new Date(a.date+'T'+a.time).getTime()-new Date(b.date+'T'+b.time).getTime()).map(s => {
+                            const isRegistered = myRegisteredSessions[s.id] || false;
+                            return (
+                            <div key={s.id} className="w-full flex items-center gap-3 px-3 py-2 bg-surface-container-high hover:bg-surface-container-highest transition-colors group">
+                              <button onClick={() => setSelectedSession(s)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                                <div className="w-1.5 h-1.5 flex-shrink-0" style={{ background: s.tag ? getTagColor(s.tag) : platformColor[s.platform] }}></div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold text-on-surface truncate">{s.topic}</p>
+                                  <p className="text-[10px] text-slate-500">{s.date} · {s.time} · <span className="text-slate-400">{s.attendeeCount || 0} attending</span>{s.recordingDeleted && <span className="text-red-400 ml-1">· rec. removed</span>}</p>
+                                </div>
+                              </button>
+                              <button
+                                onClick={() => isRegistered ? handleUnregisterSession(s.id) : handleRegisterSession(s.id)}
+                                className={`text-[9px] font-bold uppercase px-2 py-1 whitespace-nowrap transition-all flex-shrink-0 ${
+                                  isRegistered
+                                    ? 'bg-primary/20 text-primary hover:bg-red-500/20 hover:text-red-400'
+                                    : 'bg-surface-container-highest text-slate-500 hover:bg-primary/10 hover:text-primary'
+                                }`}
+                              >
+                                {isRegistered ? '✓ Attending' : "I'll Attend"}
+                              </button>
+                            </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -3001,12 +3029,19 @@ const ResourceTable: React.FC = () => {
                       return null;
                     })()}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {requests.filter(r => !new Set(resources.map(res => res.name.toLowerCase().trim())).has(r.resourceName?.toLowerCase().trim())).map(request => (
+                      {requests.filter(r => !new Set(resources.map(res => res.name.toLowerCase().trim())).has(r.resourceName?.toLowerCase().trim())).map(request => {
+                        const upvoteCount = request.upvotes?.length || 0;
+                        const isHighPriority = upvoteCount >= 5;
+                        const hasUpvoted = request.upvotes?.includes(user?.id || '') || false;
+                        return (
                         <div key={request._id} className={`bg-surface-container-high p-6 flex items-start justify-between relative overflow-hidden
-                          ${isDup(request) ? 'border-l-2 border-primary' : isStaleReq(request) ? 'border-l-2 border-red-500' : ''}`}>
+                          ${isHighPriority ? 'border-l-2 border-orange-400' : isDup(request) ? 'border-l-2 border-primary' : isStaleReq(request) ? 'border-l-2 border-red-500' : ''}`}>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{request.resourceType}</span>
+                              {isHighPriority && (
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 text-orange-400 bg-orange-400/10">🔥 High Priority</span>
+                              )}
                               {isDup(request) && (
                                 <span className="text-[9px] font-black uppercase px-1.5 py-0.5 text-primary bg-primary/10">⚠ Duplicate</span>
                               )}
@@ -3016,18 +3051,34 @@ const ResourceTable: React.FC = () => {
                             </div>
                             <h4 className="text-sm font-bold text-on-surface">{request.resourceName}</h4>
                             <p className="text-xs text-slate-500 mt-1">by {request.userName}</p>
-                            <span className={`inline-block mt-3 text-[10px] font-bold uppercase px-3 py-1 ${
-                              request.status==='approved'||request.status==='fulfilled'?'bg-green-500/20 text-green-400'
-                              :request.status==='rejected'?'bg-red-500/20 text-red-400'
-                              :'bg-yellow-500/20 text-yellow-400'}`}>
-                              {request.status === 'fulfilled' ? 'Done' : request.status}
-                            </span>
+                            {request.notes && (
+                              <p className="text-xs text-slate-400 mt-2 leading-relaxed">{request.notes}</p>
+                            )}
+                            <div className="flex items-center gap-3 mt-3 flex-wrap">
+                              <span className={`text-[10px] font-bold uppercase px-3 py-1 ${
+                                request.status==='approved'||request.status==='fulfilled'?'bg-green-500/20 text-green-400'
+                                :request.status==='rejected'?'bg-red-500/20 text-red-400'
+                                :'bg-yellow-500/20 text-yellow-400'}`}>
+                                {request.status === 'fulfilled' ? 'Done' : request.status}
+                              </span>
+                              <button
+                                onClick={() => handleUpvoteRequest(request._id)}
+                                className={`flex items-center gap-1.5 text-[10px] font-bold uppercase px-3 py-1 transition-all ${
+                                  hasUpvoted
+                                    ? 'bg-primary/20 text-primary'
+                                    : 'bg-surface-container-highest text-slate-500 hover:text-primary hover:bg-primary/10'
+                                }`}
+                              >
+                                👍 {hasUpvoted ? 'Voted' : 'Need This'} · {upvoteCount}
+                              </button>
+                            </div>
                           </div>
                           <button className="bg-surface-container-highest p-2 text-primary hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 ml-3">
                             <Pin size={16} />
                           </button>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -3085,6 +3136,16 @@ const ResourceTable: React.FC = () => {
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Notes <span className="text-slate-600 normal-case font-normal">(optional — why do you need this?)</span></label>
+                  <textarea
+                    placeholder="e.g. Need this for CKA exam prep, covers PV/PVC concepts"
+                    value={newRequestNotes}
+                    onChange={e => setNewRequestNotes(e.target.value)}
+                    rows={3}
+                    className="w-full bg-[#0e0e13] border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors resize-none"
+                  />
                 </div>
               </div>
               <div className="px-6 pb-6 flex gap-3">
