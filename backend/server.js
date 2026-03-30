@@ -86,6 +86,7 @@ const sessionSchema = new mongoose.Schema({
   recordingLink: { type: String, default: '' },
   aiSummary: { type: String, default: '' },
   hostLinkedIn: { type: String, default: '' },
+  duration: { type: Number, default: 30 },
   attendeeCount: { type: Number, default: 0 },
   registeredUsers: { type: [String], default: [] },
   recordingDeleted: { type: Boolean, default: false },

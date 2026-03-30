@@ -102,6 +102,7 @@ interface Session {
   recordingLink: string;
   aiSummary: string;
   hostLinkedIn: string;
+  duration?: number;
   attendeeCount: number;
   registeredUsers?: string[];
   recordingDeleted?: boolean;
@@ -380,6 +381,7 @@ const ResourceTable: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [sessionLinkedIn, setSessionLinkedIn] = useState("");
+  const [sessionDuration, setSessionDuration] = useState("30");
   const [viewAllResources, setViewAllResources] = useState(false);
   const [newResourceAddedBy, setNewResourceAddedBy] = useState('');
   const [sgScheduledAt, setSgScheduledAt] = useState('');
@@ -550,6 +552,53 @@ const ResourceTable: React.FC = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Register service worker on mount
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW registration failed:', err));
+    }
+  }, []);
+
+  // Schedule client-side notification timers for upcoming registered sessions
+  const notifTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  useEffect(() => {
+    // Clear old timers
+    Object.values(notifTimersRef.current).forEach(clearTimeout);
+    notifTimersRef.current = {};
+
+    if (Notification.permission !== 'granted') return;
+
+    const REMIND_MS = 10 * 60 * 1000; // 10 min before
+    Object.keys(myRegisteredSessions).filter(id => myRegisteredSessions[id]).forEach(id => {
+      const session = sessions.find(s => s.id === id);
+      if (!session) return;
+      const sessionMs = new Date(`${session.date}T${session.time}`).getTime();
+      const fireAt = sessionMs - REMIND_MS;
+      const delay = fireAt - Date.now();
+      if (delay <= 0) return; // already past
+      notifTimersRef.current[id] = setTimeout(() => {
+        new Notification(`⏰ Starting in 10 min: ${session.topic}`, {
+          body: `Host: ${session.author} · ${session.time} on ${session.platform}`,
+          icon: '/favicon.ico',
+          tag: `session-${id}`,
+        });
+        // play chime via Web Audio API (no file needed)
+        try {
+          const ctx = new AudioContext();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.type = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime);
+          gain.gain.setValueAtTime(0.4, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+          osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 1.2);
+        } catch {}
+      }, delay);
+    });
+
+    return () => { Object.values(notifTimersRef.current).forEach(clearTimeout); };
+  }, [myRegisteredSessions, sessions]);
 
   useEffect(() => {
     if (showSearchOverlay) setTimeout(() => searchInputRef.current?.focus(), 50);
@@ -926,12 +975,12 @@ const ResourceTable: React.FC = () => {
         date: sessionDate, time: sessionTime,
         tag: sessionTag, meetingLink: sessionLink, platform: sessionPlatform,
         agenda: sessionAgenda, willRecord: sessionWillRecord, recordingLink: '', aiSummary: '',
-        hostLinkedIn: sessionLinkedIn, attendeeCount: 0,
+        hostLinkedIn: sessionLinkedIn, attendeeCount: 0, duration: Number(sessionDuration) || 30,
       });
       setSessions(prev => [...prev, { ...res.data, id: res.data._id }]);
       setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
       setSessionTime(""); setSessionTag(""); setSessionLink("");
-      setSessionPlatform('Google Meet'); setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn("");
+      setSessionPlatform('Google Meet'); setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn(""); setSessionDuration("30");
     } catch (err) { console.error('Error adding session:', err); }
   };
 
@@ -1020,6 +1069,10 @@ const ResourceTable: React.FC = () => {
       setSessions(prev => prev.map(s => s.id === id ? { ...res.data, id: res.data._id } : s));
       setMyRegisteredSessions(prev => ({ ...prev, [id]: true }));
       setSelectedSession(prev => prev?.id === id ? { ...prev, attendeeCount: res.data.attendeeCount } : prev);
+      // Request notification permission so we can remind them before the session
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
     } catch (err) { console.error('Error registering for session:', err); }
   };
 
@@ -1097,6 +1150,39 @@ const ResourceTable: React.FC = () => {
 
   const platformColor: Record<Session['platform'], string> = {
     'Google Meet': '#00ac47', 'Zoom': '#2D8CFF', 'Teams': '#6264A7', 'Other': '#ff86c2',
+  };
+
+  const PlatformIcon = ({ platform, size = 14 }: { platform: Session['platform']; size?: number }) => {
+    if (platform === 'Google Meet') return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M22 7.5L17 12l5 4.5V7.5z" fill="#00832d"/>
+        <path d="M2 7h11a2 2 0 012 2v6a2 2 0 01-2 2H2a2 2 0 01-2-2V9a2 2 0 012-2z" fill="#0066da"/>
+        <path d="M13 12v3a2 2 0 01-2 2H2a2 2 0 01-2-2v-3h13z" fill="#0066da"/>
+        <path d="M0 9a2 2 0 012-2h11a2 2 0 012 2v3H0V9z" fill="#2684fc"/>
+        <path d="M0 12h15v1H0z" fill="#00ac47" opacity=".5"/>
+      </svg>
+    );
+    if (platform === 'Zoom') return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect width="24" height="24" rx="6" fill="#2D8CFF"/>
+        <path d="M4 8.5h9a1.5 1.5 0 011.5 1.5v5H5A1.5 1.5 0 013.5 13.5v-4A1 1 0 014 8.5z" fill="white"/>
+        <path d="M15.5 10.5l5-3v9l-5-3v-3z" fill="white"/>
+      </svg>
+    );
+    if (platform === 'Teams') return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M14 10h4a2 2 0 012 2v4a2 2 0 01-2 2h-4v-8z" fill="#5059C9"/>
+        <circle cx="16" cy="7" r="2" fill="#5059C9"/>
+        <path d="M10 10H4a2 2 0 00-2 2v4a2 2 0 002 2h6a2 2 0 002-2v-4a2 2 0 00-2-2z" fill="#7B83EB"/>
+        <circle cx="7" cy="7" r="2.5" fill="#7B83EB"/>
+      </svg>
+    );
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#ff86c2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="23 7 16 12 23 17 23 7"/>
+        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+      </svg>
+    );
   };
 
   // Calendar helpers
@@ -2037,13 +2123,26 @@ const ResourceTable: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Platform</label>
-                      <select value={sessionPlatform} onChange={e => setSessionPlatform(e.target.value as Session['platform'])}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
-                        <option>Google Meet</option>
-                        <option>Zoom</option>
-                        <option>Teams</option>
-                        <option>Other</option>
-                      </select>
+                      <div className="flex items-center gap-2 border-b border-outline-variant focus-within:border-primary pb-0.5">
+                        <PlatformIcon platform={sessionPlatform} size={16} />
+                        <select value={sessionPlatform} onChange={e => setSessionPlatform(e.target.value as Session['platform'])}
+                          className="flex-1 bg-transparent py-2.5 text-sm text-on-surface outline-none transition-colors">
+                          <option>Google Meet</option>
+                          <option>Zoom</option>
+                          <option>Teams</option>
+                          <option>Other</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
+                        Duration (mins)
+                        {Number(sessionDuration) > 30 && (
+                          <span className="ml-2 text-[9px] font-black text-orange-400 bg-orange-400/10 px-1.5 py-0.5 normal-case tracking-normal">⚠ Keep sessions to 30 min</span>
+                        )}
+                      </label>
+                      <input type="number" min="5" max="180" value={sessionDuration} onChange={e => setSessionDuration(e.target.value)}
+                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Meeting Link</label>
@@ -2098,6 +2197,9 @@ const ResourceTable: React.FC = () => {
                           <h3 className="text-2xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.01em' }}>
                             {selectedSession.topic}
                           </h3>
+                          {(selectedSession.duration || 30) > 30 && (
+                            <span className="inline-block mt-2 text-[9px] font-black text-orange-400 bg-orange-400/10 px-2 py-0.5 uppercase tracking-widest">⚠ {selectedSession.duration} min session</span>
+                          )}
                         </div>
                         <button onClick={() => setSelectedSession(null)} className="text-slate-500 hover:text-on-surface transition-colors text-xl leading-none">×</button>
                       </div>
@@ -2123,8 +2225,9 @@ const ResourceTable: React.FC = () => {
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Platform</p>
-                          <span className="text-xs font-bold uppercase px-2 py-1"
+                          <span className="text-xs font-bold uppercase px-2 py-1 inline-flex items-center gap-1.5"
                             style={{ color: sessionColor, background: sessionColor + '25' }}>
+                            <PlatformIcon platform={selectedSession.platform} size={13} />
                             {selectedSession.platform}
                           </span>
                         </div>
@@ -2316,7 +2419,7 @@ const ResourceTable: React.FC = () => {
                             return (
                             <div key={s.id} className="w-full flex items-center gap-3 px-3 py-2 bg-surface-container-high hover:bg-surface-container-highest transition-colors group">
                               <button onClick={() => setSelectedSession(s)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                                <div className="w-1.5 h-1.5 flex-shrink-0" style={{ background: s.tag ? getTagColor(s.tag) : platformColor[s.platform] }}></div>
+                                <PlatformIcon platform={s.platform} size={14} />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs font-bold text-on-surface truncate">{s.topic}</p>
                                   <p className="text-[10px] text-slate-500">{s.date} · {s.time} · <span className="text-slate-400">{s.attendeeCount || 0} attending</span>{s.recordingDeleted && <span className="text-red-400 ml-1">· rec. removed</span>}</p>
