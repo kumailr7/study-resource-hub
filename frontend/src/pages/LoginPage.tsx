@@ -1,22 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Navigate, useLocation, Link } from 'react-router-dom';
 import { SignIn, SignUp, useUser, AuthenticateWithRedirectCallback } from '@clerk/clerk-react';
-import { Turnstile } from '@marsidev/react-turnstile';
 import logo from '../assets/logo-2.png';
 import backgroundImage from '../assets/login-unsplash.jpg';
 import SplitText from '../components/SplitText';
-
-const TURNSTILE_SITE_KEY =
-  process.env.REACT_APP_TURNSTILE_SITE_KEY || '0x4AAAAAAACxrrCJdrKqydSZ4';
 
 const LoginPage: React.FC = () => {
   const { isLoaded, isSignedIn } = useUser();
   const location = useLocation();
   const showSignup = location.pathname.startsWith('/signup');
   const isSSOCallback = location.pathname.includes('/sso-callback');
-
-  const [turnstileVerified, setTurnstileVerified] = useState(false);
-  const [turnstileError, setTurnstileError] = useState(false);
 
   if (isSSOCallback) {
     return (
@@ -121,7 +114,7 @@ const LoginPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Right half: Turnstile gate → Clerk SignIn/SignUp ── */}
+      {/* ── Right half: Clerk SignIn/SignUp ── */}
       <div
         className="flex-1 lg:w-1/2 flex items-center justify-center p-8 relative"
         style={{ background: '#0e0e13' }}
@@ -133,151 +126,104 @@ const LoginPage: React.FC = () => {
         </div>
 
         <div className="relative z-10 w-full max-w-md">
-          {!turnstileVerified ? (
-            /* ── Turnstile verification gate ── */
-            <div className="flex flex-col items-center gap-6 text-center">
-              <div>
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: 'linear-gradient(135deg, #6b21a8, #db2777)' }}
-                >
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
-                </div>
-                <h2 className="text-white text-xl font-bold mb-1">Security Check</h2>
-                <p className="text-white/40 text-sm">Verifying you're human before continuing</p>
-              </div>
-
-              {!turnstileError ? (
-                <Turnstile
-                  siteKey={TURNSTILE_SITE_KEY}
-                  onSuccess={() => setTurnstileVerified(true)}
-                  onError={() => setTurnstileError(true)}
-                  onExpire={() => setTurnstileVerified(false)}
-                  options={{ theme: 'dark', size: 'normal' }}
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <p className="text-red-400 text-sm">Verification failed. Please try again.</p>
-                  <button
-                    onClick={() => setTurnstileError(false)}
-                    className="px-4 py-2 text-sm font-semibold text-white rounded-lg"
-                    style={{ background: 'linear-gradient(135deg, #6b21a8, #db2777)' }}
-                  >
-                    Retry
-                  </button>
-                </div>
-              )}
-
-              <p className="text-white/20 text-xs">
-                Protected by{' '}
-                <span className="text-white/40 font-semibold">Cloudflare Turnstile</span>
-              </p>
-            </div>
-          ) : (
-            /* ── Clerk auth forms ── */
+          {showSignup ? (
             <>
-              {showSignup ? (
-                <>
-                  <SignUp
-                    routing="path"
-                    path="/signup"
-                    signInUrl="/login"
-                    afterSignUpUrl="/user"
-                    appearance={{
-                      variables: {
-                        colorPrimary: '#ff86c2',
-                        colorBackground: '#19191f',
-                        colorInputBackground: '#ffffff',
-                        colorInputText: '#111111',
-                        colorText: '#f8f5fd',
-                        fontFamily: '"Space Grotesk", sans-serif',
-                        fontFamilyButtons: '"Space Grotesk", sans-serif',
-                      },
-                      elements: {
-                        socialButtonsBlockButton: {
-                          fontFamily: '"Space Grotesk", sans-serif',
-                          fontWeight: '600',
-                          backgroundColor: '#2a2a35',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          color: '#f8f5fd',
-                        },
-                        socialButtonsBlockButtonText: {
-                          fontFamily: '"Space Grotesk", sans-serif',
-                          fontWeight: '600',
-                          color: '#f8f5fd',
-                        },
-                        formFieldInput: {
-                          backgroundColor: '#ffffff',
-                          color: '#111111',
-                          fontWeight: '600',
-                          border: '1px solid #ddd',
-                        },
-                        otpCodeFieldInput: {
-                          backgroundColor: '#ffffff',
-                          color: '#111111',
-                          fontWeight: '700',
-                          border: '2px solid #ddd',
-                        },
-                      },
-                    }}
-                  />
-                  <p className="text-xs text-[#888] text-center mt-3">
-                    Already have an account? <Link to="/login" className="text-[#ff86c2]">Sign in</Link>
-                  </p>
-                </>
-              ) : (
-                <>
-                  <SignIn
-                    routing="path"
-                    path="/login"
-                    signUpUrl="/signup"
-                    afterSignInUrl="/user"
-                    appearance={{
-                      variables: {
-                        colorPrimary: '#ff86c2',
-                        colorBackground: '#19191f',
-                        colorInputBackground: '#ffffff',
-                        colorInputText: '#111111',
-                        colorText: '#f8f5fd',
-                        colorTextSecondary: '#76747b',
-                        fontFamily: '"Space Grotesk", sans-serif',
-                        fontFamilyButtons: '"Space Grotesk", sans-serif',
-                      },
-                      elements: {
-                        socialButtonsBlockButton: {
-                          fontFamily: '"Space Grotesk", sans-serif',
-                          fontWeight: '600',
-                          backgroundColor: '#2a2a35',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          color: '#f8f5fd',
-                        },
-                        socialButtonsBlockButtonText: {
-                          fontFamily: '"Space Grotesk", sans-serif',
-                          fontWeight: '600',
-                          color: '#f8f5fd',
-                        },
-                        formFieldInput: {
-                          backgroundColor: '#ffffff',
-                          color: '#111111',
-                          fontWeight: '600',
-                          border: '1px solid #ddd',
-                        },
-                        otpCodeFieldInput: {
-                          backgroundColor: '#ffffff',
-                          color: '#111111',
-                          fontWeight: '700',
-                          border: '2px solid #ddd',
-                        },
-                      },
-                    }}
-                  />
-                  <p className="text-xs text-[#888] text-center mt-3">
-                    Don't have an account? <Link to="/signup" className="text-[#ff86c2]">Sign up</Link>
-                  </p>
-                </>
-              )}
+              <SignUp
+                routing="path"
+                path="/signup"
+                signInUrl="/login"
+                afterSignUpUrl="/user"
+                appearance={{
+                  variables: {
+                    colorPrimary: '#ff86c2',
+                    colorBackground: '#19191f',
+                    colorInputBackground: '#ffffff',
+                    colorInputText: '#111111',
+                    colorText: '#f8f5fd',
+                    fontFamily: '"Space Grotesk", sans-serif',
+                    fontFamilyButtons: '"Space Grotesk", sans-serif',
+                  },
+                  elements: {
+                    socialButtonsBlockButton: {
+                      fontFamily: '"Space Grotesk", sans-serif',
+                      fontWeight: '600',
+                      backgroundColor: '#2a2a35',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#f8f5fd',
+                    },
+                    socialButtonsBlockButtonText: {
+                      fontFamily: '"Space Grotesk", sans-serif',
+                      fontWeight: '600',
+                      color: '#f8f5fd',
+                    },
+                    formFieldInput: {
+                      backgroundColor: '#ffffff',
+                      color: '#111111',
+                      fontWeight: '600',
+                      border: '1px solid #ddd',
+                    },
+                    otpCodeFieldInput: {
+                      backgroundColor: '#ffffff',
+                      color: '#111111',
+                      fontWeight: '700',
+                      border: '2px solid #ddd',
+                    },
+                  },
+                }}
+              />
+              <p className="text-xs text-[#888] text-center mt-3">
+                Already have an account? <Link to="/login" className="text-[#ff86c2]">Sign in</Link>
+              </p>
+            </>
+          ) : (
+            <>
+              <SignIn
+                routing="path"
+                path="/login"
+                signUpUrl="/signup"
+                afterSignInUrl="/user"
+                appearance={{
+                  variables: {
+                    colorPrimary: '#ff86c2',
+                    colorBackground: '#19191f',
+                    colorInputBackground: '#ffffff',
+                    colorInputText: '#111111',
+                    colorText: '#f8f5fd',
+                    colorTextSecondary: '#76747b',
+                    fontFamily: '"Space Grotesk", sans-serif',
+                    fontFamilyButtons: '"Space Grotesk", sans-serif',
+                  },
+                  elements: {
+                    socialButtonsBlockButton: {
+                      fontFamily: '"Space Grotesk", sans-serif',
+                      fontWeight: '600',
+                      backgroundColor: '#2a2a35',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#f8f5fd',
+                    },
+                    socialButtonsBlockButtonText: {
+                      fontFamily: '"Space Grotesk", sans-serif',
+                      fontWeight: '600',
+                      color: '#f8f5fd',
+                    },
+                    formFieldInput: {
+                      backgroundColor: '#ffffff',
+                      color: '#111111',
+                      fontWeight: '600',
+                      border: '1px solid #ddd',
+                    },
+                    otpCodeFieldInput: {
+                      backgroundColor: '#ffffff',
+                      color: '#111111',
+                      fontWeight: '700',
+                      border: '2px solid #ddd',
+                    },
+                  },
+                }}
+              />
+              <p className="text-xs text-[#888] text-center mt-3">
+                Don't have an account? <Link to="/signup" className="text-[#ff86c2]">Sign up</Link>
+              </p>
             </>
           )}
         </div>
