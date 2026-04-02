@@ -59,7 +59,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (res.data?.role && ['super_admin', 'admin', 'user'].includes(res.data.role)) {
           setUserRole(res.data.role as 'super_admin' | 'admin' | 'user');
         } else {
-        } else {
           // Fallback: Check Clerk metadata as backup
           console.log('🔄 No role in MongoDB, checking Clerk metadata...');
           const clerkRole = (user.publicMetadata as any)?.role;
