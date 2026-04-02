@@ -26,83 +26,41 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { user, isLoaded, isSignedIn } = useUser();
   const [userRole, setUserRole] = useState<'super_admin' | 'admin' | 'user' | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const syncAndGetRole = async () => {
-      if (!user?.id) {
-        setUserRole(null);
-        setIsLoading(false);
-        return;
-      }
+    if (!isLoaded) return;
 
-      try {
-        const userEmail = user.primaryEmailAddress?.emailAddress || '';
-        console.log('🔐 Syncing user - Clerk ID:', user.id, '| Email:', userEmail);
-        
-        // First, sync user to MongoDB
-        try {
-          await axios.post(`${API_BASE_URL}/users/sync`, {
-            clerkId: user.id,
-            email: userEmail,
-            name: user.fullName || user.username || '',
-          });
-          console.log('✅ User synced to MongoDB');
-        } catch (syncErr: any) {
-          console.warn('⚠️ Sync failed:', syncErr.message);
-        }
+    if (!isSignedIn) {
+      setUserRole(null);
+      return;
+    }
 
-        // Then get role from MongoDB (with email fallback)
-        const res = await axios.get<{ role?: string; clerkId?: string; email?: string }>(`${API_BASE_URL}/users/me?clerkId=${user.id}&email=${encodeURIComponent(userEmail)}`);
-        console.log('📊 User role response:', res.data);
-        
+    // PRIMARY: Check Clerk metadata first (faster, more reliable)
+    const clerkRole = (user?.publicMetadata as { role?: string })?.role;
+    if (clerkRole === 'super_admin' || clerkRole === 'admin') {
+      setUserRole(clerkRole);
+      return;
+    }
+
+    // FALLBACK: Check MongoDB
+    setIsLoading(true);
+    const userEmail = user?.primaryEmailAddress?.emailAddress || '';
+    
+    axios.get(`${API_BASE_URL}/users/me?clerkId=${user?.id}&email=${encodeURIComponent(userEmail)}`)
+      .then(res => {
         if (res.data?.role && ['super_admin', 'admin', 'user'].includes(res.data.role)) {
-          setUserRole(res.data.role as 'super_admin' | 'admin' | 'user');
-        } else {
-          // Fallback: Check Clerk metadata as backup
-          console.log('🔄 No role in MongoDB, checking Clerk metadata...');
-          const clerkRole = (user.publicMetadata as any)?.role;
-          if (clerkRole === 'super_admin' || clerkRole === 'admin') {
-            setUserRole(clerkRole as 'super_admin' | 'admin');
-          } else {
-            setUserRole('user');
-          }
-        }
-      } catch (err: any) {
-        console.error('❌ Error fetching user role:', err);
-        // Fallback: Check Clerk metadata
-        const clerkRole = (user.publicMetadata as any)?.role;
-        if (clerkRole === 'super_admin' || clerkRole === 'admin') {
-          console.log('🔄 Using Clerk metadata role:', clerkRole);
-          setUserRole(clerkRole as 'super_admin' | 'admin');
+          setUserRole(res.data.role);
         } else {
           setUserRole('user');
         }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isLoaded && isSignedIn) {
-      syncAndGetRole();
-    } else if (isLoaded && !isSignedIn) {
-      setUserRole(null);
-      setIsLoading(false);
-    }
+      })
+      .catch(() => setUserRole('user'))
+      .finally(() => setIsLoading(false));
   }, [user, isLoaded, isSignedIn]);
 
   const userIsAdmin = userRole === 'admin' || userRole === 'super_admin';
   const userIsSuperAdmin = userRole === 'super_admin';
-  
-  const authIsLoaded = isLoaded && !isLoading;
-  console.log('🔐 AuthContext state:', { 
-    clerkIsLoaded: isLoaded, 
-    isSignedIn, 
-    isLoading, 
-    authIsLoaded, 
-    userRole, 
-    userIsAdmin 
-  });
 
   return (
     <AuthContext.Provider value={{
@@ -110,7 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       userIsAdmin,
       userIsSuperAdmin,
       userRole,
-      isLoaded: authIsLoaded,
+      isLoaded: isLoaded && !isLoading,
     }}>
       {children}
     </AuthContext.Provider>
