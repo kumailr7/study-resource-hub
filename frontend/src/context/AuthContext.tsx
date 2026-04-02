@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: user.fullName || user.username || '',
         });
 
-        const res = await axios.get(`${API_BASE_URL}/users/me?clerkId=${user.id}`);
+        const res = await axios.get<{ role?: 'super_admin' | 'admin' | 'user' }>(`${API_BASE_URL}/users/me?clerkId=${user.id}`);
         setUserRole(res.data?.role || 'user');
       } catch (err) {
         console.error('Error fetching user role:', err);
