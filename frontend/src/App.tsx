@@ -2628,82 +2628,76 @@ const ResourceTable: React.FC = () => {
                                         )}
                                       </div>
                                       {/* Download request UI - only show for non-past sessions */}
-                                      {!isPast && (
-                                {(() => {
-                                  const myRequest = downloadRequests.find((r: any) => r.sessionId === selectedSession.id);
-                                  const isRegistered = myRegisteredSessions[selectedSession.id];
-                                  const isExpired = myRequest?.expiresAt && new Date(myRequest.expiresAt) < new Date();
-                                  
-                                  if (!isRegistered) {
-                                    return (
-                                      <p className="text-[10px] text-slate-500 italic">
-                                        Register for this session to request download access.
-                                      </p>
-                                    );
-                                  }
-                                  
-                                  if (!myRequest || myRequest.status === 'pending') {
-                                    return (
-                                      <button onClick={() => handleRequestDownload(selectedSession.id)}
-                                        className="self-start flex items-center gap-2 text-amber-400 text-xs font-bold hover:underline underline-offset-2 transition-colors">
-                                        <span className="text-lg">🔐</span> Request Download Access
-                                      </button>
-                                    );
-                                  }
-                                  
-                                  if (myRequest.status === 'rejected') {
-                                    return (
-                                      <div className="space-y-2">
-                                        <p className="text-[10px] text-red-400 font-bold">Request Denied</p>
-                                        {myRequest.rejectionReason && (
-                                          <p className="text-[10px] text-slate-500">Reason: {myRequest.rejectionReason}</p>
-                                        )}
-                                        <button onClick={() => handleRequestDownload(selectedSession.id)}
-                                          className="text-[10px] text-slate-400 hover:text-amber-400 font-bold transition-colors">
-                                          Request Again
-                                        </button>
-                                      </div>
-                                    );
-                                  }
-                                  
-                                  if (myRequest.status === 'approved' && !isExpired) {
-                                    return (
-                                      <div className="space-y-2">
-                                        <a href={selectedSession.recordingLink} download
-                                          className="self-start flex items-center gap-2 text-green-400 text-xs font-bold hover:underline underline-offset-2 transition-colors">
-                                          <span>↓</span> Download (Expires {new Date(myRequest.expiresAt).toLocaleString()})
-                                        </a>
-                                        <p className="text-[10px] text-amber-400/80">
-                                          ⏱ Download link expires in 24 hours
-                                        </p>
-                                      </div>
-                                    );
-                                  }
-                                  
-                                  if (myRequest.status === 'approved' && isExpired) {
-                                    return (
-                                      <div className="space-y-2">
-                                        <p className="text-[10px] text-slate-500">Download link expired.</p>
-                                        <button onClick={() => handleRequestDownload(selectedSession.id)}
-                                          className="self-start text-[10px] text-amber-400 hover:text-amber-300 font-bold transition-colors">
-                                          Request New Download Access
-                                        </button>
-                                      </div>
-                                    );
-                                  }
-                                  
-                                  return null;
-                                })()}
+                                      {!isPast && (() => {
+                                        const myRequest = downloadRequests.find((r: any) => r.sessionId === selectedSession.id);
+                                        const isRegistered = myRegisteredSessions[selectedSession.id];
+                                        const isExpired = myRequest?.expiresAt && new Date(myRequest.expiresAt) < new Date();
+                                        
+                                        if (!isRegistered) {
+                                          return (
+                                            <p className="text-[10px] text-slate-500 italic">
+                                              Register for this session to request download access.
+                                            </p>
+                                          );
+                                        }
+                                        
+                                        if (!myRequest || myRequest.status === 'pending') {
+                                          return (
+                                            <button onClick={() => handleRequestDownload(selectedSession.id)}
+                                              className="self-start flex items-center gap-2 text-amber-400 text-xs font-bold hover:underline underline-offset-2 transition-colors">
+                                              <span className="text-lg">🔐</span> Request Download Access
+                                            </button>
+                                          );
+                                        }
+                                        
+                                        if (myRequest.status === 'rejected') {
+                                          return (
+                                            <div className="space-y-2">
+                                              <p className="text-[10px] text-red-400 font-bold">Request Denied</p>
+                                              {myRequest.rejectionReason && (
+                                                <p className="text-[10px] text-slate-500">Reason: {myRequest.rejectionReason}</p>
+                                              )}
+                                              <button onClick={() => handleRequestDownload(selectedSession.id)}
+                                                className="text-[10px] text-slate-400 hover:text-amber-400 font-bold transition-colors">
+                                                Request Again
+                                              </button>
+                                            </div>
+                                          );
+                                        }
+                                        
+                                        if (myRequest.status === 'approved' && !isExpired) {
+                                          return (
+                                            <div className="space-y-2">
+                                              <a href={selectedSession.recordingLink} download
+                                                className="self-start flex items-center gap-2 text-green-400 text-xs font-bold hover:underline underline-offset-2 transition-colors">
+                                                <span>↓</span> Download (Expires {new Date(myRequest.expiresAt).toLocaleString()})
+                                              </a>
+                                              <p className="text-[10px] text-amber-400/80">
+                                                ⏱ Download link expires in 24 hours
+                                              </p>
+                                            </div>
+                                          );
+                                        }
+                                        
+                                        if (myRequest.status === 'approved' && isExpired) {
+                                          return (
+                                            <div className="space-y-2">
+                                              <p className="text-[10px] text-slate-500">Download link expired.</p>
+                                              <button onClick={() => handleRequestDownload(selectedSession.id)}
+                                                className="self-start text-[10px] text-amber-400 hover:text-amber-300 font-bold transition-colors">
+                                                Request New Download Access
+                                              </button>
+                                            </div>
+                                          );
+                                        }
+                                        
+                                        return null;
+                                      })()}
                                     </>
                                   );
                                 })()}
-                                {/* Admin: delete recording */}
-                                {userIsAdmin && !showDeleteRecordingConfirm && (
-                                  <button onClick={() => setShowDeleteRecordingConfirm(true)}
-                                    className="text-[10px] text-slate-600 hover:text-red-400 font-bold uppercase tracking-widest transition-colors ml-auto">
-                                    Remove
-                                  </button>
-                                )}
+                              </div>
+                            )}
                               </div>
                             )}
 
