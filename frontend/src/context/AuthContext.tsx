@@ -38,19 +38,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       try {
         const userEmail = user.primaryEmailAddress?.emailAddress || '';
-        console.log('Syncing user with Clerk ID:', user.id, 'Email:', userEmail);
-        await axios.post(`${API_BASE_URL}/users/sync`, {
-          clerkId: user.id,
-          email: userEmail,
-          name: user.fullName || user.username || '',
-        });
+        console.log('🔐 Syncing user - Clerk ID:', user.id, '| Email:', userEmail);
+        
+        // First, sync user to MongoDB
+        try {
+          await axios.post(`${API_BASE_URL}/users/sync`, {
+            clerkId: user.id,
+            email: userEmail,
+            name: user.fullName || user.username || '',
+          });
+          console.log('✅ User synced to MongoDB');
+        } catch (syncErr: any) {
+          console.warn('⚠️ Sync failed:', syncErr.message);
+        }
 
-        const res = await axios.get<{ role?: 'super_admin' | 'admin' | 'user' }>(`${API_BASE_URL}/users/me?clerkId=${user.id}&email=${encodeURIComponent(userEmail)}`);
-        console.log('User role response:', res.data);
-        setUserRole(res.data?.role || 'user');
-      } catch (err) {
-        console.error('Error fetching user role:', err);
-        setUserRole('user');
+        // Then get role from MongoDB (with email fallback)
+        const res = await axios.get(`${API_BASE_URL}/users/me?clerkId=${user.id}&email=${encodeURIComponent(userEmail)}`);
+        console.log('📊 User role response:', res.data);
+        
+        if (res.data?.role) {
+          setUserRole(res.data.role);
+        } else {
+          // Fallback: Check Clerk metadata as backup
+          console.log('🔄 No role in MongoDB, checking Clerk metadata...');
+          const clerkRole = (user.publicMetadata as any)?.role;
+          if (clerkRole === 'super_admin' || clerkRole === 'admin') {
+            setUserRole(clerkRole);
+          } else {
+            setUserRole('user');
+          }
+        }
+      } catch (err: any) {
+        console.error('❌ Error fetching user role:', err);
+        // Fallback: Check Clerk metadata
+        const clerkRole = (user.publicMetadata as any)?.role;
+        if (clerkRole === 'super_admin' || clerkRole === 'admin') {
+          console.log('🔄 Using Clerk metadata role:', clerkRole);
+          setUserRole(clerkRole);
+        } else {
+          setUserRole('user');
+        }
       } finally {
         setIsLoading(false);
       }
