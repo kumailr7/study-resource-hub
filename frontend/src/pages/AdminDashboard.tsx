@@ -867,37 +867,32 @@ const AdminDashboard: React.FC = () => {
                   <h3 className="text-base font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                     Platform Users
                   </h3>
-                  <p className="text-[10px] text-slate-600 mt-1">Users registered in your backend. Manage their Clerk roles at dashboard.clerk.com</p>
+                  <p className="text-[10px] text-slate-600 mt-1">Users synced from your database</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-[#1f1f26]">
-                        {['Username', 'Current Role', 'Clerk Action'].map(h => (
+                        {['Name', 'Email', 'Role', 'Status'].map(h => (
                           <th key={h} className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest px-6 py-3">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {users.length === 0 && (
-                        <tr><td colSpan={3} className="px-6 py-10 text-center text-slate-600 text-sm">No users found</td></tr>
+                      {managedUsers.length === 0 && (
+                        <tr><td colSpan={4} className="px-6 py-10 text-center text-slate-600 text-sm">No users found</td></tr>
                       )}
-                      {users.map(u => (
-                        <tr key={u.id} className="border-t border-white/5 hover:bg-[#1a1a21] transition-colors">
-                          <td className="px-6 py-3 font-bold text-[#f8f5fd]">{u.username}</td>
+                      {managedUsers.filter(u => u.status !== 'removed').map(u => (
+                        <tr key={u._id} className="border-t border-white/5 hover:bg-[#1a1a21] transition-colors">
+                          <td className="px-6 py-3 font-bold text-[#f8f5fd]">{u.name || '—'}</td>
+                          <td className="px-6 py-3 text-slate-400">{u.email}</td>
                           <td className="px-6 py-3">
-                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 ${u.role === 'admin' ? 'text-[#ff86c2] bg-[#ff86c2]/10' : 'text-[#4ade80] bg-[#4ade80]/10'}`}>
-                              {u.role || 'user'}
-                            </span>
+                            {getRoleBadge(u.role)}
                           </td>
                           <td className="px-6 py-3">
-                            <a
-                              href="https://dashboard.clerk.com"
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] font-bold uppercase px-3 py-1.5 border border-[#48474d] text-slate-400 hover:text-[#bf81ff] hover:border-[#bf81ff] transition-colors inline-flex items-center gap-1">
-                              <ExternalLink size={9} /> Edit in Clerk
-                            </a>
+                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 ${u.status === 'active' ? 'text-green-400 bg-green-400/10' : 'text-yellow-400 bg-yellow-400/10'}`}>
+                              {u.status}
+                            </span>
                           </td>
                         </tr>
                       ))}
