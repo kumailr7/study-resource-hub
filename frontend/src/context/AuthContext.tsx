@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         // Then get role from MongoDB (with email fallback)
-        const res = await axios.get(`${API_BASE_URL}/users/me?clerkId=${user.id}&email=${encodeURIComponent(userEmail)}`);
+        const res = await axios.get<{ role?: string; clerkId?: string; email?: string }>(`${API_BASE_URL}/users/me?clerkId=${user.id}&email=${encodeURIComponent(userEmail)}`);
         console.log('📊 User role response:', res.data);
         
         if (res.data?.role) {
