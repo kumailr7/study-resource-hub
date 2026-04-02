@@ -37,14 +37,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       try {
-        console.log('Syncing user with Clerk ID:', user.id);
+        const userEmail = user.primaryEmailAddress?.emailAddress || '';
+        console.log('Syncing user with Clerk ID:', user.id, 'Email:', userEmail);
         await axios.post(`${API_BASE_URL}/users/sync`, {
           clerkId: user.id,
-          email: user.primaryEmailAddress?.emailAddress || '',
+          email: userEmail,
           name: user.fullName || user.username || '',
         });
 
-        const res = await axios.get<{ role?: 'super_admin' | 'admin' | 'user' }>(`${API_BASE_URL}/users/me?clerkId=${user.id}`);
+        const res = await axios.get<{ role?: 'super_admin' | 'admin' | 'user' }>(`${API_BASE_URL}/users/me?clerkId=${user.id}&email=${encodeURIComponent(userEmail)}`);
         console.log('User role response:', res.data);
         setUserRole(res.data?.role || 'user');
       } catch (err) {

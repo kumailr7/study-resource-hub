@@ -330,9 +330,18 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
 }));
 
 app.get('/api/users/me', asyncHandler(async (req, res) => {
-  const { clerkId } = req.query;
-  if (!clerkId) return res.status(400).json({ error: 'clerkId required' });
-  const user = await UserManagement.findOne({ clerkId });
+  const { clerkId, email } = req.query;
+  if (!clerkId && !email) return res.status(400).json({ error: 'clerkId or email required' });
+  
+  let user = null;
+  if (clerkId) {
+    user = await UserManagement.findOne({ clerkId });
+  }
+  // Fallback: try finding by email if clerkId didn't match
+  if (!user && email) {
+    user = await UserManagement.findOne({ email });
+  }
+  
   res.json(user);
 }));
 
