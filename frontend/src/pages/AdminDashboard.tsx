@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useClerk, useUser } from '@clerk/clerk-react';
 import {
   LayoutGrid, Package, Bell, LogOut, ExternalLink,
-  CheckCircle2, AlertTriangle, Copy, Users as UsersIcon, Shield,
+  CheckCircle2, AlertTriangle, Copy, Users as UsersIcon, Shield, Download, X, RefreshCw
 } from 'lucide-react';
 import SplitText from '../components/SplitText';
 
@@ -16,7 +16,7 @@ interface FullRequest {
   requestDate: string; status: string; createdAt: string;
 }
 
-type AdminTab = 'overview' | 'requests' | 'slack' | 'roles';
+type AdminTab = 'overview' | 'requests' | 'downloads' | 'slack' | 'roles';
 
 const AdminDashboard: React.FC = () => {
   const { userIsAdmin } = useAuth();
@@ -24,10 +24,12 @@ const AdminDashboard: React.FC = () => {
   const { user: clerkUser } = useUser();
   const [users, setUsers] = useState<User[]>([]);
   const [allRequests, setAllRequests] = useState<FullRequest[]>([]);
+  const [downloadRequests, setDownloadRequests] = useState<any[]>([]);
   const [totalResources, setTotalResources] = useState(0);
   const [adminTab, setAdminTab] = useState<AdminTab>('overview');
   const [slackWebhook, setSlackWebhook] = useState(localStorage.getItem('dojo_slack_webhook') || '');
   const [slackStatus, setSlackStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [rejectReason, setRejectReason] = useState('');
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -35,17 +37,37 @@ const AdminDashboard: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [usersRes, resourcesRes, requestsRes] = await Promise.all([
+      const [usersRes, resourcesRes, requestsRes, dlRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/users`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API_BASE_URL}/added-resources?limit=1000`).catch(() => ({ data: { total: 0, data: [] } })),
         axios.get(`${API_BASE_URL}/requests?limit=1000`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API_BASE_URL}/download-requests`, { headers }).catch(() => ({ data: [] })),
       ]);
       setUsers(usersRes.data || []);
       setTotalResources(resourcesRes.data.total || resourcesRes.data.data?.length || 0);
       setAllRequests(requestsRes.data.data || requestsRes.data || []);
+      setDownloadRequests(dlRes.data || []);
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleApproveDownload = async (id: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_BASE_URL}/download-requests/${id}/approve`, { adminId: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      setDownloadRequests(prev => prev.map(r => r._id === id ? { ...r, status: 'approved', reviewedAt: new Date(), expiresAt: new Date(Date.now() + 24*60*60*1000) } : r));
+    } catch (e) { console.error(e); }
+  };
+
+  const handleRejectDownload = async (id: string) => {
+    if (!rejectReason.trim()) { alert('Please provide a reason for rejection'); return; }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_BASE_URL}/download-requests/${id}/reject`, { adminId: clerkUser?.id, reason: rejectReason }, { headers: { Authorization: `Bearer ${token}` } });
+      setDownloadRequests(prev => prev.map(r => r._id === id ? { ...r, status: 'rejected', reviewedAt: new Date(), rejectionReason: rejectReason } : r));
+      setRejectReason('');
+    } catch (e) { console.error(e); }
   };
 
   const markRequestStatus = async (id: string, status: string) => {
@@ -141,6 +163,7 @@ const AdminDashboard: React.FC = () => {
           <nav className="flex-1 px-4 space-y-1">
             {navItem('overview', LayoutGrid, 'Overview')}
             {navItem('requests', Package, 'Requested Resources')}
+            {navItem('downloads', Download, 'Download Requests')}
             {navItem('slack', Bell, 'Slack Alerts')}
             {navItem('roles', Shield, 'Role Management')}
           </nav>
@@ -319,6 +342,115 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                               )
                             }
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {/* ── DOWNLOAD REQUESTS ── */}
+          {adminTab === 'downloads' && (
+            <>
+              <div className="flex items-end justify-between">
+                <div>
+                  <h2 className="text-3xl font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                    <SplitText text="Download Requests" delay={35} />
+                  </h2>
+                  <p className="text-slate-500 mt-1 text-sm">Review and approve session recording download requests</p>
+                </div>
+                <button onClick={fetchAll} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#f8f5fd] transition-colors">
+                  <RefreshCw size={12} /> Refresh
+                </button>
+              </div>
+
+              {/* Summary cards */}
+              {(() => {
+                const pendingDl = downloadRequests.filter(r => r.status === 'pending');
+                const approvedDl = downloadRequests.filter(r => r.status === 'approved');
+                const rejectedDl = downloadRequests.filter(r => r.status === 'rejected');
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-[#131318] p-5 flex flex-col gap-2" style={{ borderLeft: '3px solid #facc15' }}>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pending</span>
+                      <span className="text-3xl font-black" style={{ color: '#facc15', fontFamily: 'Space Grotesk, sans-serif' }}>{pendingDl.length}</span>
+                    </div>
+                    <div className="bg-[#131318] p-5 flex flex-col gap-2" style={{ borderLeft: '3px solid #4ade80' }}>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Approved (24h)</span>
+                      <span className="text-3xl font-black" style={{ color: '#4ade80', fontFamily: 'Space Grotesk, sans-serif' }}>{approvedDl.length}</span>
+                    </div>
+                    <div className="bg-[#131318] p-5 flex flex-col gap-2" style={{ borderLeft: '3px solid #f87171' }}>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rejected</span>
+                      <span className="text-3xl font-black" style={{ color: '#f87171', fontFamily: 'Space Grotesk, sans-serif' }}>{rejectedDl.length}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="bg-[#131318] overflow-x-auto">
+                <table className="w-full text-sm min-w-[900px]">
+                  <thead>
+                    <tr className="bg-[#1f1f26]">
+                      {['Session', 'User', 'Email', 'Status', 'Requested', 'Expires', 'Actions'].map(h => (
+                        <th key={h} className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest px-5 py-3 whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {downloadRequests.length === 0 && (
+                      <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-600">No download requests found</td></tr>
+                    )}
+                    {downloadRequests.map(r => {
+                      const session = r.sessionId || {};
+                      const isExpired = r.expiresAt && new Date(r.expiresAt) < new Date();
+                      return (
+                        <tr key={r._id} className="border-t border-white/5 hover:bg-[#1a1a21] transition-colors">
+                          <td className="px-5 py-3">
+                            <div>
+                              <span className="font-bold text-[#f8f5fd]">{session.topic || '—'}</span>
+                              {session.date && <span className="text-xs text-slate-500 ml-2">{session.date}</span>}
+                            </div>
+                          </td>
+                          <td className="px-5 py-3 text-slate-400">{r.userName}</td>
+                          <td className="px-5 py-3 text-slate-500 text-xs">{r.userEmail}</td>
+                          <td className="px-5 py-3">
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 ${
+                              r.status === 'approved' ? 'text-green-400 bg-green-400/10'
+                              : r.status === 'pending' ? 'text-yellow-400 bg-yellow-400/10'
+                              : 'text-red-400 bg-red-400/10'
+                            }`}>
+                              {r.status === 'approved' && isExpired ? 'Expired' : r.status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-slate-500 text-xs">
+                            {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}
+                          </td>
+                          <td className="px-5 py-3 text-xs">
+                            {r.expiresAt ? (
+                              <span className={isExpired ? 'text-red-400' : 'text-green-400'}>
+                                {new Date(r.expiresAt).toLocaleString()}
+                              </span>
+                            ) : '—'}
+                          </td>
+                          <td className="px-5 py-3">
+                            {r.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <button onClick={() => handleApproveDownload(r._id)}
+                                  className="flex items-center gap-1 text-[9px] font-black uppercase px-2.5 py-1.5 text-green-400 border border-green-900/50 hover:border-green-400 hover:bg-green-400/10 transition-all whitespace-nowrap">
+                                  <CheckCircle2 size={10} /> Approve
+                                </button>
+                                <button onClick={() => { setRejectReason(''); handleRejectDownload(r._id); }}
+                                  className="text-[9px] font-black uppercase px-2.5 py-1.5 text-red-500 border border-red-900/40 hover:border-red-400 transition-all">
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                            {r.status === 'rejected' && r.rejectionReason && (
+                              <span className="text-[10px] text-slate-500">{r.rejectionReason}</span>
+                            )}
                           </td>
                         </tr>
                       );

@@ -503,6 +503,7 @@ const ResourceTable: React.FC = () => {
   const [sgScheduledAt, setSgScheduledAt] = useState('');
   const [myRegisteredSessions, setMyRegisteredSessions] = useState<Record<string, boolean>>({});
   const [myJoinedGroups, setMyJoinedGroups] = useState<Record<string, boolean>>({});
+  const [downloadRequests, setDownloadRequests] = useState<any[]>([]);
   const [collections, setCollections] = useState<ResourceCollection[]>(() => {
     try { return JSON.parse(localStorage.getItem('dojo_collections') || '[]'); } catch { return []; }
   });
@@ -808,6 +809,20 @@ const ResourceTable: React.FC = () => {
       }
     };
     fetchShared();
+  }, [user?.id]);
+
+  // Fetch user's download requests
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchDownloadRequests = async () => {
+      try {
+        const res = await axios.get<any[]>(`${API_BASE_URL}/download-requests/user/${user.id}`);
+        setDownloadRequests(res.data);
+      } catch (err) {
+        console.error('Error fetching download requests:', err);
+      }
+    };
+    fetchDownloadRequests();
   }, [user?.id]);
 
   // Fetch resources from the API
@@ -1201,6 +1216,29 @@ const ResourceTable: React.FC = () => {
       setMyRegisteredSessions(prev => ({ ...prev, [id]: false }));
       setSelectedSession(prev => prev?.id === id ? { ...prev, attendeeCount: res.data.attendeeCount } : prev);
     } catch (err) { console.error('Error unregistering from session:', err); }
+  };
+
+  const handleRequestDownload = async (sessionId: string) => {
+    const userId = user?.id;
+    const userEmail = user?.emailAddresses?.[0]?.emailAddress || '';
+    const userName = user?.fullName || user?.username || 'Unknown';
+    if (!userId) return;
+    try {
+      const res = await axios.post<any>(`${API_BASE_URL}/download-requests`, {
+        sessionId, userId, userEmail, userName
+      });
+      setDownloadRequests(prev => [...prev, res.data]);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Error requesting download');
+    }
+  };
+
+  const handleRefreshDownloadRequests = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await axios.get<any[]>(`${API_BASE_URL}/download-requests/user/${user.id}`);
+      setDownloadRequests(res.data);
+    } catch (err) { console.error('Error refreshing download requests:', err); }
   };
 
   const handleUpvoteRequest = async (id: string) => {
@@ -2489,15 +2527,79 @@ const ResourceTable: React.FC = () => {
                             )}
 
                             {selectedSession.recordingLink && (
-                              <div className="flex items-center gap-4">
-                                <a href={selectedSession.recordingLink} target="_blank" rel="noreferrer"
-                                  className="flex items-center gap-2 text-secondary text-xs font-bold hover:underline underline-offset-2">
-                                  <Video size={13} /> Watch Recording
-                                </a>
-                                <a href={selectedSession.recordingLink} download
-                                  className="flex items-center gap-2 text-slate-400 hover:text-secondary text-xs font-bold hover:underline underline-offset-2 transition-colors">
-                                  ↓ Download
-                                </a>
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-4">
+                                  <a href={selectedSession.recordingLink} target="_blank" rel="noreferrer"
+                                    className="flex items-center gap-2 text-secondary text-xs font-bold hover:underline underline-offset-2">
+                                    <Video size={13} /> Watch Recording
+                                  </a>
+                                </div>
+                                {/* Download request UI */}
+                                {(() => {
+                                  const myRequest = downloadRequests.find((r: any) => r.sessionId === selectedSession.id);
+                                  const isRegistered = myRegisteredSessions[selectedSession.id];
+                                  const isExpired = myRequest?.expiresAt && new Date(myRequest.expiresAt) < new Date();
+                                  
+                                  if (!isRegistered) {
+                                    return (
+                                      <p className="text-[10px] text-slate-500 italic">
+                                        Register for this session to request download access.
+                                      </p>
+                                    );
+                                  }
+                                  
+                                  if (!myRequest || myRequest.status === 'pending') {
+                                    return (
+                                      <button onClick={() => handleRequestDownload(selectedSession.id)}
+                                        className="self-start flex items-center gap-2 text-amber-400 text-xs font-bold hover:underline underline-offset-2 transition-colors">
+                                        <span className="text-lg">🔐</span> Request Download Access
+                                      </button>
+                                    );
+                                  }
+                                  
+                                  if (myRequest.status === 'rejected') {
+                                    return (
+                                      <div className="space-y-2">
+                                        <p className="text-[10px] text-red-400 font-bold">Request Denied</p>
+                                        {myRequest.rejectionReason && (
+                                          <p className="text-[10px] text-slate-500">Reason: {myRequest.rejectionReason}</p>
+                                        )}
+                                        <button onClick={() => handleRequestDownload(selectedSession.id)}
+                                          className="text-[10px] text-slate-400 hover:text-amber-400 font-bold transition-colors">
+                                          Request Again
+                                        </button>
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  if (myRequest.status === 'approved' && !isExpired) {
+                                    return (
+                                      <div className="space-y-2">
+                                        <a href={selectedSession.recordingLink} download
+                                          className="self-start flex items-center gap-2 text-green-400 text-xs font-bold hover:underline underline-offset-2 transition-colors">
+                                          <span>↓</span> Download (Expires {new Date(myRequest.expiresAt).toLocaleString()})
+                                        </a>
+                                        <p className="text-[10px] text-amber-400/80">
+                                          ⏱ Download link expires in 24 hours
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  if (myRequest.status === 'approved' && isExpired) {
+                                    return (
+                                      <div className="space-y-2">
+                                        <p className="text-[10px] text-slate-500">Download link expired.</p>
+                                        <button onClick={() => handleRequestDownload(selectedSession.id)}
+                                          className="self-start text-[10px] text-amber-400 hover:text-amber-300 font-bold transition-colors">
+                                          Request New Download Access
+                                        </button>
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  return null;
+                                })()}
                                 {/* Admin: delete recording */}
                                 {userIsAdmin && !showDeleteRecordingConfirm && (
                                   <button onClick={() => setShowDeleteRecordingConfirm(true)}

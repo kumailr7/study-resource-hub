@@ -110,9 +110,24 @@ const challengeParticipantSchema = new mongoose.Schema({
 }, { timestamps: true });
 challengeParticipantSchema.index({ challengeId: 1, userId: 1 }, { unique: true });
 
+const downloadRequestSchema = new mongoose.Schema({
+  sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', required: true },
+  userId: { type: String, required: true },
+  userEmail: { type: String, required: true },
+  userName: { type: String, required: true },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  reviewedBy: { type: String, default: null },
+  reviewedAt: { type: Date, default: null },
+  rejectionReason: { type: String, default: '' },
+  approvedAt: { type: Date, default: null },
+  expiresAt: { type: Date, default: null },
+}, { timestamps: true });
+downloadRequestSchema.index({ sessionId: 1, userId: 1 }, { unique: true });
+
 const SessionModel = mongoose.model('Session', sessionSchema);
 const StudyGroup = mongoose.model('StudyGroup', studyGroupSchema);
 const ChallengeParticipant = mongoose.model('ChallengeParticipant', challengeParticipantSchema);
+const DownloadRequest = mongoose.model('DownloadRequest', downloadRequestSchema);
 
 // ── Sessions routes ──
 app.get('/api/sessions', asyncHandler(async (req, res) => {
@@ -167,6 +182,87 @@ app.patch('/api/sessions/:id/register', asyncHandler(async (req, res) => {
   }
   await session.save();
   res.json(session);
+}));
+
+// ── Download Request routes ──
+app.post('/api/download-requests', asyncHandler(async (req, res) => {
+  const { sessionId, userId, userEmail, userName } = req.body;
+  
+  const session = await SessionModel.findById(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  
+  if (!session.registeredUsers.includes(userId)) {
+    return res.status(403).json({ error: 'You must be registered for this session to request download' });
+  }
+  
+  const existing = await DownloadRequest.findOne({ sessionId, userId });
+  if (existing) {
+    if (existing.status === 'approved' && existing.expiresAt && new Date(existing.expiresAt) > new Date()) {
+      return res.status(200).json(existing);
+    }
+    if (existing.status === 'pending') {
+      return res.status(400).json({ error: 'You already have a pending request' });
+    }
+  }
+  
+  const request = new DownloadRequest({ sessionId, userId, userEmail, userName });
+  await request.save();
+  res.status(201).json(request);
+}));
+
+app.get('/api/download-requests', asyncHandler(async (req, res) => {
+  const requests = await DownloadRequest.find().sort({ createdAt: -1 }).populate('sessionId', 'topic date time');
+  res.json(requests);
+}));
+
+app.get('/api/download-requests/user/:userId', asyncHandler(async (req, res) => {
+  const requests = await DownloadRequest.find({ userId: req.params.userId }).populate('sessionId', 'topic date time');
+  res.json(requests);
+}));
+
+app.patch('/api/download-requests/:id/approve', asyncHandler(async (req, res) => {
+  const { adminId } = req.body;
+  const request = await DownloadRequest.findById(req.params.id);
+  if (!request) return res.status(404).json({ error: 'Request not found' });
+  
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  request.status = 'approved';
+  request.reviewedBy = adminId;
+  request.reviewedAt = new Date();
+  request.approvedAt = new Date();
+  request.expiresAt = expiresAt;
+  
+  await request.save();
+  res.json(request);
+}));
+
+app.patch('/api/download-requests/:id/reject', asyncHandler(async (req, res) => {
+  const { adminId, reason } = req.body;
+  const request = await DownloadRequest.findById(req.params.id);
+  if (!request) return res.status(404).json({ error: 'Request not found' });
+  
+  request.status = 'rejected';
+  request.reviewedBy = adminId;
+  request.reviewedAt = new Date();
+  request.rejectionReason = reason || '';
+  
+  await request.save();
+  res.json(request);
+}));
+
+app.patch('/api/download-requests/:id/reset', asyncHandler(async (req, res) => {
+  const request = await DownloadRequest.findById(req.params.id);
+  if (!request) return res.status(404).json({ error: 'Request not found' });
+  
+  request.status = 'pending';
+  request.reviewedBy = null;
+  request.reviewedAt = null;
+  request.approvedAt = null;
+  request.expiresAt = null;
+  request.rejectionReason = '';
+  
+  await request.save();
+  res.json(request);
 }));
 
 // ── Study Groups routes ──
