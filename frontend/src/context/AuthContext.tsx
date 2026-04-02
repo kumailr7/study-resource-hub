@@ -56,14 +56,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const res = await axios.get<{ role?: string; clerkId?: string; email?: string }>(`${API_BASE_URL}/users/me?clerkId=${user.id}&email=${encodeURIComponent(userEmail)}`);
         console.log('📊 User role response:', res.data);
         
-        if (res.data?.role) {
-          setUserRole(res.data.role);
+        if (res.data?.role && ['super_admin', 'admin', 'user'].includes(res.data.role)) {
+          setUserRole(res.data.role as 'super_admin' | 'admin' | 'user');
+        } else {
         } else {
           // Fallback: Check Clerk metadata as backup
           console.log('🔄 No role in MongoDB, checking Clerk metadata...');
           const clerkRole = (user.publicMetadata as any)?.role;
           if (clerkRole === 'super_admin' || clerkRole === 'admin') {
-            setUserRole(clerkRole);
+            setUserRole(clerkRole as 'super_admin' | 'admin');
           } else {
             setUserRole('user');
           }
@@ -74,7 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const clerkRole = (user.publicMetadata as any)?.role;
         if (clerkRole === 'super_admin' || clerkRole === 'admin') {
           console.log('🔄 Using Clerk metadata role:', clerkRole);
-          setUserRole(clerkRole);
+          setUserRole(clerkRole as 'super_admin' | 'admin');
         } else {
           setUserRole('user');
         }
