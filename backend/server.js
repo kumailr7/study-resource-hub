@@ -35,17 +35,21 @@ const allowedOrigins = [
   'https://studyhub.local',
   'https://hub.devops-dojo.ninja',
   'https://study-resource-hub-bice.vercel.app',
+  'https://study-resource-hub.vercel.app',
+  // Add any custom frontend URLs here
 ];
 
+// Allow all origins for easier development (can be restricted later)
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests like curl/postman with no origin
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`CORS policy does not allow access from ${origin}`), false);
+    // Allow all origins for now - can be restricted in production
+    return callback(null, true);
   },
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-clerk-id'],
   credentials: true,
 };
 
