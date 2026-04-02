@@ -94,6 +94,7 @@ interface Session {
   topic: string;
   date: string;
   time: string;
+  timezone: string;
   tag: string;
   meetingLink: string;
   platform: 'Google Meet' | 'Zoom' | 'Teams' | 'Other';
@@ -160,6 +161,59 @@ const getTagColor = (tag: string): string => {
     if (entry.keywords.some(kw => lower.includes(kw))) return entry.color;
   }
   return '#ff86c2';
+};
+
+const COMMON_TIMEZONES = [
+  { value: 'Asia/Kolkata', label: 'IST - India Standard Time' },
+  { value: 'Asia/Tokyo', label: 'JST - Japan Standard Time' },
+  { value: 'Asia/Shanghai', label: 'CST - China Standard Time' },
+  { value: 'Asia/Singapore', label: 'SGT - Singapore Time' },
+  { value: 'Asia/Dubai', label: 'GST - Gulf Standard Time' },
+  { value: 'Europe/London', label: 'GMT/BST - United Kingdom' },
+  { value: 'Europe/Paris', label: 'CET - Central European Time' },
+  { value: 'Europe/Berlin', label: 'CET - Germany' },
+  { value: 'Europe/Moscow', label: 'MSK - Moscow Time' },
+  { value: 'America/New_York', label: 'EST/EDT - Eastern Time (US)' },
+  { value: 'America/Chicago', label: 'CST/CDT - Central Time (US)' },
+  { value: 'America/Denver', label: 'MST/MDT - Mountain Time (US)' },
+  { value: 'America/Los_Angeles', label: 'PST/PDT - Pacific Time (US)' },
+  { value: 'America/Sao_Paulo', label: 'BRT - Brazil Time' },
+  { value: 'Australia/Sydney', label: 'AEST/AEDT - Australia Eastern' },
+  { value: 'Pacific/Auckland', label: 'NZST/NZDT - New Zealand' },
+  { value: 'UTC', label: 'UTC - Universal Time' },
+];
+
+const formatTimeInTimezone = (date: string, time: string, fromTz: string, toTz: string): string => {
+  try {
+    const dateTimeStr = `${date}T${time}`;
+    const sourceDate = new Date(dateTimeStr);
+    if (isNaN(sourceDate.getTime())) return `${time}`;
+    
+    const options: Intl.DateTimeFormatOptions = {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: toTz,
+    };
+    return sourceDate.toLocaleTimeString('en-US', options);
+  } catch {
+    return time;
+  }
+};
+
+const getTimezoneOffset = (tz: string): string => {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'short',
+    });
+    const parts = formatter.formatToParts(now);
+    const tzPart = parts.find(p => p.type === 'timeZoneName');
+    return tzPart?.value || tz;
+  } catch {
+    return tz;
+  }
 };
 
 const ResourceRow: React.FC<{
@@ -383,6 +437,8 @@ const ResourceTable: React.FC = () => {
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [sessionLinkedIn, setSessionLinkedIn] = useState("");
   const [sessionDuration, setSessionDuration] = useState("30");
+  const [sessionTimezone, setSessionTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [userTimezone, setUserTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [viewAllResources, setViewAllResources] = useState(false);
   const [newResourceAddedBy, setNewResourceAddedBy] = useState('');
   const [sgScheduledAt, setSgScheduledAt] = useState('');
@@ -973,7 +1029,7 @@ const ResourceTable: React.FC = () => {
     try {
       const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
         author: sessionAuthor, topic: sessionTopic,
-        date: sessionDate, time: sessionTime,
+        date: sessionDate, time: sessionTime, timezone: sessionTimezone,
         tag: sessionTag, meetingLink: sessionLink, platform: sessionPlatform,
         agenda: sessionAgenda, willRecord: sessionWillRecord, recordingLink: '', aiSummary: '',
         hostLinkedIn: sessionLinkedIn, attendeeCount: 0, duration: Number(sessionDuration) || 30,
@@ -2113,11 +2169,14 @@ const ResourceTable: React.FC = () => {
                         <div className="space-y-0.5">
                           {daySessions.slice(0, 3).map(s => {
                             const tc = s.tag ? getTagColor(s.tag) : platformColor[s.platform];
+                            const displayTime = userTimezone !== (s.timezone || 'UTC') 
+                              ? formatTimeInTimezone(s.date, s.time, s.timezone || 'UTC', userTimezone)
+                              : s.time;
                             return (
                             <button key={s.id} onClick={() => setSelectedSession(s)}
                               className="w-full text-left px-1.5 py-0.5 text-[10px] font-semibold truncate transition-opacity hover:opacity-80"
                               style={{ background: tc + '30', color: tc, borderLeft: `2px solid ${tc}` }}>
-                              {s.time} {s.topic}
+                              {displayTime} {s.topic}
                             </button>
                             );
                           })}
@@ -2159,6 +2218,15 @@ const ResourceTable: React.FC = () => {
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Time</label>
                       <input type="time" value={sessionTime} onChange={e => setSessionTime(e.target.value)}
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Timezone</label>
+                      <select value={sessionTimezone} onChange={e => setSessionTimezone(e.target.value)}
+                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
+                        {COMMON_TIMEZONES.map(tz => (
+                          <option key={tz.value} style={{ background: '#1e1e2e', color: '#e2e8f0' }} value={tz.value}>{tz.label}</option>
+                        ))}
+                      </select>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Tag</label>
@@ -2265,7 +2333,15 @@ const ResourceTable: React.FC = () => {
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Date & Time</p>
                           <p className="text-sm font-bold text-on-surface">{selectedSession.date}</p>
-                          <p className="text-xs text-slate-400">{selectedSession.time}</p>
+                          <p className="text-xs text-slate-400">{selectedSession.time} {selectedSession.timezone ? `(${getTimezoneOffset(selectedSession.timezone)})` : '(UTC)'}</p>
+                          {userTimezone !== (selectedSession.timezone || 'UTC') && (
+                            <div className="mt-2 pt-2 border-t border-white/10">
+                              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Your Time ({getTimezoneOffset(userTimezone)})</p>
+                              <p className="text-sm font-bold text-primary">
+                                {formatTimeInTimezone(selectedSession.date, selectedSession.time, selectedSession.timezone || 'UTC', userTimezone)}
+                              </p>
+                            </div>
+                          )}
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Platform</p>

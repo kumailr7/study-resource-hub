@@ -78,6 +78,7 @@ const sessionSchema = new mongoose.Schema({
   topic: { type: String, required: true },
   date: { type: String, required: true },
   time: { type: String, required: true },
+  timezone: { type: String, default: 'UTC' },
   tag: { type: String, default: '' },
   meetingLink: { type: String, required: true },
   platform: { type: String, default: 'Google Meet' },
