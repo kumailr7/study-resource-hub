@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       try {
+        console.log('Syncing user with Clerk ID:', user.id);
         await axios.post(`${API_BASE_URL}/users/sync`, {
           clerkId: user.id,
           email: user.primaryEmailAddress?.emailAddress || '',
@@ -44,6 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
 
         const res = await axios.get<{ role?: 'super_admin' | 'admin' | 'user' }>(`${API_BASE_URL}/users/me?clerkId=${user.id}`);
+        console.log('User role response:', res.data);
         setUserRole(res.data?.role || 'user');
       } catch (err) {
         console.error('Error fetching user role:', err);

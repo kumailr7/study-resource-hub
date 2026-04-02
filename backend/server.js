@@ -323,7 +323,7 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
     user.name = name;
     await user.save();
   } else {
-    user = new UserManagement({ clerkId, email, name, role: 'user' });
+    user = new UserManagement({ clerkId, email, name, role: 'user', status: 'active' });
     await user.save();
   }
   res.json(user);
