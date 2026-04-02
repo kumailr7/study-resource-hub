@@ -155,10 +155,6 @@ const AdminDashboard: React.FC = () => {
     const c = colors[role as keyof typeof colors] || colors.user;
     return <span className="text-[9px] font-black uppercase px-2 py-0.5" style={{ background: c.bg, color: c.text }}>{c.label}</span>;
   };
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const handleApproveDownload = async (id: string) => {
     try {

@@ -2546,25 +2546,42 @@ const ResourceTable: React.FC = () => {
                       </div>
 
                       {/* Meeting link CTA */}
-                      <a href={selectedSession.meetingLink} target="_blank" rel="noreferrer"
-                        className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all"
-                        style={{ background: sessionColor, color: '#0e0e13' }}>
-                        <Video size={14} /> Join Meeting
-                      </a>
+                      {(() => {
+                        const isPast = new Date(`${selectedSession.date}T${selectedSession.time}`) < new Date();
+                        if (isPast) {
+                          return (
+                            <div className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-slate-700 text-slate-500 cursor-not-allowed">
+                              <Video size={14} /> Session Ended
+                            </div>
+                          );
+                        }
+                        return (
+                          <a href={selectedSession.meetingLink} target="_blank" rel="noreferrer"
+                            className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all hover:opacity-90"
+                            style={{ background: sessionColor, color: '#0e0e13' }}>
+                            <Video size={14} /> Join Meeting
+                          </a>
+                        );
+                      })()}
 
                       {/* Calendar integration buttons */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <a href={getGoogleCalendarUrl(selectedSession)} target="_blank" rel="noreferrer"
-                          className="flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600/30 transition-colors">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 15h-3v-9h3v9zm6 0h-3v-6h3v6zm0-7.5h-3V7.5h3v3z"/></svg>
-                          Google Cal
-                        </a>
-                        <button onClick={() => downloadICS(selectedSession)}
-                          className="flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest bg-purple-600/20 text-purple-400 border border-purple-600/30 hover:bg-purple-600/30 transition-colors">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                          Download ICS
-                        </button>
-                      </div>
+                      {(() => {
+                        const isPast = new Date(`${selectedSession.date}T${selectedSession.time}`) < new Date();
+                        return (
+                          <div className={`grid grid-cols-2 gap-3 ${isPast ? 'opacity-40 pointer-events-none' : ''}`}>
+                            <a href={getGoogleCalendarUrl(selectedSession)} target="_blank" rel="noreferrer"
+                              className="flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600/30 transition-colors">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 15h-3v-9h3v9zm6 0h-3v-6h3v6zm0-7.5h-3V7.5h3v3z"/></svg>
+                              Google Cal
+                            </a>
+                            <button onClick={() => downloadICS(selectedSession)}
+                              className="flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest bg-purple-600/20 text-purple-400 border border-purple-600/30 hover:bg-purple-600/30 transition-colors">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                              Download ICS
+                            </button>
+                          </div>
+                        );
+                      })()}
 
                       {/* Recording section */}
                       {selectedSession.willRecord && (() => {
@@ -2594,13 +2611,24 @@ const ResourceTable: React.FC = () => {
 
                             {selectedSession.recordingLink && (
                               <div className="flex flex-col gap-3">
-                                <div className="flex items-center gap-4">
-                                  <a href={selectedSession.recordingLink} target="_blank" rel="noreferrer"
-                                    className="flex items-center gap-2 text-secondary text-xs font-bold hover:underline underline-offset-2">
-                                    <Video size={13} /> Watch Recording
-                                  </a>
-                                </div>
-                                {/* Download request UI */}
+                                {(() => {
+                                  const isPast = new Date(`${selectedSession.date}T${selectedSession.time}`) < new Date();
+                                  return (
+                                    <>
+                                      <div className="flex items-center gap-4">
+                                        {isPast ? (
+                                          <span className="flex items-center gap-2 text-slate-500 text-xs font-bold cursor-not-allowed">
+                                            <Video size={13} /> Watch Recording
+                                          </span>
+                                        ) : (
+                                          <a href={selectedSession.recordingLink} target="_blank" rel="noreferrer"
+                                            className="flex items-center gap-2 text-secondary text-xs font-bold hover:underline underline-offset-2">
+                                            <Video size={13} /> Watch Recording
+                                          </a>
+                                        )}
+                                      </div>
+                                      {/* Download request UI - only show for non-past sessions */}
+                                      {!isPast && (
                                 {(() => {
                                   const myRequest = downloadRequests.find((r: any) => r.sessionId === selectedSession.id);
                                   const isRegistered = myRegisteredSessions[selectedSession.id];
@@ -2665,6 +2693,9 @@ const ResourceTable: React.FC = () => {
                                   }
                                   
                                   return null;
+                                })()}
+                                    </>
+                                  );
                                 })()}
                                 {/* Admin: delete recording */}
                                 {userIsAdmin && !showDeleteRecordingConfirm && (
