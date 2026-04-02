@@ -93,6 +93,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const userIsAdmin = userRole === 'admin' || userRole === 'super_admin';
   const userIsSuperAdmin = userRole === 'super_admin';
+  
+  const authIsLoaded = isLoaded && !isLoading;
+  console.log('🔐 AuthContext state:', { 
+    clerkIsLoaded: isLoaded, 
+    isSignedIn, 
+    isLoading, 
+    authIsLoaded, 
+    userRole, 
+    userIsAdmin 
+  });
 
   return (
     <AuthContext.Provider value={{
@@ -100,7 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       userIsAdmin,
       userIsSuperAdmin,
       userRole,
-      isLoaded: isLoaded && !isLoading,
+      isLoaded: authIsLoaded,
     }}>
       {children}
     </AuthContext.Provider>
