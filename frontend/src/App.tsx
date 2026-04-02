@@ -2698,8 +2698,6 @@ const ResourceTable: React.FC = () => {
                                 })()}
                               </div>
                             )}
-                              </div>
-                            )}
 
                             {/* Admin delete confirm */}
                             {userIsAdmin && showDeleteRecordingConfirm && (
