@@ -216,6 +216,29 @@ const getTimezoneOffset = (tz: string): string => {
   }
 };
 
+type SessionStatus = 'past' | 'live' | 'upcoming-soon' | 'future';
+
+const getSessionStatus = (session: Session): SessionStatus => {
+  const now = new Date();
+  const sessionDateTime = new Date(`${session.date}T${session.time}`);
+  const diffMs = sessionDateTime.getTime() - now.getTime();
+  const diffMins = diffMs / (1000 * 60);
+  
+  if (diffMins < -session.duration! * 1.5) return 'past';
+  if (diffMins < 15 && diffMins > -session.duration! * 0.5) return 'live';
+  if (diffMins > 0 && diffMins <= 30) return 'upcoming-soon';
+  return 'future';
+};
+
+const getStatusColor = (status: SessionStatus): string => {
+  switch (status) {
+    case 'live': return '#4ade80';
+    case 'upcoming-soon': return '#22d3ee';
+    case 'past': return '#6b7280';
+    default: return '#9ca3af';
+  }
+};
+
 const generateICS = (session: Session): string => {
   const formatDateForICS = (date: string, time: string): string => {
     const dateTime = new Date(`${date}T${time}`);
@@ -2224,6 +2247,38 @@ const ResourceTable: React.FC = () => {
                 </button>
               </div>
 
+              {/* Live Sessions Banner */}
+              {(() => {
+                const now = new Date();
+                const liveSessions = sessions.filter(s => {
+                  const status = getSessionStatus(s);
+                  return status === 'live' || status === 'upcoming-soon';
+                });
+                if (liveSessions.length === 0) return null;
+                return (
+                  <div className="bg-gradient-to-r from-green-900/30 to-cyan-900/30 border border-green-500/30 rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                      <span className="text-xs font-black uppercase tracking-widest text-green-400">Live / Starting Soon</span>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1">
+                      {liveSessions.map(s => {
+                        const status = getSessionStatus(s);
+                        const isLive = status === 'live';
+                        return (
+                          <button key={s.id} onClick={() => setSelectedSession(s)}
+                            className="flex-shrink-0 px-4 py-2 rounded-lg bg-green-500/20 border border-green-400/30 hover:bg-green-500/30 transition-all text-left group"
+                            style={{ animation: 'electric-pulse 2s ease-in-out infinite' }}>
+                            <p className="text-xs font-bold text-green-300 group-hover:text-green-200">{s.topic}</p>
+                            <p className="text-[10px] text-green-400/70">{isLive ? '● LIVE NOW' : `Starts in 30 min`} · {s.time}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ── Google Calendar style grid ── */}
               <div className="bg-surface-container overflow-hidden">
                 {/* Calendar header */}
@@ -2269,10 +2324,21 @@ const ResourceTable: React.FC = () => {
                             const displayTime = userTimezone !== (s.timezone || 'UTC') 
                               ? formatTimeInTimezone(s.date, s.time, s.timezone || 'UTC', userTimezone)
                               : s.time;
+                            const status = getSessionStatus(s);
+                            const isPast = status === 'past';
+                            const isUpcomingSoon = status === 'upcoming-soon' || status === 'live';
                             return (
                             <button key={s.id} onClick={() => setSelectedSession(s)}
-                              className="w-full text-left px-1.5 py-0.5 text-[10px] font-semibold truncate transition-opacity hover:opacity-80"
-                              style={{ background: tc + '30', color: tc, borderLeft: `2px solid ${tc}` }}>
+                              className={`w-full text-left px-1.5 py-0.5 text-[10px] font-semibold truncate transition-all hover:opacity-80 relative
+                                ${isPast ? 'opacity-50' : ''}`}
+                              style={{ 
+                                background: isPast ? 'rgba(107, 114, 128, 0.15)' : tc + '30', 
+                                color: isPast ? '#9ca3af' : tc, 
+                                borderLeft: `2px solid ${isPast ? '#6b7280' : tc}`,
+                                animation: isUpcomingSoon ? 'electric-pulse 2s ease-in-out infinite' : 'none',
+                                boxShadow: isUpcomingSoon ? `0 0 8px ${getStatusColor(status)}40` : 'none',
+                              }}>
+                              {status === 'live' && <span className="inline-block w-1.5 h-1.5 bg-green-400 rounded-full mr-1 animate-pulse" />}
                               {displayTime} {s.topic}
                             </button>
                             );
@@ -2822,19 +2888,19 @@ const ResourceTable: React.FC = () => {
                     <div className="space-y-1">
                       {past.map(s => (
                         <div key={s.id}
-                          className="flex items-center gap-4 px-4 py-3 bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer group"
+                          className="flex items-center gap-4 px-4 py-3 bg-surface-container/50 hover:bg-surface-container/80 transition-colors cursor-pointer group opacity-60"
                           onClick={() => setSelectedSession(s)}
-                          style={{ borderLeft: `3px solid ${platformColor[s.platform]}50` }}>
-                          <div className="w-1.5 h-1.5 flex-shrink-0 opacity-40" style={{ background: platformColor[s.platform] }}></div>
+                          style={{ borderLeft: '3px solid #6b7280' }}>
+                          <div className="w-1.5 h-1.5 flex-shrink-0 opacity-40" style={{ background: '#6b7280' }}></div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-on-surface truncate group-hover:text-primary transition-colors">{s.topic}</p>
-                            <p className="text-[10px] text-slate-500">{s.author} · {s.date} at {s.time}</p>
+                            <p className="text-xs font-bold text-slate-400 truncate group-hover:text-slate-300 transition-colors">{s.topic}</p>
+                            <p className="text-[10px] text-slate-600">{s.author} · {s.date} at {s.time}</p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <span className="text-[9px] font-bold uppercase px-2 py-0.5"
-                              style={{ color: platformColor[s.platform], background: platformColor[s.platform] + '20' }}>{s.platform}</span>
+                              style={{ color: '#6b7280', background: '#6b728020' }}>{s.platform}</span>
                             {s.willRecord && (
-                              <span className={`text-[9px] font-bold uppercase px-2 py-0.5 ${s.recordingLink ? 'text-green-400 bg-green-400/10' : 'text-slate-500 bg-white/5'}`}>
+                              <span className={`text-[9px] font-bold uppercase px-2 py-0.5 ${s.recordingLink ? 'text-slate-400 bg-slate-400/10' : 'text-slate-600 bg-white/5'}`}>
                                 {s.recordingLink ? '● Recorded' : '○ Pending'}
                               </span>
                             )}
