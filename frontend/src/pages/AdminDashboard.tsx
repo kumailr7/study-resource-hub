@@ -6,23 +6,43 @@ import { useAuth } from '../context/AuthContext';
 import { useClerk, useUser } from '@clerk/clerk-react';
 import {
   LayoutGrid, Package, Bell, LogOut, ExternalLink,
-  CheckCircle2, AlertTriangle, Copy, Users as UsersIcon, Shield, Download, X, RefreshCw
+  CheckCircle2, AlertTriangle, Copy, Users as UsersIcon, Shield, Download, X, RefreshCw, UserPlus, Trash2, ArrowUpCircle
 } from 'lucide-react';
 import SplitText from '../components/SplitText';
 
-interface User { id: string; username: string; role: string; status: string; }
+interface ManagedUser {
+  _id: string;
+  clerkId: string;
+  email: string;
+  name: string;
+  role: 'super_admin' | 'admin' | 'user';
+  status: 'active' | 'pending_removal' | 'removed';
+  removalRequest?: {
+    requestedBy: string;
+    reason: string;
+    requestedAt: string;
+    reviewedBy: string;
+    reviewedAt: string;
+    approved: boolean;
+  };
+  invitedBy?: string;
+  invitedAt?: string;
+  createdAt: string;
+}
+
 interface FullRequest {
   _id: string; userName: string; resourceName: string; resourceType: string;
   requestDate: string; status: string; createdAt: string;
 }
 
-type AdminTab = 'overview' | 'requests' | 'downloads' | 'slack' | 'roles';
+type AdminTab = 'overview' | 'users' | 'removals' | 'requests' | 'downloads' | 'slack' | 'roles';
 
 const AdminDashboard: React.FC = () => {
-  const { userIsAdmin } = useAuth();
+  const { userIsAdmin, userIsSuperAdmin, userRole } = useAuth();
   const { signOut } = useClerk();
   const { user: clerkUser } = useUser();
-  const [users, setUsers] = useState<User[]>([]);
+  const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([]);
+  const [pendingRemovals, setPendingRemovals] = useState<ManagedUser[]>([]);
   const [allRequests, setAllRequests] = useState<FullRequest[]>([]);
   const [downloadRequests, setDownloadRequests] = useState<any[]>([]);
   const [totalResources, setTotalResources] = useState(0);
@@ -30,6 +50,11 @@ const AdminDashboard: React.FC = () => {
   const [slackWebhook, setSlackWebhook] = useState(localStorage.getItem('dojo_slack_webhook') || '');
   const [slackStatus, setSlackStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [rejectReason, setRejectReason] = useState('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [removeUserId, setRemoveUserId] = useState<string | null>(null);
+  const [removeReason, setRemoveReason] = useState('');
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -37,16 +62,99 @@ const AdminDashboard: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [usersRes, resourcesRes, requestsRes, dlRes] = await Promise.all([
+      const [usersRes, removalsRes, resourcesRes, requestsRes, dlRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/users`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/users/pending-removals`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API_BASE_URL}/added-resources?limit=1000`).catch(() => ({ data: { total: 0, data: [] } })),
         axios.get(`${API_BASE_URL}/requests?limit=1000`).catch(() => ({ data: { data: [] } })),
         axios.get(`${API_BASE_URL}/download-requests`, { headers }).catch(() => ({ data: [] })),
       ]);
-      setUsers(usersRes.data || []);
+      setManagedUsers(usersRes.data || []);
+      setPendingRemovals(removalsRes.data || []);
       setTotalResources(resourcesRes.data.total || resourcesRes.data.data?.length || 0);
       setAllRequests(requestsRes.data.data || requestsRes.data || []);
       setDownloadRequests(dlRes.data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleInviteUser = async () => {
+    if (!inviteEmail.trim()) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_BASE_URL}/users/invite`, { email: inviteEmail, invitedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      setShowInviteModal(false);
+      setInviteEmail('');
+      fetchAll();
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Error inviting user');
+    }
+  };
+
+  const handlePromoteToAdmin = async (clerkId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'admin', updatedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      fetchAll();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDemoteToUser = async (clerkId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'user', updatedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      fetchAll();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleRequestRemoval = async () => {
+    if (!removeUserId || !removeReason.trim()) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_BASE_URL}/users/${removeUserId}/request-removal`, { reason: removeReason, requestedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      setShowRemoveModal(false);
+      setRemoveUserId(null);
+      setRemoveReason('');
+      fetchAll();
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Error requesting removal');
+    }
+  };
+
+  const handleApproveRemoval = async (clerkId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/approve-removal`, { reviewedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      fetchAll();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleRejectRemoval = async (clerkId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/reject-removal`, { reviewedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      fetchAll();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleMakeSuperAdmin = async (clerkId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'super_admin', updatedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      fetchAll();
+    } catch (e) { console.error(e); }
+  };
+
+  const getRoleBadge = (role: string) => {
+    const colors = {
+      super_admin: { bg: '#7c3aed20', text: '#a78bfa', label: 'SUPER ADMIN' },
+      admin: { bg: '#ff86c220', text: '#ff86c2', label: 'ADMIN' },
+      user: { bg: '#4ade8020', text: '#4ade80', label: 'USER' },
+    };
+    const c = colors[role as keyof typeof colors] || colors.user;
+    return <span className="text-[9px] font-black uppercase px-2 py-0.5" style={{ background: c.bg, color: c.text }}>{c.label}</span>;
+  };
     } catch (e) {
       console.error(e);
     }
@@ -162,7 +270,9 @@ const AdminDashboard: React.FC = () => {
           </div>
           <nav className="flex-1 px-4 space-y-1">
             {navItem('overview', LayoutGrid, 'Overview')}
-            {navItem('requests', Package, 'Requested Resources')}
+            {userIsSuperAdmin && navItem('users', UsersIcon, 'User Management')}
+            {userIsSuperAdmin && navItem('removals', Trash2, 'Removal Requests')}
+            {userIsAdmin && navItem('requests', Package, 'Requested Resources')}
             {navItem('downloads', Download, 'Download Requests')}
             {navItem('slack', Bell, 'Slack Alerts')}
             {navItem('roles', Shield, 'Role Management')}
@@ -191,10 +301,10 @@ const AdminDashboard: React.FC = () => {
               {/* Stat cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
                 {[
-                  { label: 'Total Users', value: users.length, accent: '#ff86c2' },
+                  { label: 'Total Users', value: managedUsers.length, accent: '#ff86c2' },
                   { label: 'Total Resources', value: totalResources, accent: '#bf81ff' },
                   { label: 'Pending Requests', value: pending.length, accent: '#facc15' },
-                  { label: 'Stale (7+ days)', value: stale.length, accent: stale.length > 0 ? '#ff6e84' : '#4ade80' },
+                  { label: 'Pending Removals', value: pendingRemovals.length, accent: pendingRemovals.length > 0 ? '#ff6e84' : '#4ade80' },
                 ].map(c => (
                   <div key={c.label} className="bg-[#131318] p-6 flex flex-col gap-2 relative overflow-hidden" style={{ borderLeft: `3px solid ${c.accent}` }}>
                     <div className="absolute top-0 right-0 w-20 h-20 blur-[40px] opacity-20 pointer-events-none" style={{ background: c.accent }}></div>
@@ -204,46 +314,170 @@ const AdminDashboard: React.FC = () => {
                 ))}
               </div>
 
-              {/* User management table */}
-              <div className="bg-[#131318] overflow-hidden">
-                <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
-                  <h3 className="text-base font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>User Management</h3>
-                  <span className="text-[10px] text-slate-600 uppercase tracking-widest">{users.length} users</span>
+              {/* Stats for non-super-admins */}
+              {!userIsSuperAdmin && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  {[
+                    { label: 'Total Resources', value: totalResources, accent: '#bf81ff' },
+                    { label: 'Pending Requests', value: pending.length, accent: '#facc15' },
+                    { label: 'Stale (7+ days)', value: stale.length, accent: stale.length > 0 ? '#ff6e84' : '#4ade80' },
+                  ].map(c => (
+                    <div key={c.label} className="bg-[#131318] p-6 flex flex-col gap-2 relative overflow-hidden" style={{ borderLeft: `3px solid ${c.accent}` }}>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.label}</span>
+                      <span className="text-4xl font-black leading-none" style={{ color: c.accent }}>{c.value}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-[#1f1f26]">
-                        {['Username', 'Role', 'Status', 'Actions'].map(h => (
-                          <th key={h} className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest px-6 py-3">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.length === 0 && (
-                        <tr><td colSpan={4} className="px-6 py-10 text-center text-slate-600 text-sm">No users found</td></tr>
-                      )}
-                      {users.map(u => (
-                        <tr key={u.id} className="border-t border-white/5 hover:bg-[#1a1a21] transition-colors">
-                          <td className="px-6 py-3 font-bold text-[#f8f5fd]">{u.username}</td>
-                          <td className="px-6 py-3">
-                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 text-[#bf81ff] bg-[#bf81ff]/10">{u.role}</span>
-                          </td>
-                          <td className="px-6 py-3">
-                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 text-green-400 bg-green-400/10">Active</span>
-                          </td>
-                          <td className="px-6 py-3">
-                            <div className="flex gap-2">
-                              <button className="text-[10px] font-bold uppercase px-3 py-1.5 border border-[#48474d] text-slate-400 hover:text-[#f8f5fd] hover:border-[#76747b] transition-colors">Edit</button>
-                              <button className="text-[10px] font-bold uppercase px-3 py-1.5 border border-red-900/40 text-red-500 hover:border-red-400 transition-colors">Delete</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              )}
+            </>
+          )}
+
+          {/* ── USER MANAGEMENT (Super Admin Only) ── */}
+          {adminTab === 'users' && userIsSuperAdmin && (
+            <>
+              <div className="flex items-end justify-between">
+                <div>
+                  <h2 className="text-3xl font-black text-[#f8f5fd]">User Management</h2>
+                  <p className="text-slate-500 mt-1 text-sm">Manage users, roles, and permissions</p>
                 </div>
+                <button onClick={() => setShowInviteModal(true)} className="flex items-center gap-2 px-4 py-2 bg-[#ff86c2] text-[#0e0e13] text-xs font-black uppercase tracking-widest hover:opacity-90">
+                  <UserPlus size={14} /> Invite User
+                </button>
               </div>
+
+              {/* Invite Modal */}
+              {showInviteModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className="bg-[#131318] p-6 rounded-xl w-96 space-y-4 border border-white/10">
+                    <h3 className="text-lg font-black text-[#f8f5fd]">Invite User</h3>
+                    <input type="email" placeholder="Enter email address" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                      className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-2 text-sm text-[#f8f5fd] placeholder-slate-600 outline-none focus:border-[#ff86c2]" />
+                    <div className="flex gap-3">
+                      <button onClick={handleInviteUser} className="flex-1 py-2 bg-[#ff86c2] text-[#0e0e13] text-xs font-black uppercase hover:opacity-90">Send Invite</button>
+                      <button onClick={() => setShowInviteModal(false)} className="px-4 py-2 border border-[#48474d] text-slate-400 text-xs font-bold uppercase hover:text-[#f8f5fd]">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Users Table */}
+              <div className="bg-[#131318] overflow-x-auto">
+                <table className="w-full text-sm min-w-[800px]">
+                  <thead>
+                    <tr className="bg-[#1f1f26]">
+                      {['User', 'Email', 'Role', 'Status', 'Actions'].map(h => (
+                        <th key={h} className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest px-5 py-3">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {managedUsers.filter(u => u.status !== 'removed').map(u => (
+                      <tr key={u._id} className="border-t border-white/5 hover:bg-[#1a1a21] transition-colors">
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#ff86c2]/20 flex items-center justify-center text-[10px] font-bold text-[#ff86c2]">
+                              {(u.name || u.email)[0].toUpperCase()}
+                            </div>
+                            <span className="font-bold text-[#f8f5fd]">{u.name || '—'}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-slate-400">{u.email}</td>
+                        <td className="px-5 py-3">{getRoleBadge(u.role)}</td>
+                        <td className="px-5 py-3">
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 ${u.status === 'active' ? 'text-green-400 bg-green-400/10' : 'text-yellow-400 bg-yellow-400/10'}`}>
+                            {u.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex gap-2">
+                            {u.role === 'user' && (
+                              <button onClick={() => handlePromoteToAdmin(u.clerkId)} className="text-[9px] font-bold uppercase px-2 py-1 text-[#bf81ff] border border-[#bf81ff]/50 hover:bg-[#bf81ff]/10">
+                                Promote
+                              </button>
+                            )}
+                            {u.role === 'admin' && u.clerkId !== clerkUser?.id && (
+                              <button onClick={() => handleDemoteToUser(u.clerkId)} className="text-[9px] font-bold uppercase px-2 py-1 text-slate-400 border border-slate-600 hover:text-[#f8f5fd]">
+                                Demote
+                              </button>
+                            )}
+                            {u.role === 'user' && (
+                              <button onClick={() => { setRemoveUserId(u.clerkId); setShowRemoveModal(true); }} className="text-[9px] font-bold uppercase px-2 py-1 text-red-400 border border-red-900/40 hover:bg-red-400/10">
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Remove User Modal */}
+              {showRemoveModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className="bg-[#131318] p-6 rounded-xl w-96 space-y-4 border border-red-500/30">
+                    <h3 className="text-lg font-black text-red-400">Request User Removal</h3>
+                    <p className="text-xs text-slate-400">This request will be reviewed by a Super Admin.</p>
+                    <textarea placeholder="Reason for removal (required)" value={removeReason} onChange={e => setRemoveReason(e.target.value)}
+                      className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-2 text-sm text-[#f8f5fd] placeholder-slate-600 outline-none focus:border-red-400 h-24 resize-none" />
+                    <div className="flex gap-3">
+                      <button onClick={handleRequestRemoval} disabled={!removeReason.trim()} className="flex-1 py-2 bg-red-500 text-white text-xs font-black uppercase hover:bg-red-600 disabled:opacity-50">Submit Request</button>
+                      <button onClick={() => { setShowRemoveModal(false); setRemoveReason(''); setRemoveUserId(null); }} className="px-4 py-2 border border-[#48474d] text-slate-400 text-xs font-bold uppercase">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── REMOVAL REQUESTS (Super Admin Only) ── */}
+          {adminTab === 'removals' && userIsSuperAdmin && (
+            <>
+              <div>
+                <h2 className="text-3xl font-black text-[#f8f5fd]">Removal Requests</h2>
+                <p className="text-slate-500 mt-1 text-sm">Review and approve user removal requests</p>
+              </div>
+
+              {pendingRemovals.length === 0 ? (
+                <div className="bg-[#131318] p-12 text-center">
+                  <p className="text-slate-500">No pending removal requests</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingRemovals.map(u => (
+                    <div key={u._id} className="bg-[#131318] p-6 border border-yellow-500/30">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-[#ff86c2]/20 flex items-center justify-center text-sm font-bold text-[#ff86c2]">
+                              {(u.name || u.email)[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-[#f8f5fd]">{u.name || '—'}</p>
+                              <p className="text-xs text-slate-500">{u.email}</p>
+                            </div>
+                            {getRoleBadge(u.role)}
+                          </div>
+                          <div className="mt-3 p-3 bg-[#0e0e13]">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Reason for removal:</p>
+                            <p className="text-sm text-slate-300">{u.removalRequest?.reason}</p>
+                          </div>
+                          <p className="text-[10px] text-slate-600">Requested: {u.removalRequest?.requestedAt ? new Date(u.removalRequest.requestedAt).toLocaleString() : '—'}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => handleApproveRemoval(u.clerkId)} className="px-4 py-2 bg-green-500 text-[#0e0e13] text-xs font-black uppercase hover:bg-green-400">
+                            Approve
+                          </button>
+                          <button onClick={() => handleRejectRemoval(u.clerkId)} className="px-4 py-2 border border-red-500 text-red-400 text-xs font-bold uppercase hover:bg-red-500/10">
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 

@@ -71,6 +71,30 @@ mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTop
     process.exit(1);
   });
 
+// Middleware to check if user is admin or super_admin
+const requireAdmin = asyncHandler(async (req, res, next) => {
+  const clerkId = req.headers['x-clerk-id'];
+  if (!clerkId) return res.status(401).json({ error: 'Unauthorized' });
+  
+  const user = await UserManagement.findOne({ clerkId });
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+});
+
+// Middleware to check if user is super_admin
+const requireSuperAdmin = asyncHandler(async (req, res, next) => {
+  const clerkId = req.headers['x-clerk-id'];
+  if (!clerkId) return res.status(401).json({ error: 'Unauthorized' });
+  
+  const user = await UserManagement.findOne({ clerkId });
+  if (!user || user.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Super admin access required' });
+  }
+  next();
+});
+
 // ── New collections: Sessions, Study Groups, Challenge Participants ──
 
 const sessionSchema = new mongoose.Schema({
@@ -124,10 +148,30 @@ const downloadRequestSchema = new mongoose.Schema({
 }, { timestamps: true });
 downloadRequestSchema.index({ sessionId: 1, userId: 1 }, { unique: true });
 
+const userManagementSchema = new mongoose.Schema({
+  clerkId: { type: String, required: true, unique: true },
+  email: { type: String, required: true },
+  name: { type: String, default: '' },
+  role: { type: String, enum: ['super_admin', 'admin', 'user'], default: 'user' },
+  status: { type: String, enum: ['active', 'pending_removal', 'removed'], default: 'active' },
+  removalRequest: {
+    requestedBy: { type: String, default: null },
+    reason: { type: String, default: '' },
+    requestedAt: { type: Date, default: null },
+    reviewedBy: { type: String, default: null },
+    reviewedAt: { type: Date, default: null },
+    approved: { type: Boolean, default: null }
+  },
+  invitedBy: { type: String, default: null },
+  invitedAt: { type: Date, default: null },
+}, { timestamps: true });
+userManagementSchema.index({ clerkId: 1 });
+
 const SessionModel = mongoose.model('Session', sessionSchema);
 const StudyGroup = mongoose.model('StudyGroup', studyGroupSchema);
 const ChallengeParticipant = mongoose.model('ChallengeParticipant', challengeParticipantSchema);
 const DownloadRequest = mongoose.model('DownloadRequest', downloadRequestSchema);
+const UserManagement = mongoose.model('UserManagement', userManagementSchema);
 
 // ── Sessions routes ──
 app.get('/api/sessions', asyncHandler(async (req, res) => {
@@ -263,6 +307,121 @@ app.patch('/api/download-requests/:id/reset', asyncHandler(async (req, res) => {
   
   await request.save();
   res.json(request);
+}));
+
+// ── User Management routes ──
+app.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
+  const users = await UserManagement.find().sort({ createdAt: -1 });
+  res.json(users);
+}));
+
+app.post('/api/users/sync', asyncHandler(async (req, res) => {
+  const { clerkId, email, name } = req.body;
+  let user = await UserManagement.findOne({ clerkId });
+  if (user) {
+    user.email = email;
+    user.name = name;
+    await user.save();
+  } else {
+    user = new UserManagement({ clerkId, email, name, role: 'user' });
+    await user.save();
+  }
+  res.json(user);
+}));
+
+app.get('/api/users/me', asyncHandler(async (req, res) => {
+  const { clerkId } = req.query;
+  if (!clerkId) return res.status(400).json({ error: 'clerkId required' });
+  const user = await UserManagement.findOne({ clerkId });
+  res.json(user);
+}));
+
+app.patch('/api/users/:clerkId/role', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const { role, updatedBy } = req.body;
+  const user = await UserManagement.findOne({ clerkId: req.params.clerkId });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  
+  if (role === 'admin' || role === 'super_admin') {
+    user.role = role;
+  } else if (role === 'user') {
+    user.role = 'user';
+  }
+  await user.save();
+  res.json(user);
+}));
+
+app.post('/api/users/:clerkId/request-removal', requireAdmin, asyncHandler(async (req, res) => {
+  const { reason, requestedBy } = req.body;
+  const user = await UserManagement.findOne({ clerkId: req.params.clerkId });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (user.role === 'super_admin') return res.status(400).json({ error: 'Cannot request removal of super admin' });
+  
+  user.status = 'pending_removal';
+  user.removalRequest = {
+    requestedBy,
+    reason,
+    requestedAt: new Date(),
+    reviewedBy: null,
+    reviewedAt: null,
+    approved: null
+  };
+  await user.save();
+  res.json(user);
+}));
+
+app.patch('/api/users/:clerkId/approve-removal', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const { reviewedBy } = req.body;
+  const user = await UserManagement.findOne({ clerkId: req.params.clerkId });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (user.status !== 'pending_removal') return res.status(400).json({ error: 'No pending removal request' });
+  
+  user.status = 'removed';
+  user.removalRequest.approved = true;
+  user.removalRequest.reviewedBy = reviewedBy;
+  user.removalRequest.reviewedAt = new Date();
+  await user.save();
+  res.json(user);
+}));
+
+app.patch('/api/users/:clerkId/reject-removal', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const { reviewedBy } = req.body;
+  const user = await UserManagement.findOne({ clerkId: req.params.clerkId });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  
+  user.status = 'active';
+  user.removalRequest = {
+    requestedBy: null,
+    reason: '',
+    requestedAt: null,
+    reviewedBy,
+    reviewedAt: new Date(),
+    approved: false
+  };
+  await user.save();
+  res.json(user);
+}));
+
+app.get('/api/users/pending-removals', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const users = await UserManagement.find({ status: 'pending_removal' }).sort({ 'removalRequest.requestedAt': -1 });
+  res.json(users);
+}));
+
+app.post('/api/users/invite', requireAdmin, asyncHandler(async (req, res) => {
+  const { email, invitedBy } = req.body;
+  const existing = await UserManagement.findOne({ email });
+  if (existing) return res.status(400).json({ error: 'User already exists' });
+  
+  const user = new UserManagement({
+    clerkId: `invited_${Date.now()}`,
+    email,
+    name: '',
+    role: 'user',
+    status: 'active',
+    invitedBy,
+    invitedAt: new Date()
+  });
+  await user.save();
+  res.status(201).json(user);
 }));
 
 // ── Study Groups routes ──
