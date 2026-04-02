@@ -216,6 +216,65 @@ const getTimezoneOffset = (tz: string): string => {
   }
 };
 
+const generateICS = (session: Session): string => {
+  const formatDateForICS = (date: string, time: string): string => {
+    const dateTime = new Date(`${date}T${time}`);
+    return dateTime.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  };
+  
+  const startDate = formatDateForICS(session.date, session.time);
+  const endDate = new Date(new Date(`${session.date}T${session.time}`).getTime() + (session.duration || 30) * 60000)
+    .toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Study Resource Hub//EN',
+    'BEGIN:VEVENT',
+    `UID:session-${session.id}@studyresourcehub`,
+    `DTSTAMP:${formatDateForICS(new Date().toISOString().split('T')[0], new Date().toTimeString().slice(0,5))}`,
+    `DTSTART:${startDate}`,
+    `DTEND:${endDate}`,
+    `SUMMARY:${session.topic}`,
+    `DESCRIPTION:Host: ${session.author}\\nPlatform: ${session.platform}\\n\\n${session.agenda || ''}`,
+    `LOCATION:${session.meetingLink}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  return icsContent;
+};
+
+const downloadICS = (session: Session) => {
+  const icsContent = generateICS(session);
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${session.topic.replace(/\s+/g, '_')}_session.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const getGoogleCalendarUrl = (session: Session): string => {
+  const startDate = new Date(`${session.date}T${session.time}`);
+  const endDate = new Date(startDate.getTime() + (session.duration || 30) * 60000);
+  
+  const formatGoogleDate = (d: Date): string => d.toISOString().replace(/-|:|\.\d{3}/g, '');
+  
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: session.topic,
+    dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
+    details: `Host: ${session.author}\\nPlatform: ${session.platform}\\n\\n${session.agenda || ''}`,
+    location: session.meetingLink,
+  });
+  
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+};
+
 const ResourceRow: React.FC<{
   resource: Resource;
   i: number;
@@ -2388,6 +2447,20 @@ const ResourceTable: React.FC = () => {
                         style={{ background: sessionColor, color: '#0e0e13' }}>
                         <Video size={14} /> Join Meeting
                       </a>
+
+                      {/* Calendar integration buttons */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <a href={getGoogleCalendarUrl(selectedSession)} target="_blank" rel="noreferrer"
+                          className="flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600/30 transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 15h-3v-9h3v9zm6 0h-3v-6h3v6zm0-7.5h-3V7.5h3v3z"/></svg>
+                          Google Cal
+                        </a>
+                        <button onClick={() => downloadICS(selectedSession)}
+                          className="flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest bg-purple-600/20 text-purple-400 border border-purple-600/30 hover:bg-purple-600/30 transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                          Download ICS
+                        </button>
+                      </div>
 
                       {/* Recording section */}
                       {selectedSession.willRecord && (() => {
