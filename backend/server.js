@@ -342,6 +342,7 @@ app.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
   console.log('Fetching users, clerkId:', req.headers['x-clerk-id']);
   const users = await UserManagement.find().sort({ createdAt: -1 });
   console.log('Found users count:', users.length);
+  console.log('User emails:', users.map(u => u.email));
   res.json(users);
 }));
 
