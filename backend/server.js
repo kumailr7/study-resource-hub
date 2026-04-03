@@ -473,13 +473,53 @@ app.get('/api/users/pending-removals', requireSuperAdmin, asyncHandler(async (re
 
 app.post('/api/users/invite', requireAdmin, asyncHandler(async (req, res) => {
   const { email, invitedBy } = req.body;
+  
+  // First check in our MongoDB - allow re-inviting if previous invite was cancelled or expired
   const existing = await UserManagement.findOne({ email });
-  if (existing) return res.status(400).json({ error: 'User already exists' });
+  if (existing && existing.status === 'active') {
+    return res.status(400).json({ error: 'User already exists and is active in database' });
+  }
+  if (existing && existing.status === 'invited') {
+    return res.status(400).json({ error: 'User already has a pending invitation. Use resend instead.' });
+  }
   
   try {
-    // Use Clerk's invitation API to send email invitation
+    // Check if user already exists in Clerk
     const clerkClient = Clerk({ secretKey: process.env.CLERK_SECRET_KEY });
     
+    // Try to get user by email - if exists, error
+    try {
+      const existingUser = await clerkClient.users.getUserByEmail(email);
+      if (existingUser) {
+        // If user exists in Clerk, just add to our DB as active
+        if (existing) {
+          existing.status = 'active';
+          existing.clerkId = existingUser.id;
+          existing.clerkInvitationId = null;
+          await existing.save();
+        } else {
+          const newUser = new UserManagement({
+            clerkId: existingUser.id,
+            email,
+            name: existingUser.firstName || existingUser.lastName || '',
+            role: 'user',
+            status: 'active',
+            invitedBy,
+            invitedAt: new Date()
+          });
+          await newUser.save();
+        }
+        return res.status(200).json({ 
+          success: true,
+          message: 'User exists in Clerk. Added to database as active user.',
+          email 
+        });
+      }
+    } catch (e) {
+      // User doesn't exist in Clerk, which is what we want for new invitation
+    }
+    
+    // Create Clerk invitation
     const invitation = await clerkClient.invitations.createInvitation({
       emailAddress: email,
       redirectUrl: `${process.env.FRONTEND_URL || 'https://study-resource-hub.vercel.app'}/signup?invited=true`,
@@ -489,18 +529,26 @@ app.post('/api/users/invite', requireAdmin, asyncHandler(async (req, res) => {
       }
     });
     
-    // Also create a record in MongoDB for tracking
-    const user = new UserManagement({
-      clerkId: `invited_${invitation.id}`,
-      email,
-      name: '',
-      role: 'user',
-      status: 'invited',
-      clerkInvitationId: invitation.id,
-      invitedBy,
-      invitedAt: new Date()
-    });
-    await user.save();
+    // If there was an existing record with 'invited' status, update it; otherwise create new
+    if (existing) {
+      existing.clerkId = `invited_${invitation.id}`;
+      existing.clerkInvitationId = invitation.id;
+      existing.status = 'invited';
+      existing.invitedAt = new Date();
+      await existing.save();
+    } else {
+      const user = new UserManagement({
+        clerkId: `invited_${invitation.id}`,
+        email,
+        name: '',
+        role: 'user',
+        status: 'invited',
+        clerkInvitationId: invitation.id,
+        invitedBy,
+        invitedAt: new Date()
+      });
+      await user.save();
+    }
     
     res.status(201).json({ 
       success: true,
