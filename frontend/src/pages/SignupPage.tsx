@@ -18,6 +18,13 @@ const SignupPage: React.FC = () => {
 
   useEffect(() => {
     const verifyInvitation = async () => {
+      // If no token or email, this is a regular signup - skip verification
+      if (!token && !email) {
+        setInvitationStatus('valid'); // Allow regular signup
+        return;
+      }
+      
+      // If we have either token or email, verify the invitation
       if (!token || !email) {
         setInvitationStatus('invalid');
         return;
