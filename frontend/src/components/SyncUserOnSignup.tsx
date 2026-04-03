@@ -20,7 +20,7 @@ const SyncUserOnSignup: React.FC = () => {
         const token = searchParams.get('token');
         const email = searchParams.get('email');
 
-        await axios.post(`${API_BASE_URL}/api/users/sync`, {
+        await axios.post(`${API_BASE_URL}/users/sync`, {
           clerkId: user.id,
           email: user.primaryEmailAddress?.emailAddress || email,
           firstName: user.firstName,
