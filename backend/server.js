@@ -433,6 +433,8 @@ app.get('/api/users/verify-invite', asyncHandler(async (req, res) => {
   const token = req.query.token;
   const email = req.query.email;
   
+  console.log('Verify invite - token:', token, 'email:', email);
+  
   if (!token || !email) {
     return res.status(400).json({ error: 'Token and email are required' });
   }
@@ -442,6 +444,8 @@ app.get('/api/users/verify-invite', asyncHandler(async (req, res) => {
     invitationToken: token,
     status: 'invited'
   });
+  
+  console.log('Found user:', user ? 'yes' : 'no', 'status:', user?.status, 'token match:', user?.invitationToken === token);
   
   if (!user) {
     return res.status(404).json({ error: 'Invalid or expired invitation' });
