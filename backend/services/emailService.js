@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const sendInvitationEmail = async (email, invitationToken, invitedByName) => {
-  const frontendUrl = process.env.FRONTEND_URL || 'https://study-resource-hub.vercel.app';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://hub.devops-dojo.ninja';
   const inviteLink = `${frontendUrl}/signup?token=${invitationToken}&email=${encodeURIComponent(email)}`;
 
   const emailHtml = `
