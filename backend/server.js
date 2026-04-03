@@ -339,7 +339,9 @@ app.patch('/api/download-requests/:id/reset', asyncHandler(async (req, res) => {
 
 // ── User Management routes ──
 app.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
+  console.log('Fetching users, clerkId:', req.headers['x-clerk-id']);
   const users = await UserManagement.find().sort({ createdAt: -1 });
+  console.log('Found users count:', users.length);
   res.json(users);
 }));
 
