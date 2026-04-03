@@ -429,23 +429,45 @@ app.get('/api/users/me', asyncHandler(async (req, res) => {
 }));
 
 // Verify invitation token
-app.get('/users/verify-invite', asyncHandler(async (req, res) => {
+app.get('/api/users/verify-invite', asyncHandler(async (req, res) => {
   const token = req.query.token;
   const email = req.query.email;
   
   console.log('Verify invite - token:', token, 'email:', email);
+  console.log('Token length:', token?.length);
   
   if (!token || !email) {
     return res.status(400).json({ error: 'Token and email are required' });
   }
   
-  const user = await UserManagement.findOne({ 
+  // Try exact match first
+  let user = await UserManagement.findOne({ 
     email: email,
     invitationToken: token,
     status: 'invited'
   });
   
-  console.log('Found user:', user ? 'yes' : 'no', 'status:', user?.status, 'token match:', user?.invitationToken === token);
+  // If not found, try case-insensitive email match
+  if (!user) {
+    user = await UserManagement.findOne({ 
+      email: { $regex: new RegExp('^' + email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') },
+      invitationToken: token,
+      status: 'invited'
+    });
+  }
+  
+  // If still not found, just check by token
+  if (!user) {
+    user = await UserManagement.findOne({ 
+      invitationToken: token,
+      status: 'invited'
+    });
+    if (user) {
+      console.log('Found by token only. DB email:', user.email, 'Input email:', email);
+    }
+  }
+  
+  console.log('Found user:', user ? 'yes' : 'no', 'status:', user?.status, 'email in DB:', user?.email);
   
   if (!user) {
     return res.status(404).json({ error: 'Invalid or expired invitation' });
