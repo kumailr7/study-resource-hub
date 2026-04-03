@@ -1145,7 +1145,6 @@ const ResourceTable: React.FC = () => {
     }
 
     // Show confirmation modal
-    console.log('handleAddSession called', { sessionAuthor, sessionTopic, sessionDate, sessionTime, sessionWhiteboardEnabled, sessionLink });
     if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime) {
       alert('Please fill in all required fields: Author, Topic, Date, and Time');
       return;
@@ -3922,7 +3921,35 @@ END:VCALENDAR`;
       </div>
 
       {/* Session Confirmation Modal */}
-      {showSessionConfirmModal && pendingSessionData && (
+      {showSessionConfirmModal && pendingSessionData && (() => {
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const sessionDateTime = new Date(`${pendingSessionData.date}T${pendingSessionData.time}:00`);
+        
+        const formatTimeWithTz = (dt: Date, tz: string): string => {
+          return dt.toLocaleString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: tz,
+          });
+        };
+        
+        const getGMTOffset = (tz: string): string => {
+          const now = new Date();
+          const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: tz,
+            timeZoneName: 'shortOffset'
+          });
+          const parts = formatter.formatToParts(now);
+          const offsetPart = parts.find(p => p.type === 'timeZoneName');
+          return offsetPart?.value || '';
+        };
+        
+        const startTimeFormatted = `${formatTimeWithTz(sessionDateTime, userTimezone)} (${getGMTOffset(userTimezone)})`;
+        const endDateTime = new Date(sessionDateTime.getTime() + pendingSessionData.duration * 60000);
+        const endTimeFormatted = `${formatTimeWithTz(endDateTime, userTimezone)} (${getGMTOffset(userTimezone)})`;
+        
+        return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-surface-container border border-outline-variant rounded-xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-6">
@@ -3947,11 +3974,11 @@ END:VCALENDAR`;
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-surface-container-high p-4 rounded-lg">
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Start Time</p>
-                  <p className="text-sm font-bold text-green-400">{pendingSessionData.time}</p>
+                  <p className="text-sm font-bold text-green-400">{startTimeFormatted}</p>
                 </div>
                 <div className="bg-surface-container-high p-4 rounded-lg">
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">End Time</p>
-                  <p className="text-sm font-bold text-green-400">{calculateEndTime(pendingSessionData.time, pendingSessionData.duration)}</p>
+                  <p className="text-sm font-bold text-green-400">{endTimeFormatted}</p>
                 </div>
               </div>
               <div className="bg-surface-container-high p-4 rounded-lg">
@@ -3975,7 +4002,8 @@ END:VCALENDAR`;
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </ThemeProvider>
   );
 };
