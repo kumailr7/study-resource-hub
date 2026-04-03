@@ -1,8 +1,4 @@
-const MailerSend = require('mailersend');
-
-const mailerSend = new MailerSend({
-  apiKey: process.env.MAILERSEND_API_KEY,
-});
+const axios = require('axios');
 
 const sendInvitationEmail = async (email, invitationToken, invitedByName) => {
   const frontendUrl = process.env.FRONTEND_URL || 'https://study-resource-hub.vercel.app';
@@ -40,20 +36,31 @@ const sendInvitationEmail = async (email, invitationToken, invitedByName) => {
     </html>
   `;
 
-  const options = {
-    from: `${process.env.MAILERSEND_FROM_NAME || 'Study Resource Hub'} <${process.env.MAILERSEND_FROM_EMAIL}>`,
-    to: email,
-    subject: 'You\'re invited to join Study Resource Hub!',
-    html: emailHtml,
-  };
+  const fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'invitations@devops-dojo.ninja';
+  const fromName = process.env.MAILERSEND_FROM_NAME || 'Study Resource Hub';
 
   try {
-    const result = await mailerSend.email.send(options);
-    console.log('MailerSend email sent successfully:', result);
-    return { success: true, messageId: result };
+    const response = await axios.post(
+      'https://api.mailersend.com/v1/email',
+      {
+        from: { email: fromEmail, name: fromName },
+        to: [{ email }],
+        subject: "You're invited to join Study Resource Hub!",
+        html: emailHtml
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.MAILERSEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('MailerSend email sent successfully:', response.data);
+    return { success: true, messageId: response.data };
   } catch (error) {
-    console.error('MailerSend error:', error);
-    return { success: false, error: error.message };
+    console.error('MailerSend error:', error.response?.data || error.message);
+    return { success: false, error: error.response?.data || error.message };
   }
 };
 
