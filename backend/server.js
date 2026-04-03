@@ -174,6 +174,7 @@ const userManagementSchema = new mongoose.Schema({
   name: { type: String, default: '' },
   role: { type: String, enum: ['super_admin', 'admin', 'user'], default: 'user' },
   status: { type: String, enum: ['active', 'invited', 'pending_removal', 'removed'], default: 'active' },
+  inviteToken: { type: String, default: null },
   removalRequest: {
     requestedBy: { type: String, default: null },
     reason: { type: String, default: '' },
@@ -186,6 +187,8 @@ const userManagementSchema = new mongoose.Schema({
   invitedAt: { type: Date, default: null },
 }, { timestamps: true });
 userManagementSchema.index({ clerkId: 1 });
+userManagementSchema.index({ inviteToken: 1 });
+userManagementSchema.index({ email: 1 });
 
 const SessionModel = mongoose.model('Session', sessionSchema);
 const StudyGroup = mongoose.model('StudyGroup', studyGroupSchema);
@@ -349,12 +352,15 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
     }
     await user.save();
   } else {
-    // Check if there's an invited user with this email - they accepted the invite
-    const invitedUser = await UserManagement.findOne({ email, status: 'invited' });
+    // Check if there's an invited user with this email or token - they accepted the invite
+    const invitedUser = await UserManagement.findOne({ 
+      $or: [{ email, status: 'invited' }, { inviteToken, status: 'invited' }]
+    });
     if (invitedUser) {
       invitedUser.clerkId = clerkId;
       invitedUser.name = name;
       invitedUser.status = 'active';
+      invitedUser.inviteToken = null;
       await invitedUser.save();
       return res.json(invitedUser);
     }
@@ -363,6 +369,19 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
     await user.save();
   }
   res.json(user);
+}));
+
+// Validate invite token
+app.get('/api/users/invite/validate/:token', asyncHandler(async (req, res) => {
+  const user = await UserManagement.findOne({ inviteToken: req.params.token, status: 'invited' });
+  if (!user) {
+    return res.status(404).json({ error: 'Invalid or expired invitation' });
+  }
+  res.json({ 
+    valid: true, 
+    email: user.email,
+    invitedAt: user.invitedAt 
+  });
 }));
 
 app.get('/api/users/me', asyncHandler(async (req, res) => {
@@ -456,17 +475,25 @@ app.post('/api/users/invite', requireAdmin, asyncHandler(async (req, res) => {
   const existing = await UserManagement.findOne({ email });
   if (existing) return res.status(400).json({ error: 'User already exists' });
   
+  // Generate unique invite token
+  const inviteToken = require('crypto').randomBytes(32).toString('hex');
+  
   const user = new UserManagement({
     clerkId: `invited_${Date.now()}`,
     email,
     name: '',
     role: 'user',
-    status: 'invited', // Changed from 'active' to track invitation status
+    status: 'invited',
+    inviteToken,
     invitedBy,
     invitedAt: new Date()
   });
   await user.save();
-  res.status(201).json(user);
+  
+  res.status(201).json({ 
+    user, 
+    inviteLink: `${process.env.FRONTEND_URL || 'https://study-resource-hub.vercel.app'}/invite/${inviteToken}` 
+  });
 }));
 
 // Resend invitation

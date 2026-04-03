@@ -16,7 +16,7 @@ interface ManagedUser {
   email: string;
   name: string;
   role: 'super_admin' | 'admin' | 'user';
-  status: 'active' | 'pending_removal' | 'removed';
+  status: 'active' | 'invited' | 'pending_removal' | 'removed';
   removalRequest?: {
     requestedBy: string;
     reason: string;
