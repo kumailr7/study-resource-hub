@@ -99,7 +99,8 @@ interface Session {
   timezone?: string;
   tag: string;
   meetingLink: string;
-  platform: 'Google Meet' | 'Zoom' | 'Teams' | 'Other';
+  platform: 'Google Meet' | 'Zoom' | 'Teams' | 'Excalidraw' | 'Other';
+  whiteboardLink?: string;
   agenda: string;
   willRecord: boolean;
   recordingLink: string;
@@ -450,6 +451,7 @@ const ResourceTable: React.FC = () => {
   const [sessionTag, setSessionTag] = useState("");
   const [sessionLink, setSessionLink] = useState("");
   const [sessionPlatform, setSessionPlatform] = useState<Session['platform']>('Google Meet');
+  const [sessionWhiteboardLink, setSessionWhiteboardLink] = useState("");
   const [sessionAgenda, setSessionAgenda] = useState("");
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -1046,12 +1048,24 @@ const ResourceTable: React.FC = () => {
   };
 
   const handleAddSession = async () => {
-    if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime || !sessionLink) return;
+    // For Excalidraw, we need either meeting link or it will auto-generate whiteboard
+    if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime) return;
+    if (sessionPlatform !== 'Excalidraw' && !sessionLink) return;
+    
     try {
+      // Generate whiteboard link for Excalidraw
+      let whiteboardLink = sessionWhiteboardLink;
+      if (sessionPlatform === 'Excalidraw' && !whiteboardLink) {
+        // Generate Excalidraw link with topic name
+        const topicSlug = sessionTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        whiteboardLink = `https://excalidraw.com/#name=${encodeURIComponent(sessionTopic)}`;
+      }
+      
       const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
         author: sessionAuthor, topic: sessionTopic,
         date: sessionDate, time: sessionTime, timezone: sessionTimezone,
         tag: sessionTag, meetingLink: sessionLink, platform: sessionPlatform,
+        whiteboardLink,
         agenda: sessionAgenda, willRecord: sessionWillRecord, recordingLink: '', aiSummary: '',
         hostLinkedIn: sessionLinkedIn, attendeeCount: 0, duration: Number(sessionDuration) || 30,
       });
@@ -1059,7 +1073,8 @@ const ResourceTable: React.FC = () => {
       setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
       setSessionTime(""); setSessionTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
       setSessionTag(""); setSessionLink("");
-      setSessionPlatform('Google Meet'); setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn(""); setSessionDuration("30");
+      setSessionPlatform('Google Meet'); setSessionWhiteboardLink("");
+      setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn(""); setSessionDuration("30");
     } catch (err) { console.error('Error adding session:', err); }
   };
 
@@ -1228,10 +1243,18 @@ const ResourceTable: React.FC = () => {
   };
 
   const platformColor: Record<Session['platform'], string> = {
-    'Google Meet': '#00ac47', 'Zoom': '#2D8CFF', 'Teams': '#6264A7', 'Other': '#ff86c2',
+    'Google Meet': '#00ac47', 'Zoom': '#2D8CFF', 'Teams': '#6264A7', 'Excalidraw': '#ff6b35', 'Other': '#ff86c2',
   };
 
   const PlatformIcon = ({ platform, size = 14 }: { platform: Session['platform']; size?: number }) => {
+    if (platform === 'Excalidraw') return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#ff6b35" strokeWidth="2">
+        <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+        <path d="M2 2l7.586 7.586"/>
+        <circle cx="11" cy="11" r="2"/>
+      </svg>
+    );
     if (platform === 'Google Meet') return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <path d="M22 7.5L17 12l5 4.5V7.5z" fill="#00832d"/>
@@ -2273,10 +2296,19 @@ const ResourceTable: React.FC = () => {
                           <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Google Meet</option>
                           <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Zoom</option>
                           <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Teams</option>
+                          <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Excalidraw</option>
                           <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Other</option>
                         </select>
                       </div>
                     </div>
+                    {sessionPlatform === 'Excalidraw' && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Whiteboard Link (optional)</label>
+                        <input type="url" placeholder="https://excalidraw.com/..." value={sessionWhiteboardLink} onChange={e => setSessionWhiteboardLink(e.target.value)}
+                          className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
+                        <p className="text-[9px] text-slate-500">Leave empty to auto-generate with session topic</p>
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
                         Duration (mins)
@@ -2487,16 +2519,42 @@ END:VCALENDAR`;
                         </div>
                       </div>
 
-                      {/* Meeting link CTA */}
+                      {/* Meeting link CTA or Whiteboard CTA */}
                       {(() => {
                         const isPast = new Date(selectedSession.date + 'T' + selectedSession.time) < new Date();
+                        const isExcalidraw = selectedSession.platform === 'Excalidraw';
+                        const whiteboardLink = selectedSession.whiteboardLink || selectedSession.meetingLink;
+                        
                         if (isPast) {
                           return (
                             <div className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-slate-700 text-slate-400 cursor-not-allowed">
-                              <Video size={14} /> Meeting Ended
+                              <Video size={14} /> {isExcalidraw ? 'Session Ended' : 'Meeting Ended'}
                             </div>
                           );
                         }
+                        
+                        // For Excalidraw, show whiteboard link with share option
+                        if (isExcalidraw && whiteboardLink) {
+                          return (
+                            <div className="flex flex-col gap-2">
+                              <a href={whiteboardLink} target="_blank" rel="noreferrer"
+                                className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all"
+                                style={{ background: '#ff6b35', color: '#0e0e13' }}>
+                                🎨 Open Whiteboard
+                              </a>
+                              <button 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(whiteboardLink);
+                                  alert('Whiteboard link copied to clipboard!');
+                                }}
+                                className="flex items-center justify-center gap-2 w-full py-2 text-[10px] font-bold uppercase tracking-widest bg-surface-container-high text-slate-400 hover:text-white transition-colors"
+                              >
+                                📋 Copy Whiteboard Link
+                              </button>
+                            </div>
+                          );
+                        }
+                        
                         return (
                           <a href={selectedSession.meetingLink} target="_blank" rel="noreferrer"
                             className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all"
