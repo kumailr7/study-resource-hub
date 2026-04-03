@@ -351,7 +351,7 @@ const AdminDashboard: React.FC = () => {
           )}
 
           {/* ── USER MANAGEMENT (Super Admin Only) ── */}
-          {adminTab === 'users' && (userIsSuperAdmin || userIsAdmin) && (
+          {adminTab === 'users' && userIsSuperAdmin && (
             <>
               <div className="flex items-end justify-between">
                 <div>
