@@ -2393,24 +2393,37 @@ const ResourceTable: React.FC = () => {
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Add to Calendar</p>
-                          <div className="flex flex-col gap-2">
-                            {/* Google Calendar */}
-                            <a 
-                              href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(selectedSession.topic)}&dates=${selectedSession.date.replace(/-/g, '')}T${selectedSession.time.replace(':', '')}00/${selectedSession.date.replace(/-/g, '')}T${selectedSession.time.replace(':', '')}00&details=${encodeURIComponent(`Host: ${selectedSession.author}\\nPlatform: ${selectedSession.platform}\\nLink: ${selectedSession.meetingLink}`)}&location=${encodeURIComponent(selectedSession.meetingLink)}`}
-                              target="_blank" rel="noreferrer"
-                              className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
-                            >
-                              📅 Google Calendar
-                            </a>
-                            {/* Download ICS */}
-                            <button 
-                              onClick={() => {
-                                const formatDate = (date: string, time: string) => {
-                                  const d = date.replace(/-/g, '');
-                                  const t = time.replace(':', '') + '00';
-                                  return `${d}T${t}`;
-                                };
-                                const icsContent = `BEGIN:VCALENDAR
+                          {(() => {
+                            const isPast = new Date(selectedSession.date + 'T' + selectedSession.time) < new Date();
+                            if (isPast) {
+                              return (
+                                <div className="flex flex-col gap-2">
+                                  <span className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-slate-800 text-slate-500 cursor-not-allowed">
+                                    📅 Google Calendar
+                                  </span>
+                                  <span className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-slate-800 text-slate-500 cursor-not-allowed">
+                                    📥 Download ICS
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="flex flex-col gap-2">
+                                <a 
+                                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(selectedSession.topic)}&dates=${selectedSession.date.replace(/-/g, '')}T${selectedSession.time.replace(':', '')}00/${selectedSession.date.replace(/-/g, '')}T${selectedSession.time.replace(':', '')}00&details=${encodeURIComponent(`Host: ${selectedSession.author}\\nPlatform: ${selectedSession.platform}\\nLink: ${selectedSession.meetingLink}`)}&location=${encodeURIComponent(selectedSession.meetingLink)}`}
+                                  target="_blank" rel="noreferrer"
+                                  className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+                                >
+                                  📅 Google Calendar
+                                </a>
+                                <button 
+                                  onClick={() => {
+                                    const formatDate = (date: string, time: string) => {
+                                      const d = date.replace(/-/g, '');
+                                      const t = time.replace(':', '') + '00';
+                                      return `${d}T${t}`;
+                                    };
+                                    const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Study Resource Hub//EN
 BEGIN:VEVENT
@@ -2423,19 +2436,21 @@ DESCRIPTION:Host: ${selectedSession.author}\\nPlatform: ${selectedSession.platfo
 LOCATION:${selectedSession.meetingLink}
 END:VEVENT
 END:VCALENDAR`;
-                                const blob = new Blob([icsContent], { type: 'text/calendar' });
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `${selectedSession.topic.replace(/\\s+/g, '-').toLowerCase()}.ics`;
-                                a.click();
-                                URL.revokeObjectURL(url);
-                              }}
-                              className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-slate-700/50 text-slate-400 hover:bg-slate-700 transition-colors"
-                            >
-                              📥 Download ICS
-                            </button>
-                          </div>
+                                    const blob = new Blob([icsContent], { type: 'text/calendar' });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `${selectedSession.topic.replace(/\\s+/g, '-').toLowerCase()}.ics`;
+                                    a.click();
+                                    URL.revokeObjectURL(url);
+                                  }}
+                                  className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-slate-700/50 text-slate-400 hover:bg-slate-700 transition-colors"
+                                >
+                                  📥 Download ICS
+                                </button>
+                              </div>
+                            );
+                          })()}
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Attendees</p>
