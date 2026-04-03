@@ -52,7 +52,7 @@ const corsOptions = {
     return callback(null, true);
   },
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-clerk-id'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-clerk-id', 'x-clerk-role'],
   credentials: true,
 };
 
