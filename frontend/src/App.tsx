@@ -149,6 +149,52 @@ const getUserLocalTime = (session: Session): { original: string; converted: stri
   };
 };
 
+const getUserLocalGroupTime = (group: StudyGroup): { original: string; converted: string; convertedDate: string; userTimezone: string; showConversion: boolean } => {
+  if (!group.scheduledAt) {
+    return { original: '', converted: '', convertedDate: '', userTimezone: '', showConversion: false };
+  }
+  
+  const sessionDateTime = new Date(group.scheduledAt);
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
+  const options: Intl.DateTimeFormatOptions = {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: userTimezone,
+    timeZoneName: 'short'
+  };
+  
+  const convertedDateTime = sessionDateTime.toLocaleString('en-US', {
+    ...options,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  const convertedTime = sessionDateTime.toLocaleString('en-US', options);
+  const timePart = convertedTime.split(', ')[1] || convertedTime;
+  const datePart = convertedDateTime.split(', ')[0] || group.scheduledAt.split('T')[0];
+  
+  const hostTz = group.scheduledTimezone || 'UTC';
+  const showConversion = hostTz !== userTimezone || hostTz === 'UTC';
+  
+  return {
+    original: sessionDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: hostTz }),
+    converted: timePart,
+    convertedDate: datePart,
+    userTimezone,
+    showConversion
+  };
+};
+
+const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + durationMinutes;
+  const endHours = Math.floor(totalMinutes / 60) % 24;
+  const endMins = totalMinutes % 60;
+  return `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+};
+
 interface Suggestion {
   id: string;
   author: string;
@@ -164,7 +210,8 @@ interface StudyGroup {
   createdAt: string;
   isActive: boolean;
   memberCount: number;
-  scheduledAt: string;
+  scheduledAt?: string;
+  scheduledTimezone?: string;
 }
 
 interface AuthState {
@@ -465,6 +512,7 @@ const ResourceTable: React.FC = () => {
   const [viewAllResources, setViewAllResources] = useState(false);
   const [newResourceAddedBy, setNewResourceAddedBy] = useState('');
   const [sgScheduledAt, setSgScheduledAt] = useState('');
+  const [sgScheduledTimezone, setSgScheduledTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [myRegisteredSessions, setMyRegisteredSessions] = useState<Record<string, boolean>>({});
   const [myJoinedGroups, setMyJoinedGroups] = useState<Record<string, boolean>>({});
   const [collections, setCollections] = useState<ResourceCollection[]>(() => {
@@ -476,6 +524,14 @@ const ResourceTable: React.FC = () => {
 
   // Request new modal
   const [showRequestModal, setShowRequestModal] = useState(false);
+
+  // Session confirmation modal
+  const [showSessionConfirmModal, setShowSessionConfirmModal] = useState(false);
+  const [pendingSessionData, setPendingSessionData] = useState<{
+    author: string; topic: string; date: string; time: string;
+    tag: string; meetingLink: string; platform: string; whiteboardLink: string;
+    agenda: string; willRecord: boolean; hostLinkedIn: string; duration: number;
+  } | null>(null);
 
   // Challenges state (must be at top level — hooks cannot be called inside IIFEs)
   const CHALLENGES = [
@@ -1013,9 +1069,10 @@ const ResourceTable: React.FC = () => {
         isActive: true,
         memberCount: 0,
         scheduledAt: sgScheduledAt,
+        scheduledTimezone: sgScheduledAt ? sgScheduledTimezone : undefined,
       });
       setStudyGroups(prev => [{ ...res.data, id: res.data._id }, ...prev]);
-      setSgTitle(''); setSgAgenda(''); setSgScheduledAt('');
+      setSgTitle(''); setSgAgenda(''); setSgScheduledAt(''); setSgScheduledTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
     } catch (err) { console.error('Error creating study group:', err); }
   };
 
@@ -1047,35 +1104,56 @@ const ResourceTable: React.FC = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  const handleAddSession = async () => {
-    // For Excalidraw, we need either meeting link or it will auto-generate whiteboard
+  const handleAddSession = async (sessionData?: {
+    author: string; topic: string; date: string; time: string;
+    tag: string; meetingLink: string; platform: string; whiteboardLink: string;
+    agenda: string; willRecord: boolean; hostLinkedIn: string; duration: number;
+  }) => {
+    if (sessionData) {
+      try {
+        const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
+          author: sessionData.author, topic: sessionData.topic,
+          date: sessionData.date, time: sessionData.time, timezone: sessionTimezone,
+          tag: sessionData.tag, meetingLink: sessionData.meetingLink, platform: sessionData.platform,
+          whiteboardLink: sessionData.whiteboardLink,
+          agenda: sessionData.agenda, willRecord: sessionData.willRecord, recordingLink: '', aiSummary: '',
+          hostLinkedIn: sessionData.hostLinkedIn, attendeeCount: 0, duration: sessionData.duration,
+        });
+        setSessions(prev => [...prev, { ...res.data, id: res.data._id }]);
+        setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
+        setSessionTime(""); setSessionTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+        setSessionTag(""); setSessionLink("");
+        setSessionPlatform('Google Meet'); setSessionWhiteboardLink("");
+        setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn(""); setSessionDuration("30");
+      } catch (err) { console.error('Error adding session:', err); }
+      return;
+    }
+
+    // Show confirmation modal
     if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime) return;
     if (sessionPlatform !== 'Excalidraw' && !sessionLink) return;
     
-    try {
-      // Generate whiteboard link for Excalidraw
-      let whiteboardLink = sessionWhiteboardLink;
-      if (sessionPlatform === 'Excalidraw' && !whiteboardLink) {
-        // Generate Excalidraw link with topic name
-        const topicSlug = sessionTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-        whiteboardLink = `https://excalidraw.com/#name=${encodeURIComponent(sessionTopic)}`;
-      }
-      
-      const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
-        author: sessionAuthor, topic: sessionTopic,
-        date: sessionDate, time: sessionTime, timezone: sessionTimezone,
-        tag: sessionTag, meetingLink: sessionLink, platform: sessionPlatform,
-        whiteboardLink,
-        agenda: sessionAgenda, willRecord: sessionWillRecord, recordingLink: '', aiSummary: '',
-        hostLinkedIn: sessionLinkedIn, attendeeCount: 0, duration: Number(sessionDuration) || 30,
-      });
-      setSessions(prev => [...prev, { ...res.data, id: res.data._id }]);
-      setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
-      setSessionTime(""); setSessionTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-      setSessionTag(""); setSessionLink("");
-      setSessionPlatform('Google Meet'); setSessionWhiteboardLink("");
-      setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn(""); setSessionDuration("30");
-    } catch (err) { console.error('Error adding session:', err); }
+    let whiteboardLink = sessionWhiteboardLink;
+    if (sessionPlatform === 'Excalidraw' && !whiteboardLink) {
+      const topicSlug = sessionTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      whiteboardLink = `https://excalidraw.com/#name=${encodeURIComponent(sessionTopic)}`;
+    }
+    
+    setPendingSessionData({
+      author: sessionAuthor,
+      topic: sessionTopic,
+      date: sessionDate,
+      time: sessionTime,
+      tag: sessionTag,
+      meetingLink: sessionLink,
+      platform: sessionPlatform,
+      whiteboardLink,
+      agenda: sessionAgenda,
+      willRecord: sessionWillRecord,
+      hostLinkedIn: sessionLinkedIn,
+      duration: Number(sessionDuration) || 30,
+    });
+    setShowSessionConfirmModal(true);
   };
 
   const handleDeleteSession = async (id: string) => {
@@ -1996,13 +2074,16 @@ const ResourceTable: React.FC = () => {
               const isJoined = myJoinedGroups[g.id];
               const groupTagColor = getTagColor(g.title + ' ' + g.agenda);
               const now = new Date();
+              const localTime = getUserLocalGroupTime(g);
               const scheduledDate = g.scheduledAt ? new Date(g.scheduledAt) : null;
               const minsUntil = scheduledDate ? Math.round((scheduledDate.getTime() - now.getTime()) / 60000) : null;
               const timeLabel = minsUntil === null ? null
                 : minsUntil < 0 ? 'Session ended'
                 : minsUntil < 60 ? `Starts in ${minsUntil}m`
                 : minsUntil < 1440 ? `Starts in ${Math.round(minsUntil / 60)}h`
-                : scheduledDate!.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' at ' + scheduledDate!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                : localTime.showConversion 
+                  ? `${localTime.convertedDate} at ${localTime.converted}`
+                  : scheduledDate!.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' at ' + scheduledDate!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
               return (
                 <div className="bg-surface-container p-6 flex flex-col gap-4 relative overflow-hidden"
@@ -2109,8 +2190,21 @@ const ResourceTable: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Scheduled Date & Time</label>
-                      <input type="datetime-local" value={sgScheduledAt} onChange={e => setSgScheduledAt(e.target.value)}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
+                      <div className="flex gap-2">
+                        <input type="datetime-local" value={sgScheduledAt} onChange={e => setSgScheduledAt(e.target.value)}
+                          className="flex-1 bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
+                        {sgScheduledAt && (
+                          <select value={sgScheduledTimezone} onChange={e => setSgScheduledTimezone(e.target.value)}
+                            className="bg-surface-container-low border-b border-outline-variant focus:border-primary px-2 py-2.5 text-sm text-on-surface outline-none transition-colors">
+                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>UTC</option>
+                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/New_York</option>
+                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/London</option>
+                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Dubai</option>
+                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Kolkata</option>
+                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Singapore</option>
+                          </select>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <button onClick={handleCreateStudyGroup}
@@ -2318,6 +2412,11 @@ const ResourceTable: React.FC = () => {
                       </label>
                       <input type="number" min="5" max="180" value={sessionDuration} onChange={e => setSessionDuration(e.target.value)}
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors" />
+                      {sessionTime && (
+                        <p className="text-[10px] text-green-400 font-bold mt-1">
+                          End Time: {calculateEndTime(sessionTime, Number(sessionDuration) || 30)}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Meeting Link</label>
@@ -2349,7 +2448,7 @@ const ResourceTable: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <button onClick={handleAddSession}
+                  <button onClick={() => handleAddSession()}
                     className="mt-6 bg-primary text-on-primary px-8 py-4 text-xs font-black uppercase tracking-[0.2em] neon-glow-primary transition-all">
                     Schedule Session
                   </button>
@@ -2397,6 +2496,8 @@ const ResourceTable: React.FC = () => {
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Date & Time</p>
                           {(() => {
                             const localTime = getUserLocalTime(selectedSession);
+                            const duration = selectedSession.duration || 30;
+                            const endTime = calculateEndTime(selectedSession.time, duration);
                             return (
                               <>
                                 <p className="text-sm font-bold text-on-surface mb-1">
@@ -2411,6 +2512,8 @@ const ResourceTable: React.FC = () => {
                                   ) : (
                                     localTime.original
                                   )}
+                                  <span className="text-slate-500 mx-1">-</span>
+                                  <span className="text-green-400">{endTime}</span>
                                 </p>
                                 <p className="text-[9px] text-slate-500 mt-1">
                                   Your timezone: {localTime.userTimezone}
@@ -2426,6 +2529,9 @@ const ResourceTable: React.FC = () => {
                             <PlatformIcon platform={selectedSession.platform} size={13} />
                             {selectedSession.platform}
                           </span>
+                          <div className="mt-2 text-[10px] font-bold text-slate-400">
+                            Duration: <span className="text-green-400">{selectedSession.duration || 30} min</span>
+                          </div>
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Add to Calendar</p>
@@ -2445,13 +2551,22 @@ const ResourceTable: React.FC = () => {
                             }
                             return (
                               <div className="flex flex-col gap-2">
+                                {(() => {
+                                  const duration = selectedSession.duration || 30;
+                                  const startTime = selectedSession.time;
+                                  const endTime = calculateEndTime(startTime, duration);
+                                  const startDt = `${selectedSession.date.replace(/-/g, '')}T${startTime.replace(':', '')}00`;
+                                  const endDt = `${selectedSession.date.replace(/-/g, '')}T${endTime.replace(':', '')}00`;
+                                  return (
                                 <a 
-                                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(selectedSession.topic)}&dates=${selectedSession.date.replace(/-/g, '')}T${selectedSession.time.replace(':', '')}00/${selectedSession.date.replace(/-/g, '')}T${selectedSession.time.replace(':', '')}00&details=${encodeURIComponent(`Host: ${selectedSession.author}\\nPlatform: ${selectedSession.platform}\\nLink: ${selectedSession.meetingLink}`)}&location=${encodeURIComponent(selectedSession.meetingLink)}`}
+                                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(selectedSession.topic)}&dates=${startDt}/${endDt}&details=${encodeURIComponent(`Host: ${selectedSession.author}\\nPlatform: ${selectedSession.platform}\\nLink: ${selectedSession.meetingLink}`)}&location=${encodeURIComponent(selectedSession.meetingLink)}`}
                                   target="_blank" rel="noreferrer"
                                   className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
                                 >
                                   📅 Google Calendar
                                 </a>
+                                  );
+                                })()}
                                 <button 
                                   onClick={() => {
                                     const formatDate = (date: string, time: string) => {
@@ -2459,14 +2574,17 @@ const ResourceTable: React.FC = () => {
                                       const t = time.replace(':', '') + '00';
                                       return `${d}T${t}`;
                                     };
+                                    const duration = selectedSession.duration || 30;
+                                    const startTime = selectedSession.time;
+                                    const endTime = calculateEndTime(startTime, duration);
                                     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Study Resource Hub//EN
 BEGIN:VEVENT
 UID:${selectedSession.id}@study-resource-hub
 DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z
-DTSTART:${formatDate(selectedSession.date, selectedSession.time)}
-DTEND:${formatDate(selectedSession.date, selectedSession.time)}
+DTSTART:${formatDate(selectedSession.date, startTime)}
+DTEND:${formatDate(selectedSession.date, endTime)}
 SUMMARY:${selectedSession.topic}
 DESCRIPTION:Host: ${selectedSession.author}\\nPlatform: ${selectedSession.platform}\\nLink: ${selectedSession.meetingLink}
 LOCATION:${selectedSession.meetingLink}
@@ -3765,6 +3883,62 @@ END:VCALENDAR`;
         )}
 
       </div>
+
+      {/* Session Confirmation Modal */}
+      {showSessionConfirmModal && pendingSessionData && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-container border border-outline-variant rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-black font-headline text-on-surface">Confirm Session</h3>
+              <button onClick={() => { setShowSessionConfirmModal(false); setPendingSessionData(null); }} className="text-slate-500 hover:text-on-surface text-xl">×</button>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-surface-container-high p-4 rounded-lg">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Topic</p>
+                <p className="text-sm font-bold text-on-surface">{pendingSessionData.topic}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-surface-container-high p-4 rounded-lg">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Date</p>
+                  <p className="text-sm font-bold text-on-surface">{pendingSessionData.date}</p>
+                </div>
+                <div className="bg-surface-container-high p-4 rounded-lg">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Duration</p>
+                  <p className="text-sm font-bold text-on-surface">{pendingSessionData.duration} min</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-surface-container-high p-4 rounded-lg">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Start Time</p>
+                  <p className="text-sm font-bold text-green-400">{pendingSessionData.time}</p>
+                </div>
+                <div className="bg-surface-container-high p-4 rounded-lg">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">End Time</p>
+                  <p className="text-sm font-bold text-green-400">{calculateEndTime(pendingSessionData.time, pendingSessionData.duration)}</p>
+                </div>
+              </div>
+              <div className="bg-surface-container-high p-4 rounded-lg">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Platform</p>
+                <p className="text-sm font-bold text-on-surface">{pendingSessionData.platform}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => { setShowSessionConfirmModal(false); setPendingSessionData(null); }}
+                className="flex-1 py-3 text-xs font-black uppercase tracking-widest border border-outline-variant text-slate-400 hover:text-on-surface hover:border-slate-400 transition-all">
+                Cancel
+              </button>
+              <button onClick={async () => {
+                setShowSessionConfirmModal(false);
+                await handleAddSession(pendingSessionData);
+                setPendingSessionData(null);
+              }}
+                className="flex-1 py-3 text-xs font-black uppercase tracking-widest bg-primary text-on-primary neon-glow-primary transition-all">
+                Confirm & Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </ThemeProvider>
   );
 };
