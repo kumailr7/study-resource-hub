@@ -429,7 +429,7 @@ app.get('/api/users/me', asyncHandler(async (req, res) => {
 }));
 
 // Verify invitation token
-app.get('/api/users/verify-invite', asyncHandler(async (req, res) => {
+app.get('/users/verify-invite', asyncHandler(async (req, res) => {
   const token = req.query.token;
   const email = req.query.email;
   

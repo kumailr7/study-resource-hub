@@ -24,7 +24,7 @@ const SignupPage: React.FC = () => {
 
       try {
         console.log('Verifying invite with:', { token, email });
-        const response = await axios.get<{ valid: boolean; email?: string; invitedBy?: string }>(`${API_BASE_URL}/api/users/verify-invite?token=${token}&email=${encodeURIComponent(email)}`);
+        const response = await axios.get<{ valid: boolean; email?: string; invitedBy?: string }>(`${API_BASE_URL}/users/verify-invite?token=${token}&email=${encodeURIComponent(email)}`);
         console.log('Verification response:', response.data);
         if (response.data.valid) {
           setInviteData({
