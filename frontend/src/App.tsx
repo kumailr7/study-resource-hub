@@ -1145,8 +1145,14 @@ const ResourceTable: React.FC = () => {
     }
 
     // Show confirmation modal
-    if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime) return;
-    if (!sessionWhiteboardEnabled && !sessionLink) return;
+    if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime) {
+      alert('Please fill in all required fields: Author, Topic, Date, and Time');
+      return;
+    }
+    if (!sessionWhiteboardEnabled && !sessionLink) {
+      alert('Please either enable Whiteboard or provide a Meeting Link');
+      return;
+    }
     
     let whiteboardLink = '';
     if (sessionWhiteboardEnabled) {
