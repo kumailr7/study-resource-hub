@@ -7,7 +7,6 @@ import logo from "./assets/logo-2.png";
 import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from './components/ProtectedRoute';
-import SyncUserOnSignup from './components/SyncUserOnSignup';
 import { LayoutGrid, Trophy, Calendar, LineChart, Package, HelpCircle, LogOut, Bell, Settings, Sun, Moon, Pin, Search, Video, Users, Lightbulb } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts';
 import BlurText from './components/BlurText';
@@ -95,7 +94,6 @@ interface Session {
   topic: string;
   date: string;
   time: string;
-  timezone: string;
   tag: string;
   meetingLink: string;
   platform: 'Google Meet' | 'Zoom' | 'Teams' | 'Other';
@@ -162,141 +160,6 @@ const getTagColor = (tag: string): string => {
     if (entry.keywords.some(kw => lower.includes(kw))) return entry.color;
   }
   return '#ff86c2';
-};
-
-const COMMON_TIMEZONES = [
-  { value: 'Asia/Kolkata', label: 'IST - India Standard Time' },
-  { value: 'Asia/Tokyo', label: 'JST - Japan Standard Time' },
-  { value: 'Asia/Shanghai', label: 'CST - China Standard Time' },
-  { value: 'Asia/Singapore', label: 'SGT - Singapore Time' },
-  { value: 'Asia/Dubai', label: 'GST - Gulf Standard Time' },
-  { value: 'Europe/London', label: 'GMT/BST - United Kingdom' },
-  { value: 'Europe/Paris', label: 'CET - Central European Time' },
-  { value: 'Europe/Berlin', label: 'CET - Germany' },
-  { value: 'Europe/Moscow', label: 'MSK - Moscow Time' },
-  { value: 'America/New_York', label: 'EST/EDT - Eastern Time (US)' },
-  { value: 'America/Chicago', label: 'CST/CDT - Central Time (US)' },
-  { value: 'America/Denver', label: 'MST/MDT - Mountain Time (US)' },
-  { value: 'America/Los_Angeles', label: 'PST/PDT - Pacific Time (US)' },
-  { value: 'America/Sao_Paulo', label: 'BRT - Brazil Time' },
-  { value: 'Australia/Sydney', label: 'AEST/AEDT - Australia Eastern' },
-  { value: 'Pacific/Auckland', label: 'NZST/NZDT - New Zealand' },
-  { value: 'UTC', label: 'UTC - Universal Time' },
-];
-
-const formatTimeInTimezone = (date: string, time: string, fromTz: string, toTz: string): string => {
-  try {
-    const dateTimeStr = `${date}T${time}`;
-    const sourceDate = new Date(dateTimeStr);
-    if (isNaN(sourceDate.getTime())) return `${time}`;
-    
-    const options: Intl.DateTimeFormatOptions = {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: toTz,
-    };
-    return sourceDate.toLocaleTimeString('en-US', options);
-  } catch {
-    return time;
-  }
-};
-
-const getTimezoneOffset = (tz: string): string => {
-  try {
-    const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz,
-      timeZoneName: 'short',
-    });
-    const parts = formatter.formatToParts(now);
-    const tzPart = parts.find(p => p.type === 'timeZoneName');
-    return tzPart?.value || tz;
-  } catch {
-    return tz;
-  }
-};
-
-type SessionStatus = 'past' | 'live' | 'upcoming-soon' | 'future';
-
-const getSessionStatus = (session: Session): SessionStatus => {
-  const now = new Date();
-  const sessionDateTime = new Date(`${session.date}T${session.time}`);
-  const diffMs = sessionDateTime.getTime() - now.getTime();
-  const diffMins = diffMs / (1000 * 60);
-  
-  if (diffMins < -session.duration! * 1.5) return 'past';
-  if (diffMins < 15 && diffMins > -session.duration! * 0.5) return 'live';
-  if (diffMins > 0 && diffMins <= 30) return 'upcoming-soon';
-  return 'future';
-};
-
-const getStatusColor = (status: SessionStatus): string => {
-  switch (status) {
-    case 'live': return '#4ade80';
-    case 'upcoming-soon': return '#22d3ee';
-    case 'past': return '#6b7280';
-    default: return '#9ca3af';
-  }
-};
-
-const generateICS = (session: Session): string => {
-  const formatDateForICS = (date: string, time: string): string => {
-    const dateTime = new Date(`${date}T${time}`);
-    return dateTime.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  };
-  
-  const startDate = formatDateForICS(session.date, session.time);
-  const endDate = new Date(new Date(`${session.date}T${session.time}`).getTime() + (session.duration || 30) * 60000)
-    .toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-
-  const icsContent = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Study Resource Hub//EN',
-    'BEGIN:VEVENT',
-    `UID:session-${session.id}@studyresourcehub`,
-    `DTSTAMP:${formatDateForICS(new Date().toISOString().split('T')[0], new Date().toTimeString().slice(0,5))}`,
-    `DTSTART:${startDate}`,
-    `DTEND:${endDate}`,
-    `SUMMARY:${session.topic}`,
-    `DESCRIPTION:Host: ${session.author}\\nPlatform: ${session.platform}\\n\\n${session.agenda || ''}`,
-    `LOCATION:${session.meetingLink}`,
-    'END:VEVENT',
-    'END:VCALENDAR',
-  ].join('\r\n');
-
-  return icsContent;
-};
-
-const downloadICS = (session: Session) => {
-  const icsContent = generateICS(session);
-  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${session.topic.replace(/\s+/g, '_')}_session.ics`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
-
-const getGoogleCalendarUrl = (session: Session): string => {
-  const startDate = new Date(`${session.date}T${session.time}`);
-  const endDate = new Date(startDate.getTime() + (session.duration || 30) * 60000);
-  
-  const formatGoogleDate = (d: Date): string => d.toISOString().replace(/-|:|\.\d{3}/g, '');
-  
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: session.topic,
-    dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
-    details: `Host: ${session.author}\\nPlatform: ${session.platform}\\n\\n${session.agenda || ''}`,
-    location: session.meetingLink,
-  });
-  
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 };
 
 const ResourceRow: React.FC<{
@@ -439,6 +302,40 @@ const CATEGORY_META: Record<string, { color: string; abbr: string }> = {
   'Networking': { color: '#fb923c', abbr: 'NET' },
 };
 
+// Syncs the newly signed-up invited user to MongoDB then sends them to /user
+const SyncSignup: React.FC = () => {
+  const { user } = useUser();
+  const [done, setDone] = React.useState(false);
+
+  useEffect(() => {
+    if (!user || done) return;
+    const sync = async () => {
+      try {
+        await axios.post(`${API_BASE_URL}/users/sync`, {
+          clerkId: user.id,
+          email: user.primaryEmailAddress?.emailAddress || '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+        });
+      } catch (_) {
+        // Sync failure is non-fatal; user can still access the app
+      } finally {
+        setDone(true);
+      }
+    };
+    sync();
+  }, [user, done]);
+
+  if (!done) {
+    return (
+      <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center">
+        <p className="text-slate-400 text-sm animate-pulse">Setting up your account…</p>
+      </div>
+    );
+  }
+  return <Navigate to="/user" replace />;
+};
+
 const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -447,7 +344,7 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/login/*" element={<RedirectIfSignedIn><LoginPage /></RedirectIfSignedIn>} />
             <Route path="/signup/*" element={<SignupPage />} />
-            <Route path="/sync-signup" element={<SyncUserOnSignup />} />
+            <Route path="/sync-signup" element={<RequireAuth><SyncSignup /></RequireAuth>} />
             <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} />} />
             <Route path="/user" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/" element={<Navigate to="/login" />} />
@@ -521,14 +418,11 @@ const ResourceTable: React.FC = () => {
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [sessionLinkedIn, setSessionLinkedIn] = useState("");
   const [sessionDuration, setSessionDuration] = useState("30");
-  const [sessionTimezone, setSessionTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
-  const [userTimezone, setUserTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [viewAllResources, setViewAllResources] = useState(false);
   const [newResourceAddedBy, setNewResourceAddedBy] = useState('');
   const [sgScheduledAt, setSgScheduledAt] = useState('');
   const [myRegisteredSessions, setMyRegisteredSessions] = useState<Record<string, boolean>>({});
   const [myJoinedGroups, setMyJoinedGroups] = useState<Record<string, boolean>>({});
-  const [downloadRequests, setDownloadRequests] = useState<any[]>([]);
   const [collections, setCollections] = useState<ResourceCollection[]>(() => {
     try { return JSON.parse(localStorage.getItem('dojo_collections') || '[]'); } catch { return []; }
   });
@@ -836,20 +730,6 @@ const ResourceTable: React.FC = () => {
     fetchShared();
   }, [user?.id]);
 
-  // Fetch user's download requests
-  useEffect(() => {
-    if (!user?.id) return;
-    const fetchDownloadRequests = async () => {
-      try {
-        const res = await axios.get<any[]>(`${API_BASE_URL}/download-requests/user/${user.id}`);
-        setDownloadRequests(res.data);
-      } catch (err) {
-        console.error('Error fetching download requests:', err);
-      }
-    };
-    fetchDownloadRequests();
-  }, [user?.id]);
-
   // Fetch resources from the API
   const fetchResources = async () => {
     try {
@@ -1128,7 +1008,7 @@ const ResourceTable: React.FC = () => {
     try {
       const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
         author: sessionAuthor, topic: sessionTopic,
-        date: sessionDate, time: sessionTime, timezone: sessionTimezone,
+        date: sessionDate, time: sessionTime,
         tag: sessionTag, meetingLink: sessionLink, platform: sessionPlatform,
         agenda: sessionAgenda, willRecord: sessionWillRecord, recordingLink: '', aiSummary: '',
         hostLinkedIn: sessionLinkedIn, attendeeCount: 0, duration: Number(sessionDuration) || 30,
@@ -1241,29 +1121,6 @@ const ResourceTable: React.FC = () => {
       setMyRegisteredSessions(prev => ({ ...prev, [id]: false }));
       setSelectedSession(prev => prev?.id === id ? { ...prev, attendeeCount: res.data.attendeeCount } : prev);
     } catch (err) { console.error('Error unregistering from session:', err); }
-  };
-
-  const handleRequestDownload = async (sessionId: string) => {
-    const userId = user?.id;
-    const userEmail = user?.emailAddresses?.[0]?.emailAddress || '';
-    const userName = user?.fullName || user?.username || 'Unknown';
-    if (!userId) return;
-    try {
-      const res = await axios.post<any>(`${API_BASE_URL}/download-requests`, {
-        sessionId, userId, userEmail, userName
-      });
-      setDownloadRequests(prev => [...prev, res.data]);
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Error requesting download');
-    }
-  };
-
-  const handleRefreshDownloadRequests = async () => {
-    if (!user?.id) return;
-    try {
-      const res = await axios.get<any[]>(`${API_BASE_URL}/download-requests/user/${user.id}`);
-      setDownloadRequests(res.data);
-    } catch (err) { console.error('Error refreshing download requests:', err); }
   };
 
   const handleUpvoteRequest = async (id: string) => {
@@ -2249,38 +2106,6 @@ const ResourceTable: React.FC = () => {
                 </button>
               </div>
 
-              {/* Live Sessions Banner */}
-              {(() => {
-                const now = new Date();
-                const liveSessions = sessions.filter(s => {
-                  const status = getSessionStatus(s);
-                  return status === 'live' || status === 'upcoming-soon';
-                });
-                if (liveSessions.length === 0) return null;
-                return (
-                  <div className="bg-gradient-to-r from-green-900/30 to-cyan-900/30 border border-green-500/30 rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                      <span className="text-xs font-black uppercase tracking-widest text-green-400">Live / Starting Soon</span>
-                    </div>
-                    <div className="flex gap-3 overflow-x-auto pb-1">
-                      {liveSessions.map(s => {
-                        const status = getSessionStatus(s);
-                        const isLive = status === 'live';
-                        return (
-                          <button key={s.id} onClick={() => setSelectedSession(s)}
-                            className="flex-shrink-0 px-4 py-2 rounded-lg bg-green-500/20 border border-green-400/30 hover:bg-green-500/30 transition-all text-left group"
-                            style={{ animation: 'electric-pulse 2s ease-in-out infinite' }}>
-                            <p className="text-xs font-bold text-green-300 group-hover:text-green-200">{s.topic}</p>
-                            <p className="text-[10px] text-green-400/70">{isLive ? '● LIVE NOW' : `Starts in 30 min`} · {s.time}</p>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-
               {/* ── Google Calendar style grid ── */}
               <div className="bg-surface-container overflow-hidden">
                 {/* Calendar header */}
@@ -2323,25 +2148,11 @@ const ResourceTable: React.FC = () => {
                         <div className="space-y-0.5">
                           {daySessions.slice(0, 3).map(s => {
                             const tc = s.tag ? getTagColor(s.tag) : platformColor[s.platform];
-                            const displayTime = userTimezone !== (s.timezone || 'UTC') 
-                              ? formatTimeInTimezone(s.date, s.time, s.timezone || 'UTC', userTimezone)
-                              : s.time;
-                            const status = getSessionStatus(s);
-                            const isPast = status === 'past';
-                            const isUpcomingSoon = status === 'upcoming-soon' || status === 'live';
                             return (
                             <button key={s.id} onClick={() => setSelectedSession(s)}
-                              className={`w-full text-left px-1.5 py-0.5 text-[10px] font-semibold truncate transition-all hover:opacity-80 relative
-                                ${isPast ? 'opacity-50' : ''}`}
-                              style={{ 
-                                background: isPast ? 'rgba(107, 114, 128, 0.15)' : tc + '30', 
-                                color: isPast ? '#9ca3af' : tc, 
-                                borderLeft: `2px solid ${isPast ? '#6b7280' : tc}`,
-                                animation: isUpcomingSoon ? 'electric-pulse 2s ease-in-out infinite' : 'none',
-                                boxShadow: isUpcomingSoon ? `0 0 8px ${getStatusColor(status)}40` : 'none',
-                              }}>
-                              {status === 'live' && <span className="inline-block w-1.5 h-1.5 bg-green-400 rounded-full mr-1 animate-pulse" />}
-                              {displayTime} {s.topic}
+                              className="w-full text-left px-1.5 py-0.5 text-[10px] font-semibold truncate transition-opacity hover:opacity-80"
+                              style={{ background: tc + '30', color: tc, borderLeft: `2px solid ${tc}` }}>
+                              {s.time} {s.topic}
                             </button>
                             );
                           })}
@@ -2383,15 +2194,6 @@ const ResourceTable: React.FC = () => {
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Time</label>
                       <input type="time" value={sessionTime} onChange={e => setSessionTime(e.target.value)}
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Timezone</label>
-                      <select value={sessionTimezone} onChange={e => setSessionTimezone(e.target.value)}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
-                        {COMMON_TIMEZONES.map(tz => (
-                          <option key={tz.value} style={{ background: '#1e1e2e', color: '#e2e8f0' }} value={tz.value}>{tz.label}</option>
-                        ))}
-                      </select>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Tag</label>
@@ -2498,15 +2300,7 @@ const ResourceTable: React.FC = () => {
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Date & Time</p>
                           <p className="text-sm font-bold text-on-surface">{selectedSession.date}</p>
-                          <p className="text-xs text-slate-400">{selectedSession.time} {selectedSession.timezone ? `(${getTimezoneOffset(selectedSession.timezone)})` : '(UTC)'}</p>
-                          {userTimezone !== (selectedSession.timezone || 'UTC') && (
-                            <div className="mt-2 pt-2 border-t border-white/10">
-                              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Your Time ({getTimezoneOffset(userTimezone)})</p>
-                              <p className="text-sm font-bold text-primary">
-                                {formatTimeInTimezone(selectedSession.date, selectedSession.time, selectedSession.timezone || 'UTC', userTimezone)}
-                              </p>
-                            </div>
-                          )}
+                          <p className="text-xs text-slate-400">{selectedSession.time}</p>
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Platform</p>
@@ -2548,42 +2342,11 @@ const ResourceTable: React.FC = () => {
                       </div>
 
                       {/* Meeting link CTA */}
-                      {(() => {
-                        const isPast = new Date(`${selectedSession.date}T${selectedSession.time}`) < new Date();
-                        if (isPast) {
-                          return (
-                            <div className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-slate-700 text-slate-500 cursor-not-allowed">
-                              <Video size={14} /> Session Ended
-                            </div>
-                          );
-                        }
-                        return (
-                          <a href={selectedSession.meetingLink} target="_blank" rel="noreferrer"
-                            className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all hover:opacity-90"
-                            style={{ background: sessionColor, color: '#0e0e13' }}>
-                            <Video size={14} /> Join Meeting
-                          </a>
-                        );
-                      })()}
-
-                      {/* Calendar integration buttons */}
-                      {(() => {
-                        const isPast = new Date(`${selectedSession.date}T${selectedSession.time}`) < new Date();
-                        return (
-                          <div className={`grid grid-cols-2 gap-3 ${isPast ? 'opacity-40 pointer-events-none' : ''}`}>
-                            <a href={getGoogleCalendarUrl(selectedSession)} target="_blank" rel="noreferrer"
-                              className="flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600/30 transition-colors">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 15h-3v-9h3v9zm6 0h-3v-6h3v6zm0-7.5h-3V7.5h3v3z"/></svg>
-                              Google Cal
-                            </a>
-                            <button onClick={() => downloadICS(selectedSession)}
-                              className="flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest bg-purple-600/20 text-purple-400 border border-purple-600/30 hover:bg-purple-600/30 transition-colors">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                              Download ICS
-                            </button>
-                          </div>
-                        );
-                      })()}
+                      <a href={selectedSession.meetingLink} target="_blank" rel="noreferrer"
+                        className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all"
+                        style={{ background: sessionColor, color: '#0e0e13' }}>
+                        <Video size={14} /> Join Meeting
+                      </a>
 
                       {/* Recording section */}
                       {selectedSession.willRecord && (() => {
@@ -2612,92 +2375,22 @@ const ResourceTable: React.FC = () => {
                             )}
 
                             {selectedSession.recordingLink && (
-                              <div className="flex flex-col gap-3">
-                                {(() => {
-                                  const isPast = new Date(`${selectedSession.date}T${selectedSession.time}`) < new Date();
-                                  return (
-                                    <>
-                                      <div className="flex items-center gap-4">
-                                        {isPast ? (
-                                          <span className="flex items-center gap-2 text-slate-500 text-xs font-bold cursor-not-allowed">
-                                            <Video size={13} /> Watch Recording
-                                          </span>
-                                        ) : (
-                                          <a href={selectedSession.recordingLink} target="_blank" rel="noreferrer"
-                                            className="flex items-center gap-2 text-secondary text-xs font-bold hover:underline underline-offset-2">
-                                            <Video size={13} /> Watch Recording
-                                          </a>
-                                        )}
-                                      </div>
-                                      {/* Download request UI - only show for non-past sessions */}
-                                      {!isPast && (() => {
-                                        const myRequest = downloadRequests.find((r: any) => r.sessionId === selectedSession.id);
-                                        const isRegistered = myRegisteredSessions[selectedSession.id];
-                                        const isExpired = myRequest?.expiresAt && new Date(myRequest.expiresAt) < new Date();
-                                        
-                                        if (!isRegistered) {
-                                          return (
-                                            <p className="text-[10px] text-slate-500 italic">
-                                              Register for this session to request download access.
-                                            </p>
-                                          );
-                                        }
-                                        
-                                        if (!myRequest || myRequest.status === 'pending') {
-                                          return (
-                                            <button onClick={() => handleRequestDownload(selectedSession.id)}
-                                              className="self-start flex items-center gap-2 text-amber-400 text-xs font-bold hover:underline underline-offset-2 transition-colors">
-                                              <span className="text-lg">🔐</span> Request Download Access
-                                            </button>
-                                          );
-                                        }
-                                        
-                                        if (myRequest.status === 'rejected') {
-                                          return (
-                                            <div className="space-y-2">
-                                              <p className="text-[10px] text-red-400 font-bold">Request Denied</p>
-                                              {myRequest.rejectionReason && (
-                                                <p className="text-[10px] text-slate-500">Reason: {myRequest.rejectionReason}</p>
-                                              )}
-                                              <button onClick={() => handleRequestDownload(selectedSession.id)}
-                                                className="text-[10px] text-slate-400 hover:text-amber-400 font-bold transition-colors">
-                                                Request Again
-                                              </button>
-                                            </div>
-                                          );
-                                        }
-                                        
-                                        if (myRequest.status === 'approved' && !isExpired) {
-                                          return (
-                                            <div className="space-y-2">
-                                              <a href={selectedSession.recordingLink} download
-                                                className="self-start flex items-center gap-2 text-green-400 text-xs font-bold hover:underline underline-offset-2 transition-colors">
-                                                <span>↓</span> Download (Expires {new Date(myRequest.expiresAt).toLocaleString()})
-                                              </a>
-                                              <p className="text-[10px] text-amber-400/80">
-                                                ⏱ Download link expires in 24 hours
-                                              </p>
-                                            </div>
-                                          );
-                                        }
-                                        
-                                        if (myRequest.status === 'approved' && isExpired) {
-                                          return (
-                                            <div className="space-y-2">
-                                              <p className="text-[10px] text-slate-500">Download link expired.</p>
-                                              <button onClick={() => handleRequestDownload(selectedSession.id)}
-                                                className="self-start text-[10px] text-amber-400 hover:text-amber-300 font-bold transition-colors">
-                                                Request New Download Access
-                                              </button>
-                                            </div>
-                                          );
-                                        }
-                                        
-                                        return null;
-                                      })()}
-                                    </>
-                                  );
-                                })()}
+                              <div className="flex items-center gap-4">
+                                <a href={selectedSession.recordingLink} target="_blank" rel="noreferrer"
+                                  className="flex items-center gap-2 text-secondary text-xs font-bold hover:underline underline-offset-2">
+                                  <Video size={13} /> Watch Recording
+                                </a>
+                                <a href={selectedSession.recordingLink} download
+                                  className="flex items-center gap-2 text-slate-400 hover:text-secondary text-xs font-bold hover:underline underline-offset-2 transition-colors">
+                                  ↓ Download
+                                </a>
+                                {/* Admin: delete recording */}
+                                {userIsAdmin && !showDeleteRecordingConfirm && (
+                                  <button onClick={() => setShowDeleteRecordingConfirm(true)}
+                                    className="text-[10px] text-slate-600 hover:text-red-400 font-bold uppercase tracking-widest transition-colors ml-auto">
+                                    Remove
+                                  </button>
+                                )}
                               </div>
                             )}
 
@@ -2913,19 +2606,19 @@ const ResourceTable: React.FC = () => {
                     <div className="space-y-1">
                       {past.map(s => (
                         <div key={s.id}
-                          className="flex items-center gap-4 px-4 py-3 bg-surface-container/50 hover:bg-surface-container/80 transition-colors cursor-pointer group opacity-60"
+                          className="flex items-center gap-4 px-4 py-3 bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer group"
                           onClick={() => setSelectedSession(s)}
-                          style={{ borderLeft: '3px solid #6b7280' }}>
-                          <div className="w-1.5 h-1.5 flex-shrink-0 opacity-40" style={{ background: '#6b7280' }}></div>
+                          style={{ borderLeft: `3px solid ${platformColor[s.platform]}50` }}>
+                          <div className="w-1.5 h-1.5 flex-shrink-0 opacity-40" style={{ background: platformColor[s.platform] }}></div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-400 truncate group-hover:text-slate-300 transition-colors">{s.topic}</p>
-                            <p className="text-[10px] text-slate-600">{s.author} · {s.date} at {s.time}</p>
+                            <p className="text-xs font-bold text-on-surface truncate group-hover:text-primary transition-colors">{s.topic}</p>
+                            <p className="text-[10px] text-slate-500">{s.author} · {s.date} at {s.time}</p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <span className="text-[9px] font-bold uppercase px-2 py-0.5"
-                              style={{ color: '#6b7280', background: '#6b728020' }}>{s.platform}</span>
+                              style={{ color: platformColor[s.platform], background: platformColor[s.platform] + '20' }}>{s.platform}</span>
                             {s.willRecord && (
-                              <span className={`text-[9px] font-bold uppercase px-2 py-0.5 ${s.recordingLink ? 'text-slate-400 bg-slate-400/10' : 'text-slate-600 bg-white/5'}`}>
+                              <span className={`text-[9px] font-bold uppercase px-2 py-0.5 ${s.recordingLink ? 'text-green-400 bg-green-400/10' : 'text-slate-500 bg-white/5'}`}>
                                 {s.recordingLink ? '● Recorded' : '○ Pending'}
                               </span>
                             )}
