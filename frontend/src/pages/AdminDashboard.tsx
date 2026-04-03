@@ -288,7 +288,7 @@ const AdminDashboard: React.FC = () => {
           </div>
           <nav className="flex-1 px-4 space-y-1">
             {navItem('overview', LayoutGrid, 'Overview')}
-            {userIsSuperAdmin && navItem('users', UsersIcon, 'User Management')}
+            {(userIsSuperAdmin || userIsAdmin) && navItem('users', UsersIcon, 'User Management')}
             {userIsSuperAdmin && navItem('removals', Trash2, 'Removal Requests')}
             {userIsAdmin && navItem('requests', Package, 'Requested Resources')}
             {navItem('downloads', Download, 'Download Requests')}
@@ -351,7 +351,7 @@ const AdminDashboard: React.FC = () => {
           )}
 
           {/* ── USER MANAGEMENT (Super Admin Only) ── */}
-          {adminTab === 'users' && userIsSuperAdmin && (
+          {adminTab === 'users' && (userIsSuperAdmin || userIsAdmin) && (
             <>
               <div className="flex items-end justify-between">
                 <div>
