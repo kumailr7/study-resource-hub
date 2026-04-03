@@ -83,10 +83,13 @@ const AdminDashboard: React.FC = () => {
     if (!inviteEmail.trim()) return;
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.post(`${API_BASE_URL}/users/invite`, { email: inviteEmail, invitedBy: clerkUser?.id }, { headers });
+      const res = await axios.post(`${API_BASE_URL}/users/invite`, { email: inviteEmail, invitedBy: clerkUser?.id }, { headers });
       setShowInviteModal(false);
       setInviteEmail('');
       fetchAll();
+      if (res.data.success) {
+        alert(`Invitation sent to ${res.data.email}! They will receive an email to join.`);
+      }
     } catch (e: any) {
       alert(e.response?.data?.error || 'Error inviting user');
     }

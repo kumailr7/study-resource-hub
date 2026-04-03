@@ -8,6 +8,7 @@ const { config } = require('dotenv');
 const Joi = require('joi');
 const expressMongoSanitize = require('express-mongo-sanitize');
 const envalid = require('envalid');
+const { Clerk } = require('@clerk/clerk-sdk-node');
 
 // Import 
 const loginRoutes = require("./routes/login"); // Adjust path as needed
@@ -174,7 +175,7 @@ const userManagementSchema = new mongoose.Schema({
   name: { type: String, default: '' },
   role: { type: String, enum: ['super_admin', 'admin', 'user'], default: 'user' },
   status: { type: String, enum: ['active', 'invited', 'pending_removal', 'removed'], default: 'active' },
-  inviteToken: { type: String, default: null },
+  clerkInvitationId: { type: String, default: null },
   removalRequest: {
     requestedBy: { type: String, default: null },
     reason: { type: String, default: '' },
@@ -187,8 +188,8 @@ const userManagementSchema = new mongoose.Schema({
   invitedAt: { type: Date, default: null },
 }, { timestamps: true });
 userManagementSchema.index({ clerkId: 1 });
-userManagementSchema.index({ inviteToken: 1 });
 userManagementSchema.index({ email: 1 });
+userManagementSchema.index({ clerkInvitationId: 1 });
 
 const SessionModel = mongoose.model('Session', sessionSchema);
 const StudyGroup = mongoose.model('StudyGroup', studyGroupSchema);
@@ -352,15 +353,15 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
     }
     await user.save();
   } else {
-    // Check if there's an invited user with this email or token - they accepted the invite
+    // Check if there's an invited user with this email - they accepted the invite
     const invitedUser = await UserManagement.findOne({ 
-      $or: [{ email, status: 'invited' }, { inviteToken, status: 'invited' }]
+      $or: [{ email, status: 'invited' }, { clerkInvitationId: { $exists: true, $ne: null } }]
     });
     if (invitedUser) {
       invitedUser.clerkId = clerkId;
       invitedUser.name = name;
       invitedUser.status = 'active';
-      invitedUser.inviteToken = null;
+      invitedUser.clerkInvitationId = null;
       await invitedUser.save();
       return res.json(invitedUser);
     }
@@ -371,9 +372,9 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
   res.json(user);
 }));
 
-// Validate invite token
-app.get('/api/users/invite/validate/:token', asyncHandler(async (req, res) => {
-  const user = await UserManagement.findOne({ inviteToken: req.params.token, status: 'invited' });
+// Validate invite via Clerk (check if invitation is still pending)
+app.get('/api/users/invite/validate/:clerkId', asyncHandler(async (req, res) => {
+  const user = await UserManagement.findOne({ clerkId: req.params.clerkId, status: 'invited' });
   if (!user) {
     return res.status(404).json({ error: 'Invalid or expired invitation' });
   }
@@ -475,46 +476,97 @@ app.post('/api/users/invite', requireAdmin, asyncHandler(async (req, res) => {
   const existing = await UserManagement.findOne({ email });
   if (existing) return res.status(400).json({ error: 'User already exists' });
   
-  // Generate unique invite token
-  const inviteToken = require('crypto').randomBytes(32).toString('hex');
-  
-  const user = new UserManagement({
-    clerkId: `invited_${Date.now()}`,
-    email,
-    name: '',
-    role: 'user',
-    status: 'invited',
-    inviteToken,
-    invitedBy,
-    invitedAt: new Date()
-  });
-  await user.save();
-  
-  res.status(201).json({ 
-    user, 
-    inviteLink: `${process.env.FRONTEND_URL || 'https://study-resource-hub.vercel.app'}/invite/${inviteToken}` 
-  });
+  try {
+    // Use Clerk's invitation API to send email invitation
+    const clerkClient = Clerk({ secretKey: process.env.CLERK_SECRET_KEY });
+    
+    const invitation = await clerkClient.invitations.createInvitation({
+      emailAddress: email,
+      redirectUrl: `${process.env.FRONTEND_URL || 'https://study-resource-hub.vercel.app'}/signup?invited=true`,
+      publicMetadata: {
+        role: 'user',
+        invitedBy
+      }
+    });
+    
+    // Also create a record in MongoDB for tracking
+    const user = new UserManagement({
+      clerkId: `invited_${invitation.id}`,
+      email,
+      name: '',
+      role: 'user',
+      status: 'invited',
+      clerkInvitationId: invitation.id,
+      invitedBy,
+      invitedAt: new Date()
+    });
+    await user.save();
+    
+    res.status(201).json({ 
+      success: true,
+      invitationId: invitation.id,
+      email: invitation.emailAddress,
+      status: invitation.status
+    });
+  } catch (error) {
+    console.error('Clerk invitation error:', error);
+    res.status(500).json({ error: 'Failed to send invitation: ' + error.message });
+  }
 }));
 
-// Resend invitation
+// Resend invitation via Clerk
 app.post('/api/users/:clerkId/resend-invite', requireAdmin, asyncHandler(async (req, res) => {
   const user = await UserManagement.findOne({ clerkId: req.params.clerkId });
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (user.status !== 'invited') return res.status(400).json({ error: 'User is not in invited status' });
   
-  user.invitedAt = new Date();
-  await user.save();
-  res.json(user);
+  try {
+    // Use Clerk to resend invitation
+    const clerkClient = Clerk({ secretKey: process.env.CLERK_SECRET_KEY });
+    
+    const invitation = await clerkClient.invitations.createInvitation({
+      emailAddress: user.email,
+      redirectUrl: `${process.env.FRONTEND_URL || 'https://study-resource-hub.vercel.app'}/signup?invited=true`,
+      publicMetadata: {
+        role: 'user',
+        invitedBy: user.invitedBy
+      }
+    });
+    
+    // Update our record
+    user.clerkInvitationId = invitation.id;
+    user.invitedAt = new Date();
+    await user.save();
+    
+    res.json({ success: true, message: 'Invitation resent' });
+  } catch (error) {
+    console.error('Clerk resend error:', error);
+    res.status(500).json({ error: 'Failed to resend invitation: ' + error.message });
+  }
 }));
 
-// Cancel invitation (remove invited user)
+// Cancel invitation (revoke Clerk invitation and remove from our DB)
 app.delete('/api/users/:clerkId/cancel-invite', requireAdmin, asyncHandler(async (req, res) => {
   const user = await UserManagement.findOne({ clerkId: req.params.clerkId });
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (user.status !== 'invited') return res.status(400).json({ error: 'Can only cancel invited users' });
   
-  await UserManagement.deleteOne({ _id: user._id });
-  res.json({ message: 'Invitation cancelled' });
+  try {
+    // Revoke the Clerk invitation if it exists
+    if (user.clerkInvitationId) {
+      const clerkClient = Clerk({ secretKey: process.env.CLERK_SECRET_KEY });
+      await clerkClient.invitations.revokeInvitation(user.clerkInvitationId);
+    }
+    
+    // Remove from our database
+    await UserManagement.deleteOne({ _id: user._id });
+    res.json({ message: 'Invitation cancelled and revoked' });
+  } catch (error) {
+    console.error('Clerk cancel error:', error);
+    // Still remove from our DB even if Clerk call fails
+    await UserManagement.deleteOne({ _id: user._id });
+    res.json({ message: 'Invitation cancelled (Clerk removal may have failed)' });
+  }
 }));
 
 // ── Study Groups routes ──
