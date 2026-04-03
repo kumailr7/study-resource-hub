@@ -56,7 +56,9 @@ const AdminDashboard: React.FC = () => {
   const [removeUserId, setRemoveUserId] = useState<string | null>(null);
   const [removeReason, setRemoveReason] = useState('');
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => {
+    if (clerkUser?.id && userRole) { fetchAll(); }
+  }, [clerkUser?.id, userRole]);
 
   const fetchAll = async () => {
     try {
@@ -861,7 +863,9 @@ const AdminDashboard: React.FC = () => {
                     <p className="text-sm font-black text-[#f8f5fd]">{clerkUser?.fullName || clerkUser?.username || '—'}</p>
                     <p className="text-xs text-slate-500">{clerkUser?.primaryEmailAddress?.emailAddress}</p>
                   </div>
-                  <span className="ml-auto text-[10px] font-black uppercase px-2 py-1 text-[#ff86c2] bg-[#ff86c2]/10">Admin</span>
+                  <span className={`ml-auto text-[10px] font-black uppercase px-2 py-1 ${userIsSuperAdmin ? 'text-[#a78bfa] bg-[#a78bfa]/10' : 'text-[#ff86c2] bg-[#ff86c2]/10'}`}>
+                    {userIsSuperAdmin ? 'Super Admin' : 'Admin'}
+                  </span>
                 </div>
               </div>
 
