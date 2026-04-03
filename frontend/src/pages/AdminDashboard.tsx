@@ -69,6 +69,7 @@ const AdminDashboard: React.FC = () => {
         axios.get(`${API_BASE_URL}/requests?limit=1000`).catch(() => ({ data: { data: [] } })),
         axios.get(`${API_BASE_URL}/download-requests`, { headers }).catch(() => ({ data: [] })),
       ]);
+      console.log('Users API response:', usersRes.data);
       setManagedUsers(usersRes.data || []);
       setPendingRemovals(removalsRes.data || []);
       setTotalResources(resourcesRes.data.total || resourcesRes.data.data?.length || 0);
@@ -379,6 +380,11 @@ const AdminDashboard: React.FC = () => {
 
               {/* Users Table */}
               <div className="bg-[#131318] overflow-x-auto">
+                {managedUsers.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500">
+                    No users found. Click "Invite User" to add users.
+                  </div>
+                ) : (
                 <table className="w-full text-sm min-w-[800px]">
                   <thead>
                     <tr className="bg-[#1f1f26]">
@@ -443,6 +449,7 @@ const AdminDashboard: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+                )}
               </div>
 
               {/* Remove User Modal */}
