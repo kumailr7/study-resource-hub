@@ -2300,7 +2300,14 @@ const ResourceTable: React.FC = () => {
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Date & Time</p>
                           <p className="text-sm font-bold text-on-surface">{selectedSession.date}</p>
-                          <p className="text-xs text-slate-400">{selectedSession.time}</p>
+                          <p className="text-xs text-slate-400">
+                            {selectedSession.time}
+                            {selectedSession.timezone && selectedSession.timezone !== 'UTC' && (
+                              <span className="ml-1 text-[9px] text-slate-500">
+                                ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+                              </span>
+                            )}
+                          </p>
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Platform</p>
