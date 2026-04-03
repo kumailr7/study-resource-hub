@@ -1145,6 +1145,7 @@ const ResourceTable: React.FC = () => {
     }
 
     // Show confirmation modal
+    console.log('handleAddSession called', { sessionAuthor, sessionTopic, sessionDate, sessionTime, sessionWhiteboardEnabled, sessionLink });
     if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime) {
       alert('Please fill in all required fields: Author, Topic, Date, and Time');
       return;
