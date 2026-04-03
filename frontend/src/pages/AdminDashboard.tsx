@@ -63,11 +63,11 @@ const AdminDashboard: React.FC = () => {
       const clerkId = clerkUser?.id;
       const headers = { 'x-clerk-id': clerkId || '' };
       const [usersRes, removalsRes, resourcesRes, requestsRes, dlRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/users`, { headers }).catch(() => ({ data: [] })),
-        axios.get(`${API_BASE_URL}/api/users/pending-removals`, { headers }).catch(() => ({ data: [] })),
-        axios.get(`${API_BASE_URL}/api/added-resources?limit=1000`).catch(() => ({ data: { total: 0, data: [] } })),
-        axios.get(`${API_BASE_URL}/api/requests?limit=1000`).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API_BASE_URL}/api/download-requests`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/users`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/users/pending-removals`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/added-resources?limit=1000`).catch(() => ({ data: { total: 0, data: [] } })),
+        axios.get(`${API_BASE_URL}/requests?limit=1000`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API_BASE_URL}/download-requests`, { headers }).catch(() => ({ data: [] })),
       ]);
       console.log('Users API response:', usersRes.data);
       setManagedUsers(usersRes.data || []);
@@ -84,7 +84,7 @@ const AdminDashboard: React.FC = () => {
     if (!inviteEmail.trim()) return;
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      const res = await axios.post<{ success?: boolean; email?: string; error?: string }>(`${API_BASE_URL}/api/users/invite`, { email: inviteEmail, invitedBy: clerkUser?.id }, { headers });
+      const res = await axios.post<{ success?: boolean; email?: string; error?: string }>(`${API_BASE_URL}/users/invite`, { email: inviteEmail, invitedBy: clerkUser?.id }, { headers });
       setShowInviteModal(false);
       setInviteEmail('');
       fetchAll();
@@ -99,7 +99,7 @@ const AdminDashboard: React.FC = () => {
   const handlePromoteToAdmin = async (clerkId: string) => {
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.patch(`${API_BASE_URL}/api/users/${clerkId}/role`, { role: 'admin', updatedBy: clerkUser?.id }, { headers });
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'admin', updatedBy: clerkUser?.id }, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
@@ -107,7 +107,7 @@ const AdminDashboard: React.FC = () => {
   const handleDemoteToUser = async (clerkId: string) => {
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.patch(`${API_BASE_URL}/api/users/${clerkId}/role`, { role: 'user', updatedBy: clerkUser?.id }, { headers });
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'user', updatedBy: clerkUser?.id }, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
@@ -116,7 +116,7 @@ const AdminDashboard: React.FC = () => {
     if (!removeUserId || !removeReason.trim()) return;
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.post(`${API_BASE_URL}/api/users/${removeUserId}/request-removal`, { reason: removeReason, requestedBy: clerkUser?.id }, { headers });
+      await axios.post(`${API_BASE_URL}/users/${removeUserId}/request-removal`, { reason: removeReason, requestedBy: clerkUser?.id }, { headers });
       setShowRemoveModal(false);
       setRemoveUserId(null);
       setRemoveReason('');
@@ -129,7 +129,7 @@ const AdminDashboard: React.FC = () => {
   const handleApproveRemoval = async (clerkId: string) => {
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.patch(`${API_BASE_URL}/api/users/${clerkId}/approve-removal`, { reviewedBy: clerkUser?.id }, { headers });
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/approve-removal`, { reviewedBy: clerkUser?.id }, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
@@ -137,7 +137,7 @@ const AdminDashboard: React.FC = () => {
   const handleRejectRemoval = async (clerkId: string) => {
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.patch(`${API_BASE_URL}/api/users/${clerkId}/reject-removal`, { reviewedBy: clerkUser?.id }, { headers });
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/reject-removal`, { reviewedBy: clerkUser?.id }, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
@@ -145,7 +145,7 @@ const AdminDashboard: React.FC = () => {
   const handleMakeSuperAdmin = async (clerkId: string) => {
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.patch(`${API_BASE_URL}/api/users/${clerkId}/role`, { role: 'super_admin', updatedBy: clerkUser?.id }, { headers });
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'super_admin', updatedBy: clerkUser?.id }, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
@@ -163,7 +163,7 @@ const AdminDashboard: React.FC = () => {
   const handleResendInvite = async (clerkId: string) => {
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.post(`${API_BASE_URL}/api/users/${clerkId}/resend-invite`, {}, { headers });
+      await axios.post(`${API_BASE_URL}/users/${clerkId}/resend-invite`, {}, { headers });
       fetchAll();
       alert('Invitation resent');
     } catch (e) { console.error(e); }
@@ -173,7 +173,7 @@ const AdminDashboard: React.FC = () => {
     if (!confirm('Are you sure you want to cancel this invitation?')) return;
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.delete(`${API_BASE_URL}/api/users/${clerkId}/cancel-invite`, { headers });
+      await axios.delete(`${API_BASE_URL}/users/${clerkId}/cancel-invite`, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
@@ -181,7 +181,7 @@ const AdminDashboard: React.FC = () => {
   const handleApproveDownload = async (id: string) => {
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.patch(`${API_BASE_URL}/api/download-requests/${id}/approve`, { adminId: clerkUser?.id }, { headers });
+      await axios.patch(`${API_BASE_URL}/download-requests/${id}/approve`, { adminId: clerkUser?.id }, { headers });
       setDownloadRequests(prev => prev.map(r => r._id === id ? { ...r, status: 'approved', reviewedAt: new Date(), expiresAt: new Date(Date.now() + 24*60*60*1000) } : r));
     } catch (e) { console.error(e); }
   };
@@ -190,7 +190,7 @@ const AdminDashboard: React.FC = () => {
     if (!rejectReason.trim()) { alert('Please provide a reason for rejection'); return; }
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      await axios.patch(`${API_BASE_URL}/api/download-requests/${id}/reject`, { adminId: clerkUser?.id, reason: rejectReason }, { headers });
+      await axios.patch(`${API_BASE_URL}/download-requests/${id}/reject`, { adminId: clerkUser?.id, reason: rejectReason }, { headers });
       setDownloadRequests(prev => prev.map(r => r._id === id ? { ...r, status: 'rejected', reviewedAt: new Date(), rejectionReason: rejectReason } : r));
       setRejectReason('');
     } catch (e) { console.error(e); }
