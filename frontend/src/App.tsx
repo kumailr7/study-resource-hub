@@ -94,6 +94,7 @@ interface Session {
   topic: string;
   date: string;
   time: string;
+  timezone?: string;
   tag: string;
   meetingLink: string;
   platform: 'Google Meet' | 'Zoom' | 'Teams' | 'Other';
@@ -2299,15 +2300,37 @@ const ResourceTable: React.FC = () => {
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Date & Time</p>
-                          <p className="text-sm font-bold text-on-surface">{selectedSession.date}</p>
+                          <p className="text-sm font-bold text-on-surface mb-1">{selectedSession.date}</p>
                           <p className="text-xs text-slate-400">
-                            {selectedSession.time}
-                            {selectedSession.timezone && selectedSession.timezone !== 'UTC' && (
-                              <span className="ml-1 text-[9px] text-slate-500">
-                                ({Intl.DateTimeFormat().resolvedOptions().timeZone})
-                              </span>
-                            )}
+                            {(() => {
+                              const sessionDateTime = new Date(`${selectedSession.date}T${selectedSession.time}:00`);
+                              const hostTimezone = selectedSession.timezone || 'UTC';
+                              const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                              
+                              if (hostTimezone !== userTimezone && hostTimezone !== 'UTC') {
+                                const options: Intl.DateTimeFormatOptions = {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  timeZone: userTimezone,
+                                  timeZoneName: 'short'
+                                };
+                                const convertedTime = sessionDateTime.toLocaleString('en-US', options);
+                                const timePart = convertedTime.split(', ')[1] || convertedTime;
+                                return (
+                                  <span>
+                                    <span className="text-slate-500 line-through mr-2">{selectedSession.time}</span>
+                                    <span className="text-green-400">{timePart}</span>
+                                  </span>
+                                );
+                              }
+                              return selectedSession.time;
+                            })()}
                           </p>
+                          {selectedSession.timezone && selectedSession.timezone !== 'UTC' && (
+                            <p className="text-[9px] text-slate-500 mt-1">
+                              Host: {selectedSession.timezone}
+                            </p>
+                          )}
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Platform</p>
