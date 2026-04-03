@@ -40,6 +40,10 @@ const sendInvitationEmail = async (email, invitationToken, invitedByName) => {
   const fromName = process.env.MAILERSEND_FROM_NAME || 'Study Resource Hub';
 
   try {
+    console.log('Sending email to:', email);
+    console.log('From:', fromEmail);
+    console.log('API Key present:', !!process.env.MAILERSEND_API_KEY);
+    
     const response = await axios.post(
       'https://api.mailersend.com/v1/email',
       {
@@ -59,8 +63,11 @@ const sendInvitationEmail = async (email, invitationToken, invitedByName) => {
     console.log('MailerSend email sent successfully:', response.data);
     return { success: true, messageId: response.data };
   } catch (error) {
-    console.error('MailerSend error:', error.response?.data || error.message);
-    return { success: false, error: error.response?.data || error.message };
+    const errorDetails = error.response?.data || error.message;
+    console.error('MailerSend error response:', JSON.stringify(error.response?.data, null, 2));
+    console.error('MailerSend error status:', error.response?.status);
+    console.error('MailerSend error:', errorDetails);
+    return { success: false, error: errorDetails };
   }
 };
 
