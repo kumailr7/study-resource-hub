@@ -546,6 +546,7 @@ const ResourceTable: React.FC = () => {
     author: string; topic: string; date: string; time: string;
     tag: string; meetingLink: string; platform: string; whiteboardLink: string;
     agenda: string; willRecord: boolean; hostLinkedIn: string; duration: number;
+    timezone: string;
   } | null>(null);
 
   // Challenges state (must be at top level — hooks cannot be called inside IIFEs)
@@ -1123,12 +1124,13 @@ const ResourceTable: React.FC = () => {
     author: string; topic: string; date: string; time: string;
     tag: string; meetingLink: string; platform: string; whiteboardLink: string;
     agenda: string; willRecord: boolean; hostLinkedIn: string; duration: number;
+    timezone: string;
   }) => {
     if (sessionData) {
       try {
         const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
           author: sessionData.author, topic: sessionData.topic,
-          date: sessionData.date, time: sessionData.time, timezone: sessionTimezone,
+          date: sessionData.date, time: sessionData.time, timezone: sessionData.timezone || sessionTimezone,
           tag: sessionData.tag, meetingLink: sessionData.meetingLink, platform: sessionData.platform,
           whiteboardLink: sessionData.whiteboardLink,
           agenda: sessionData.agenda, willRecord: sessionData.willRecord, recordingLink: '', aiSummary: '',
@@ -1177,6 +1179,7 @@ const ResourceTable: React.FC = () => {
       willRecord: sessionWillRecord,
       hostLinkedIn: sessionLinkedIn,
       duration: Number(sessionDuration) || 30,
+      timezone: sessionTimezone,
     });
     setShowSessionConfirmModal(true);
   };
@@ -2550,7 +2553,7 @@ const ResourceTable: React.FC = () => {
                                   <span className="text-slate-500 mx-1">-</span>
                                   <span className="text-green-400">{endTime}</span>
                                 </p>
-                                <p className="text-[9px] text-slate-500 mt-1">
+                                <p className="text-[9px] font-bold text-primary mt-1">
                                   Your timezone: {localTime.userTimezone}
                                 </p>
                               </>
