@@ -2342,11 +2342,23 @@ const ResourceTable: React.FC = () => {
                       </div>
 
                       {/* Meeting link CTA */}
-                      <a href={selectedSession.meetingLink} target="_blank" rel="noreferrer"
-                        className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all"
-                        style={{ background: sessionColor, color: '#0e0e13' }}>
-                        <Video size={14} /> Join Meeting
-                      </a>
+                      {(() => {
+                        const isPast = new Date(selectedSession.date + 'T' + selectedSession.time) < new Date();
+                        if (isPast) {
+                          return (
+                            <div className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-slate-700 text-slate-400 cursor-not-allowed">
+                              <Video size={14} /> Meeting Ended
+                            </div>
+                          );
+                        }
+                        return (
+                          <a href={selectedSession.meetingLink} target="_blank" rel="noreferrer"
+                            className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all"
+                            style={{ background: sessionColor, color: '#0e0e13' }}>
+                            <Video size={14} /> Join Meeting
+                          </a>
+                        );
+                      })()}
 
                       {/* Recording section */}
                       {selectedSession.willRecord && (() => {
