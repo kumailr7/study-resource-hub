@@ -23,17 +23,17 @@ const SignupPage: React.FC = () => {
       }
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/users/verify-invite?token=${token}&email=${encodeURIComponent(email)}`);
+        const response = await axios.get<{ valid: boolean; email?: string; invitedBy?: string }>(`${API_BASE_URL}/api/users/verify-invite?token=${token}&email=${encodeURIComponent(email)}`);
         if (response.data.valid) {
           setInviteData({
-            email: response.data.email,
-            invitedBy: response.data.invitedBy
+            email: response.data.email || '',
+            invitedBy: response.data.invitedBy || ''
           });
           setInvitationStatus('valid');
         } else {
           setInvitationStatus('invalid');
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Invitation verification error:', err);
         setInvitationStatus('invalid');
       }
