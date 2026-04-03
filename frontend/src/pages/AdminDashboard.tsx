@@ -156,6 +156,24 @@ const AdminDashboard: React.FC = () => {
     return <span className="text-[9px] font-black uppercase px-2 py-0.5" style={{ background: c.bg, color: c.text }}>{c.label}</span>;
   };
 
+  const handleResendInvite = async (clerkId: string) => {
+    try {
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.post(`${API_BASE_URL}/users/${clerkId}/resend-invite`, {}, { headers });
+      fetchAll();
+      alert('Invitation resent');
+    } catch (e) { console.error(e); }
+  };
+
+  const handleCancelInvite = async (clerkId: string) => {
+    if (!confirm('Are you sure you want to cancel this invitation?')) return;
+    try {
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.delete(`${API_BASE_URL}/users/${clerkId}/cancel-invite`, { headers });
+      fetchAll();
+    } catch (e) { console.error(e); }
+  };
+
   const handleApproveDownload = async (id: string) => {
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
@@ -380,13 +398,28 @@ const AdminDashboard: React.FC = () => {
                         <td className="px-5 py-3 text-slate-400">{u.email}</td>
                         <td className="px-5 py-3">{getRoleBadge(u.role)}</td>
                         <td className="px-5 py-3">
-                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 ${u.status === 'active' ? 'text-green-400 bg-green-400/10' : 'text-yellow-400 bg-yellow-400/10'}`}>
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 ${
+                            u.status === 'active' ? 'text-green-400 bg-green-400/10' 
+                            : u.status === 'invited' ? 'text-amber-400 bg-amber-400/10'
+                            : u.status === 'pending_removal' ? 'text-orange-400 bg-orange-400/10'
+                            : 'text-red-400 bg-red-400/10'
+                          }`}>
                             {u.status}
                           </span>
                         </td>
                         <td className="px-5 py-3">
                           <div className="flex gap-2">
-                            {u.role === 'user' && (
+                            {u.status === 'invited' && (
+                              <>
+                                <button onClick={() => handleResendInvite(u.clerkId)} className="text-[9px] font-bold uppercase px-2 py-1 text-amber-400 border border-amber-600/50 hover:bg-amber-400/10">
+                                  Resend
+                                </button>
+                                <button onClick={() => handleCancelInvite(u.clerkId)} className="text-[9px] font-bold uppercase px-2 py-1 text-red-400 border border-red-900/40 hover:bg-red-400/10">
+                                  Cancel
+                                </button>
+                              </>
+                            )}
+                            {u.role === 'user' && u.status === 'active' && (
                               <button onClick={() => handlePromoteToAdmin(u.clerkId)} className="text-[9px] font-bold uppercase px-2 py-1 text-[#bf81ff] border border-[#bf81ff]/50 hover:bg-[#bf81ff]/10">
                                 Promote
                               </button>
@@ -396,7 +429,7 @@ const AdminDashboard: React.FC = () => {
                                 Demote
                               </button>
                             )}
-                            {u.role === 'user' && (
+                            {u.role === 'user' && u.status === 'active' && (
                               <button onClick={() => { setRemoveUserId(u.clerkId); setShowRemoveModal(true); }} className="text-[9px] font-bold uppercase px-2 py-1 text-red-400 border border-red-900/40 hover:bg-red-400/10">
                                 Remove
                               </button>

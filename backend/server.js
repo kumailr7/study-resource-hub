@@ -173,7 +173,7 @@ const userManagementSchema = new mongoose.Schema({
   email: { type: String, required: true },
   name: { type: String, default: '' },
   role: { type: String, enum: ['super_admin', 'admin', 'user'], default: 'user' },
-  status: { type: String, enum: ['active', 'pending_removal', 'removed'], default: 'active' },
+  status: { type: String, enum: ['active', 'invited', 'pending_removal', 'removed'], default: 'active' },
   removalRequest: {
     requestedBy: { type: String, default: null },
     reason: { type: String, default: '' },
@@ -339,10 +339,26 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
   const { clerkId, email, name } = req.body;
   let user = await UserManagement.findOne({ clerkId });
   if (user) {
-    user.email = email;
-    user.name = name;
+    // If user was invited, mark as active after first login
+    if (user.status === 'invited') {
+      user.status = 'active';
+      user.name = name;
+    } else {
+      user.email = email;
+      user.name = name;
+    }
     await user.save();
   } else {
+    // Check if there's an invited user with this email - they accepted the invite
+    const invitedUser = await UserManagement.findOne({ email, status: 'invited' });
+    if (invitedUser) {
+      invitedUser.clerkId = clerkId;
+      invitedUser.name = name;
+      invitedUser.status = 'active';
+      await invitedUser.save();
+      return res.json(invitedUser);
+    }
+    // New user
     user = new UserManagement({ clerkId, email, name, role: 'user', status: 'active' });
     await user.save();
   }
@@ -445,12 +461,33 @@ app.post('/api/users/invite', requireAdmin, asyncHandler(async (req, res) => {
     email,
     name: '',
     role: 'user',
-    status: 'active',
+    status: 'invited', // Changed from 'active' to track invitation status
     invitedBy,
     invitedAt: new Date()
   });
   await user.save();
   res.status(201).json(user);
+}));
+
+// Resend invitation
+app.post('/api/users/:clerkId/resend-invite', requireAdmin, asyncHandler(async (req, res) => {
+  const user = await UserManagement.findOne({ clerkId: req.params.clerkId });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (user.status !== 'invited') return res.status(400).json({ error: 'User is not in invited status' });
+  
+  user.invitedAt = new Date();
+  await user.save();
+  res.json(user);
+}));
+
+// Cancel invitation (remove invited user)
+app.delete('/api/users/:clerkId/cancel-invite', requireAdmin, asyncHandler(async (req, res) => {
+  const user = await UserManagement.findOne({ clerkId: req.params.clerkId });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (user.status !== 'invited') return res.status(400).json({ error: 'Can only cancel invited users' });
+  
+  await UserManagement.deleteOne({ _id: user._id });
+  res.json({ message: 'Invitation cancelled' });
 }));
 
 // ── Study Groups routes ──
