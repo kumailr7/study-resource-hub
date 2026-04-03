@@ -65,17 +65,22 @@ const AdminDashboard: React.FC = () => {
         'x-clerk-id': clerkId || '',
         'x-clerk-role': userRole || ''
       };
-      console.log('Fetching with clerkId:', clerkId, 'role:', userRole, 'headers:', headers);
+      console.log('Fetching users with headers:', headers);
       
-      const [usersRes, removalsRes, resourcesRes, requestsRes, dlRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/users`, { headers }).catch((e) => { console.error('Users API error:', e); return { data: [] }; }),
+      const usersRes = await axios.get(`${API_BASE_URL}/users`, { headers })
+        .catch((e) => { 
+          console.error('Users API error:', e.response?.status, e.response?.data); 
+          return { data: [], error: e.response?.data }; 
+        });
+      
+      console.log('Users API response:', usersRes.data);
+      
+      const [removalsRes, resourcesRes, requestsRes, dlRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/users/pending-removals`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API_BASE_URL}/added-resources?limit=1000`).catch(() => ({ data: { total: 0, data: [] } })),
         axios.get(`${API_BASE_URL}/requests?limit=1000`).catch(() => ({ data: { data: [] } })),
         axios.get(`${API_BASE_URL}/download-requests`, { headers }).catch(() => ({ data: [] })),
       ]);
-      console.log('Users API response:', usersRes);
-      console.log('Users API response data:', usersRes.data);
       setManagedUsers(usersRes.data || []);
       setPendingRemovals(removalsRes.data || []);
       setTotalResources(resourcesRes.data.total || resourcesRes.data.data?.length || 0);
