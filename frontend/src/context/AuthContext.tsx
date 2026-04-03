@@ -44,19 +44,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     // FALLBACK: Check MongoDB
-    setIsLoading(true);
-    const userEmail = user?.primaryEmailAddress?.emailAddress || '';
-    
-    axios.get<{ role?: string }>(`${API_BASE_URL}/users/me?clerkId=${user?.id}&email=${encodeURIComponent(userEmail)}`)
-      .then((res: { data: { role?: string } }) => {
+    const fetchRole = async () => {
+      setIsLoading(true);
+      const userEmail = user?.primaryEmailAddress?.emailAddress || '';
+      
+      try {
+        const res = await axios.get<{ role?: string }>(`${API_BASE_URL}/users/me?clerkId=${user?.id}&email=${encodeURIComponent(userEmail)}`);
         if (res.data?.role && ['super_admin', 'admin', 'user'].includes(res.data.role)) {
           setUserRole(res.data.role as 'super_admin' | 'admin' | 'user');
         } else {
           setUserRole('user');
         }
-      })
-      .catch(() => setUserRole('user'))
-      .finally(() => setIsLoading(false));
+      } catch {
+        setUserRole('user');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRole();
   }, [user, isLoaded, isSignedIn]);
 
   const userIsAdmin = userRole === 'admin' || userRole === 'super_admin';
