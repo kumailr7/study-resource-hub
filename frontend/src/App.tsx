@@ -118,23 +118,37 @@ const getUserLocalTime = (session: Session): { original: string; converted: stri
   const sessionDateTime = new Date(`${session.date}T${session.time}:00`);
   const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   
+  // Format with 12-hour time, AM/PM, and timezone offset
   const options: Intl.DateTimeFormatOptions = {
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit',
+    hour12: true,
     timeZone: userTimezone,
-    timeZoneName: 'short'
   };
   
-  const convertedDateTime = sessionDateTime.toLocaleString('en-US', {
-    ...options,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
+  // Get timezone offset like "GMT+4:00" or "GMT-5:00"
+  const getGMTOffset = (tz: string): string => {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'shortOffset'
+    });
+    const parts = formatter.formatToParts(now);
+    const offsetPart = parts.find(p => p.type === 'timeZoneName');
+    return offsetPart?.value || '';
+  };
+  
+  const gmtOffset = getGMTOffset(userTimezone);
   
   const convertedTime = sessionDateTime.toLocaleString('en-US', options);
-  const timePart = convertedTime.split(', ')[1] || convertedTime;
-  const datePart = convertedDateTime.split(', ')[0] || session.date;
+  const convertedDateStr = sessionDateTime.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: userTimezone
+  });
+  
+  const formattedTime = `${convertedTime} (${gmtOffset})`;
   
   // Show conversion if user's timezone differs from stored timezone or if there's no stored timezone
   const hostTz = session.timezone || 'UTC';
@@ -142,9 +156,9 @@ const getUserLocalTime = (session: Session): { original: string; converted: stri
   
   return {
     original: session.time,
-    converted: timePart,
-    convertedDate: datePart,
-    userTimezone,
+    converted: formattedTime,
+    convertedDate: convertedDateStr,
+    userTimezone: gmtOffset,
     showConversion
   };
 };
@@ -2412,11 +2426,11 @@ const ResourceTable: React.FC = () => {
                       </label>
                       <input type="number" min="5" max="180" value={sessionDuration} onChange={e => setSessionDuration(e.target.value)}
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors" />
-                      {sessionTime && (
-                        <p className="text-[10px] text-green-400 font-bold mt-1">
-                          End Time: {calculateEndTime(sessionTime, Number(sessionDuration) || 30)}
-                        </p>
-                      )}
+                      <p className="text-[10px] text-green-400 font-bold mt-1">
+                        {sessionTime 
+                          ? `End Time: ${calculateEndTime(sessionTime, Number(sessionDuration) || 30)}`
+                          : `Set time to see end time (Duration: ${sessionDuration || 30} min)`}
+                      </p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Meeting Link</label>
