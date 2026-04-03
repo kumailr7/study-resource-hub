@@ -38,12 +38,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // PRIMARY: Check Clerk metadata first (faster, more reliable)
     const clerkRole = (user?.publicMetadata as { role?: string })?.role;
-    if (clerkRole === 'super_admin' || clerkRole === 'admin') {
-      setUserRole(clerkRole);
+    if (clerkRole === 'super_admin') {
+      setUserRole('super_admin');
       return;
     }
-
-    // FALLBACK: Check MongoDB
+    
+    // If Clerk says admin, still check MongoDB for super_admin status
+    if (clerkRole === 'admin') {
+      // Check MongoDB - if super_admin there, use that
+      try {
+        const res = await axios.get<{ role?: string }>(`${API_BASE_URL}/users/me?clerkId=${user?.id}`);
+        if (res.data?.role === 'super_admin') {
+          setUserRole('super_admin');
+          return;
+        }
+      } catch {}
+      setUserRole('admin');
+      return;
+    }
+    
+    // FALLBACK: Check MongoDB for non-Clerk metadata users
     const fetchRole = async () => {
       setIsLoading(true);
       const userEmail = user?.primaryEmailAddress?.emailAddress || '';
