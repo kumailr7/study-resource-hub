@@ -17,6 +17,8 @@ import LightPillar from './components/LightPillar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useEffect } from 'react';
 import SignupPage from './pages/SignupPage';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import { API_BASE_URL } from './config';
 
 
@@ -384,6 +386,8 @@ const App: React.FC = () => {
             <Route path="/sync-signup" element={<RequireAuth><SyncSignup /></RequireAuth>} />
             <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} />} />
             <Route path="/user" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
