@@ -38,7 +38,7 @@ interface FullRequest {
 type AdminTab = 'overview' | 'users' | 'removals' | 'requests' | 'downloads' | 'slack' | 'roles';
 
 const AdminDashboard: React.FC = () => {
-  const { userIsAdmin, userIsSuperAdmin } = useAuth();
+  const { userIsAdmin, userIsSuperAdmin, userRole } = useAuth();
   const { signOut } = useClerk();
   const { user: clerkUser } = useUser();
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([]);
@@ -61,15 +61,21 @@ const AdminDashboard: React.FC = () => {
   const fetchAll = async () => {
     try {
       const clerkId = clerkUser?.id;
-      const headers = { 'x-clerk-id': clerkId || '' };
+      const headers = { 
+        'x-clerk-id': clerkId || '',
+        'x-clerk-role': userRole || ''
+      };
+      console.log('Fetching with clerkId:', clerkId, 'role:', userRole, 'headers:', headers);
+      
       const [usersRes, removalsRes, resourcesRes, requestsRes, dlRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/users`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/users`, { headers }).catch((e) => { console.error('Users API error:', e); return { data: [] }; }),
         axios.get(`${API_BASE_URL}/users/pending-removals`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API_BASE_URL}/added-resources?limit=1000`).catch(() => ({ data: { total: 0, data: [] } })),
         axios.get(`${API_BASE_URL}/requests?limit=1000`).catch(() => ({ data: { data: [] } })),
         axios.get(`${API_BASE_URL}/download-requests`, { headers }).catch(() => ({ data: [] })),
       ]);
-      console.log('Users API response:', usersRes.data);
+      console.log('Users API response status:', usersRes.status);
+      console.log('Users API response data:', usersRes.data);
       setManagedUsers(usersRes.data || []);
       setPendingRemovals(removalsRes.data || []);
       setTotalResources(resourcesRes.data.total || resourcesRes.data.data?.length || 0);
