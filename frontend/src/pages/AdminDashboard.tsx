@@ -74,7 +74,7 @@ const AdminDashboard: React.FC = () => {
         axios.get(`${API_BASE_URL}/requests?limit=1000`).catch(() => ({ data: { data: [] } })),
         axios.get(`${API_BASE_URL}/download-requests`, { headers }).catch(() => ({ data: [] })),
       ]);
-      console.log('Users API response status:', usersRes.status);
+      console.log('Users API response:', usersRes);
       console.log('Users API response data:', usersRes.data);
       setManagedUsers(usersRes.data || []);
       setPendingRemovals(removalsRes.data || []);
