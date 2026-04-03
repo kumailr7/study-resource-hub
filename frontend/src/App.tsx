@@ -110,6 +110,42 @@ interface Session {
   recordingDeleteReason?: string;
 }
 
+// Helper function to convert session time to user's local timezone
+const getUserLocalTime = (session: Session): { original: string; converted: string; convertedDate: string; userTimezone: string; showConversion: boolean } => {
+  const sessionDateTime = new Date(`${session.date}T${session.time}:00`);
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
+  const options: Intl.DateTimeFormatOptions = {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: userTimezone,
+    timeZoneName: 'short'
+  };
+  
+  const convertedDateTime = sessionDateTime.toLocaleString('en-US', {
+    ...options,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  const convertedTime = sessionDateTime.toLocaleString('en-US', options);
+  const timePart = convertedTime.split(', ')[1] || convertedTime;
+  const datePart = convertedDateTime.split(', ')[0] || session.date;
+  
+  // Show conversion if user's timezone differs from stored timezone or if there's no stored timezone
+  const hostTz = session.timezone || 'UTC';
+  const showConversion = hostTz !== userTimezone || hostTz === 'UTC';
+  
+  return {
+    original: session.time,
+    converted: timePart,
+    convertedDate: datePart,
+    userTimezone,
+    showConversion
+  };
+};
+
 interface Suggestion {
   id: string;
   author: string;
@@ -2149,11 +2185,12 @@ const ResourceTable: React.FC = () => {
                         <div className="space-y-0.5">
                           {daySessions.slice(0, 3).map(s => {
                             const tc = s.tag ? getTagColor(s.tag) : platformColor[s.platform];
+                            const localTime = getUserLocalTime(s);
                             return (
                             <button key={s.id} onClick={() => setSelectedSession(s)}
                               className="w-full text-left px-1.5 py-0.5 text-[10px] font-semibold truncate transition-opacity hover:opacity-80"
                               style={{ background: tc + '30', color: tc, borderLeft: `2px solid ${tc}` }}>
-                              {s.time} {s.topic}
+                              {localTime.showConversion ? localTime.converted : s.time} {s.topic}
                             </button>
                             );
                           })}
@@ -2300,37 +2337,29 @@ const ResourceTable: React.FC = () => {
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Date & Time</p>
-                          <p className="text-sm font-bold text-on-surface mb-1">{selectedSession.date}</p>
-                          <p className="text-xs text-slate-400">
-                            {(() => {
-                              const sessionDateTime = new Date(`${selectedSession.date}T${selectedSession.time}:00`);
-                              const hostTimezone = selectedSession.timezone || 'UTC';
-                              const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                              
-                              if (hostTimezone !== userTimezone && hostTimezone !== 'UTC') {
-                                const options: Intl.DateTimeFormatOptions = {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  timeZone: userTimezone,
-                                  timeZoneName: 'short'
-                                };
-                                const convertedTime = sessionDateTime.toLocaleString('en-US', options);
-                                const timePart = convertedTime.split(', ')[1] || convertedTime;
-                                return (
-                                  <span>
-                                    <span className="text-slate-500 line-through mr-2">{selectedSession.time}</span>
-                                    <span className="text-green-400">{timePart}</span>
-                                  </span>
-                                );
-                              }
-                              return selectedSession.time;
-                            })()}
-                          </p>
-                          {selectedSession.timezone && selectedSession.timezone !== 'UTC' && (
-                            <p className="text-[9px] text-slate-500 mt-1">
-                              Host: {selectedSession.timezone}
-                            </p>
-                          )}
+                          {(() => {
+                            const localTime = getUserLocalTime(selectedSession);
+                            return (
+                              <>
+                                <p className="text-sm font-bold text-on-surface mb-1">
+                                  {localTime.showConversion ? localTime.convertedDate : selectedSession.date}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                  {localTime.showConversion ? (
+                                    <span>
+                                      <span className="text-slate-500 line-through mr-2">{localTime.original}</span>
+                                      <span className="text-green-400">{localTime.converted}</span>
+                                    </span>
+                                  ) : (
+                                    localTime.original
+                                  )}
+                                </p>
+                                <p className="text-[9px] text-slate-500 mt-1">
+                                  Your timezone: {localTime.userTimezone}
+                                </p>
+                              </>
+                            );
+                          })()}
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Platform</p>
@@ -2539,13 +2568,24 @@ const ResourceTable: React.FC = () => {
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">All Sessions</p>
                           {[...sessions].sort((a,b) => new Date(a.date+'T'+a.time).getTime()-new Date(b.date+'T'+b.time).getTime()).map(s => {
                             const isRegistered = myRegisteredSessions[s.id] || false;
+                            const localTime = getUserLocalTime(s);
                             return (
                             <div key={s.id} className="w-full flex items-center gap-3 px-3 py-2 bg-surface-container-high hover:bg-surface-container-highest transition-colors group">
                               <button onClick={() => setSelectedSession(s)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
                                 <PlatformIcon platform={s.platform} size={14} />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs font-bold text-on-surface truncate">{s.topic}</p>
-                                  <p className="text-[10px] text-slate-500">{s.date} · {s.time} · <span className="text-slate-400">{s.attendeeCount || 0} attending</span>{s.recordingDeleted && <span className="text-red-400 ml-1">· rec. removed</span>}</p>
+                                  <p className="text-[10px] text-slate-500">
+                                    {localTime.showConversion ? (
+                                      <span>
+                                        {localTime.convertedDate} · 
+                                        <span className="text-green-400">{localTime.converted}</span>
+                                      </span>
+                                    ) : (
+                                      <span>{s.date} · {s.time}</span>
+                                    )}
+                                    {' · '}<span className="text-slate-400">{s.attendeeCount || 0} attending</span>{s.recordingDeleted && <span className="text-red-400 ml-1">· rec. removed</span>}
+                                  </p>
                                 </div>
                               </button>
                               <button
@@ -2646,7 +2686,9 @@ const ResourceTable: React.FC = () => {
                       <p className="text-sm text-slate-500 mt-1">History of completed sessions</p>
                     </div>
                     <div className="space-y-1">
-                      {past.map(s => (
+                      {past.map(s => {
+                        const localTime = getUserLocalTime(s);
+                        return (
                         <div key={s.id}
                           className="flex items-center gap-4 px-4 py-3 bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer group"
                           onClick={() => setSelectedSession(s)}
@@ -2654,7 +2696,13 @@ const ResourceTable: React.FC = () => {
                           <div className="w-1.5 h-1.5 flex-shrink-0 opacity-40" style={{ background: platformColor[s.platform] }}></div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-on-surface truncate group-hover:text-primary transition-colors">{s.topic}</p>
-                            <p className="text-[10px] text-slate-500">{s.author} · {s.date} at {s.time}</p>
+                            <p className="text-[10px] text-slate-500">
+                              {s.author} · {localTime.showConversion ? (
+                                <span>{localTime.convertedDate} at <span className="text-green-400">{localTime.converted}</span></span>
+                              ) : (
+                                <span>{s.date} at {s.time}</span>
+                              )}
+                            </p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <span className="text-[9px] font-bold uppercase px-2 py-0.5"
@@ -2664,6 +2712,15 @@ const ResourceTable: React.FC = () => {
                                 {s.recordingLink ? '● Recorded' : '○ Pending'}
                               </span>
                             )}
+                          </div>
+                        </div>
+                      )})}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
                           </div>
                         </div>
                       ))}
