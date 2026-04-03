@@ -7,6 +7,7 @@ import logo from "./assets/logo-2.png";
 import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from './components/ProtectedRoute';
+import SyncUserOnSignup from './components/SyncUserOnSignup';
 import { LayoutGrid, Trophy, Calendar, LineChart, Package, HelpCircle, LogOut, Bell, Settings, Sun, Moon, Pin, Search, Video, Users, Lightbulb } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts';
 import BlurText from './components/BlurText';
@@ -445,7 +446,8 @@ const App: React.FC = () => {
         <Router>
           <Routes>
             <Route path="/login/*" element={<RedirectIfSignedIn><LoginPage /></RedirectIfSignedIn>} />
-            <Route path="/signup/*" element={<RedirectIfSignedIn><LoginPage /></RedirectIfSignedIn>} />
+            <Route path="/signup/*" element={<SignupPage />} />
+            <Route path="/sync-signup" element={<SyncUserOnSignup />} />
             <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} />} />
             <Route path="/user" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/" element={<Navigate to="/login" />} />
