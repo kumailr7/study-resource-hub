@@ -512,6 +512,7 @@ const ResourceTable: React.FC = () => {
   const [sessionTag, setSessionTag] = useState("");
   const [sessionLink, setSessionLink] = useState("");
   const [sessionPlatform, setSessionPlatform] = useState<Session['platform']>('Google Meet');
+  const [sessionWhiteboardEnabled, setSessionWhiteboardEnabled] = useState(false);
   const [sessionWhiteboardLink, setSessionWhiteboardLink] = useState("");
   const [sessionAgenda, setSessionAgenda] = useState("");
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -1137,7 +1138,7 @@ const ResourceTable: React.FC = () => {
         setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
         setSessionTime(""); setSessionTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
         setSessionTag(""); setSessionLink("");
-        setSessionPlatform('Google Meet'); setSessionWhiteboardLink("");
+        setSessionPlatform('Google Meet'); setSessionWhiteboardEnabled(false); setSessionWhiteboardLink("");
         setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn(""); setSessionDuration("30");
       } catch (err) { console.error('Error adding session:', err); }
       return;
@@ -1145,12 +1146,16 @@ const ResourceTable: React.FC = () => {
 
     // Show confirmation modal
     if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime) return;
-    if (sessionPlatform !== 'Excalidraw' && !sessionLink) return;
+    if (!sessionWhiteboardEnabled && !sessionLink) return;
     
-    let whiteboardLink = sessionWhiteboardLink;
-    if (sessionPlatform === 'Excalidraw' && !whiteboardLink) {
-      const topicSlug = sessionTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      whiteboardLink = `https://excalidraw.com/#name=${encodeURIComponent(sessionTopic)}`;
+    let whiteboardLink = '';
+    if (sessionWhiteboardEnabled) {
+      if (sessionWhiteboardLink) {
+        whiteboardLink = sessionWhiteboardLink;
+      } else {
+        const topicSlug = sessionTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        whiteboardLink = `https://excalidraw.com/#name=${encodeURIComponent(sessionTopic)}`;
+      }
     }
     
     setPendingSessionData({
@@ -2404,19 +2409,29 @@ const ResourceTable: React.FC = () => {
                           <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Google Meet</option>
                           <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Zoom</option>
                           <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Teams</option>
-                          <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Excalidraw</option>
                           <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Other</option>
                         </select>
                       </div>
                     </div>
-                    {sessionPlatform === 'Excalidraw' && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Whiteboard Link (optional)</label>
-                        <input type="url" placeholder="https://excalidraw.com/..." value={sessionWhiteboardLink} onChange={e => setSessionWhiteboardLink(e.target.value)}
-                          className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
-                        <p className="text-[9px] text-slate-500">Leave empty to auto-generate with session topic</p>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Whiteboard</label>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <span className={`w-4 h-4 border-2 flex items-center justify-center transition-colors ${sessionWhiteboardEnabled ? 'border-primary bg-primary' : 'border-outline-variant bg-transparent'}`}
+                            onClick={() => setSessionWhiteboardEnabled(!sessionWhiteboardEnabled)}>
+                            {sessionWhiteboardEnabled && <span className="w-2 h-2 bg-on-primary block"></span>}
+                          </span>
+                          <span className={`text-sm transition-colors ${sessionWhiteboardEnabled ? 'text-on-surface font-bold' : 'text-slate-500 group-hover:text-slate-300'}`}>Enable Whiteboard</span>
+                        </label>
                       </div>
-                    )}
+                      {sessionWhiteboardEnabled && (
+                        <div className="space-y-1">
+                          <input type="url" placeholder="https://excalidraw.com/..." value={sessionWhiteboardLink} onChange={e => setSessionWhiteboardLink(e.target.value)}
+                            className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
+                          <p className="text-[9px] text-slate-500">Leave empty to auto-generate with session topic</p>
+                        </div>
+                      )}
+                    </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
                         Duration (mins)
@@ -2654,29 +2669,30 @@ END:VCALENDAR`;
                       {/* Meeting link CTA or Whiteboard CTA */}
                       {(() => {
                         const isPast = new Date(selectedSession.date + 'T' + selectedSession.time) < new Date();
-                        const isExcalidraw = selectedSession.platform === 'Excalidraw';
-                        const whiteboardLink = selectedSession.whiteboardLink || selectedSession.meetingLink;
+                        const hasWhiteboard = selectedSession.whiteboardLink;
+                        const meetingLink = selectedSession.meetingLink;
+                        const displayLink = hasWhiteboard || meetingLink;
                         
                         if (isPast) {
                           return (
                             <div className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-slate-700 text-slate-400 cursor-not-allowed">
-                              <Video size={14} /> {isExcalidraw ? 'Session Ended' : 'Meeting Ended'}
+                              <Video size={14} /> {hasWhiteboard ? 'Session Ended' : 'Meeting Ended'}
                             </div>
                           );
                         }
                         
-                        // For Excalidraw, show whiteboard link with share option
-                        if (isExcalidraw && whiteboardLink) {
+                        // If has whiteboard, show whiteboard link with share option
+                        if (hasWhiteboard) {
                           return (
                             <div className="flex flex-col gap-2">
-                              <a href={whiteboardLink} target="_blank" rel="noreferrer"
+                              <a href={selectedSession.whiteboardLink!} target="_blank" rel="noreferrer"
                                 className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all"
                                 style={{ background: '#ff6b35', color: '#0e0e13' }}>
                                 🎨 Open Whiteboard
                               </a>
                               <button 
                                 onClick={() => {
-                                  navigator.clipboard.writeText(whiteboardLink);
+                                  navigator.clipboard.writeText(selectedSession.whiteboardLink || '');
                                   alert('Whiteboard link copied to clipboard!');
                                 }}
                                 className="flex items-center justify-center gap-2 w-full py-2 text-[10px] font-bold uppercase tracking-widest bg-surface-container-high text-slate-400 hover:text-white transition-colors"
