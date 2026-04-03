@@ -3,6 +3,9 @@ const axios = require('axios');
 const sendInvitationEmail = async (email, invitationToken, invitedByName) => {
   const frontendUrl = process.env.FRONTEND_URL || 'https://hub.devops-dojo.ninja';
   const inviteLink = `${frontendUrl}/signup?token=${invitationToken}&email=${encodeURIComponent(email)}`;
+  
+  console.log('FRONTEND_URL from env:', process.env.FRONTEND_URL);
+  console.log('Generated invite link:', inviteLink);
 
   const emailHtml = `
     <!DOCTYPE html>
