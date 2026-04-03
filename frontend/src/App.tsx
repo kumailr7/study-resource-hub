@@ -442,6 +442,7 @@ const ResourceTable: React.FC = () => {
   const [sessionTopic, setSessionTopic] = useState("");
   const [sessionDate, setSessionDate] = useState("");
   const [sessionTime, setSessionTime] = useState("");
+  const [sessionTimezone, setSessionTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [sessionTag, setSessionTag] = useState("");
   const [sessionLink, setSessionLink] = useState("");
   const [sessionPlatform, setSessionPlatform] = useState<Session['platform']>('Google Meet');
@@ -1045,14 +1046,15 @@ const ResourceTable: React.FC = () => {
     try {
       const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
         author: sessionAuthor, topic: sessionTopic,
-        date: sessionDate, time: sessionTime,
+        date: sessionDate, time: sessionTime, timezone: sessionTimezone,
         tag: sessionTag, meetingLink: sessionLink, platform: sessionPlatform,
         agenda: sessionAgenda, willRecord: sessionWillRecord, recordingLink: '', aiSummary: '',
         hostLinkedIn: sessionLinkedIn, attendeeCount: 0, duration: Number(sessionDuration) || 30,
       });
       setSessions(prev => [...prev, { ...res.data, id: res.data._id }]);
       setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
-      setSessionTime(""); setSessionTag(""); setSessionLink("");
+      setSessionTime(""); setSessionTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+      setSessionTag(""); setSessionLink("");
       setSessionPlatform('Google Meet'); setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn(""); setSessionDuration("30");
     } catch (err) { console.error('Error adding session:', err); }
   };
@@ -2232,6 +2234,26 @@ const ResourceTable: React.FC = () => {
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Time</label>
                       <input type="time" value={sessionTime} onChange={e => setSessionTime(e.target.value)}
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Timezone</label>
+                      <select value={sessionTimezone} onChange={e => setSessionTimezone(e.target.value)}
+                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>UTC</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/New_York</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/Chicago</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/Denver</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/Los_Angeles</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/London</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/Paris</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/Berlin</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Dubai</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Kolkata</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Singapore</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Tokyo</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Australia/Sydney</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Pacific/Auckland</option>
+                      </select>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Tag</label>
