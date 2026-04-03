@@ -38,7 +38,7 @@ interface FullRequest {
 type AdminTab = 'overview' | 'users' | 'removals' | 'requests' | 'downloads' | 'slack' | 'roles';
 
 const AdminDashboard: React.FC = () => {
-  const { userIsAdmin, userIsSuperAdmin, userRole, user } = useAuth();
+  const { userIsAdmin, userIsSuperAdmin } = useAuth();
   const { signOut } = useClerk();
   const { user: clerkUser } = useUser();
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([]);
