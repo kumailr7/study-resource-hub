@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const userEmail = user?.primaryEmailAddress?.emailAddress || '';
     
     axios.get<{ role?: string }>(`${API_BASE_URL}/users/me?clerkId=${user?.id}&email=${encodeURIComponent(userEmail)}`)
-      .then(res => {
+      .then((res: { data: { role?: string } }) => {
         if (res.data?.role && ['super_admin', 'admin', 'user'].includes(res.data.role)) {
           setUserRole(res.data.role as 'super_admin' | 'admin' | 'user');
         } else {
