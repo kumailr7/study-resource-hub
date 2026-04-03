@@ -80,11 +80,19 @@ const requireAdmin = asyncHandler(async (req, res, next) => {
   const clerkId = req.headers['x-clerk-id'];
   if (!clerkId) return res.status(401).json({ error: 'Unauthorized' });
   
+  // First try MongoDB
   const user = await UserManagement.findOne({ clerkId });
-  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
-    return res.status(403).json({ error: 'Admin access required' });
+  if (user && (user.role === 'admin' || user.role === 'super_admin')) {
+    return next();
   }
-  next();
+  
+  // If not found or not admin, check Clerk webhook/event data if provided
+  const clerkRole = req.headers['x-clerk-role'];
+  if (clerkRole === 'admin' || clerkRole === 'super_admin') {
+    return next();
+  }
+  
+  return res.status(403).json({ error: 'Admin access required' });
 });
 
 // Middleware to check if user is super_admin
@@ -92,11 +100,19 @@ const requireSuperAdmin = asyncHandler(async (req, res, next) => {
   const clerkId = req.headers['x-clerk-id'];
   if (!clerkId) return res.status(401).json({ error: 'Unauthorized' });
   
+  // First try MongoDB
   const user = await UserManagement.findOne({ clerkId });
-  if (!user || user.role !== 'super_admin') {
-    return res.status(403).json({ error: 'Super admin access required' });
+  if (user && user.role === 'super_admin') {
+    return next();
   }
-  next();
+  
+  // If not found, check Clerk header if provided
+  const clerkRole = req.headers['x-clerk-role'];
+  if (clerkRole === 'super_admin') {
+    return next();
+  }
+  
+  return res.status(403).json({ error: 'Super admin access required' });
 });
 
 // ── New collections: Sessions, Study Groups, Challenge Participants ──
