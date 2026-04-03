@@ -81,16 +81,19 @@ mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTop
 // Middleware to check if user is admin or super_admin
 const requireAdmin = asyncHandler(async (req, res, next) => {
   const clerkId = req.headers['x-clerk-id'];
+  console.log('requireAdmin - clerkId:', clerkId);
   if (!clerkId) return res.status(401).json({ error: 'Unauthorized' });
   
   // First try MongoDB
   const user = await UserManagement.findOne({ clerkId });
+  console.log('requireAdmin - found user:', user ? 'yes' : 'no', 'role:', user?.role);
   if (user && (user.role === 'admin' || user.role === 'super_admin')) {
     return next();
   }
   
   // If not found or not admin, check Clerk webhook/event data if provided
   const clerkRole = req.headers['x-clerk-role'];
+  console.log('requireAdmin - clerkRole header:', clerkRole);
   if (clerkRole === 'admin' || clerkRole === 'super_admin') {
     return next();
   }
