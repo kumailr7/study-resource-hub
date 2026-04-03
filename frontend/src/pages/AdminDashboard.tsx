@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useClerk, useUser } from '@clerk/clerk-react';
 import {
   LayoutGrid, Package, Bell, LogOut, ExternalLink,
-  CheckCircle2, AlertTriangle, Copy, Users as UsersIcon, Shield, Download, X, RefreshCw, UserPlus, Trash2, ArrowUpCircle
+  CheckCircle2, AlertTriangle, Copy, Users as UsersIcon, Shield, Download, X, RefreshCw, UserPlus, Trash2
 } from 'lucide-react';
 import SplitText from '../components/SplitText';
 
@@ -38,7 +38,7 @@ interface FullRequest {
 type AdminTab = 'overview' | 'users' | 'removals' | 'requests' | 'downloads' | 'slack' | 'roles';
 
 const AdminDashboard: React.FC = () => {
-  const { userIsAdmin, userIsSuperAdmin, userRole } = useAuth();
+  const { userIsAdmin, userIsSuperAdmin, userRole, user } = useAuth();
   const { signOut } = useClerk();
   const { user: clerkUser } = useUser();
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([]);
@@ -60,8 +60,8 @@ const AdminDashboard: React.FC = () => {
 
   const fetchAll = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const clerkId = clerkUser?.id;
+      const headers = { 'x-clerk-id': clerkId || '' };
       const [usersRes, removalsRes, resourcesRes, requestsRes, dlRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/users`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API_BASE_URL}/users/pending-removals`, { headers }).catch(() => ({ data: [] })),
@@ -82,8 +82,8 @@ const AdminDashboard: React.FC = () => {
   const handleInviteUser = async () => {
     if (!inviteEmail.trim()) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_BASE_URL}/users/invite`, { email: inviteEmail, invitedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.post(`${API_BASE_URL}/users/invite`, { email: inviteEmail, invitedBy: clerkUser?.id }, { headers });
       setShowInviteModal(false);
       setInviteEmail('');
       fetchAll();
@@ -94,16 +94,16 @@ const AdminDashboard: React.FC = () => {
 
   const handlePromoteToAdmin = async (clerkId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'admin', updatedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'admin', updatedBy: clerkUser?.id }, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
 
   const handleDemoteToUser = async (clerkId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'user', updatedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'user', updatedBy: clerkUser?.id }, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
@@ -111,8 +111,8 @@ const AdminDashboard: React.FC = () => {
   const handleRequestRemoval = async () => {
     if (!removeUserId || !removeReason.trim()) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_BASE_URL}/users/${removeUserId}/request-removal`, { reason: removeReason, requestedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.post(`${API_BASE_URL}/users/${removeUserId}/request-removal`, { reason: removeReason, requestedBy: clerkUser?.id }, { headers });
       setShowRemoveModal(false);
       setRemoveUserId(null);
       setRemoveReason('');
@@ -124,24 +124,24 @@ const AdminDashboard: React.FC = () => {
 
   const handleApproveRemoval = async (clerkId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`${API_BASE_URL}/users/${clerkId}/approve-removal`, { reviewedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/approve-removal`, { reviewedBy: clerkUser?.id }, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
 
   const handleRejectRemoval = async (clerkId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`${API_BASE_URL}/users/${clerkId}/reject-removal`, { reviewedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/reject-removal`, { reviewedBy: clerkUser?.id }, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
 
   const handleMakeSuperAdmin = async (clerkId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'super_admin', updatedBy: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.patch(`${API_BASE_URL}/users/${clerkId}/role`, { role: 'super_admin', updatedBy: clerkUser?.id }, { headers });
       fetchAll();
     } catch (e) { console.error(e); }
   };
@@ -158,8 +158,8 @@ const AdminDashboard: React.FC = () => {
 
   const handleApproveDownload = async (id: string) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`${API_BASE_URL}/download-requests/${id}/approve`, { adminId: clerkUser?.id }, { headers: { Authorization: `Bearer ${token}` } });
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.patch(`${API_BASE_URL}/download-requests/${id}/approve`, { adminId: clerkUser?.id }, { headers });
       setDownloadRequests(prev => prev.map(r => r._id === id ? { ...r, status: 'approved', reviewedAt: new Date(), expiresAt: new Date(Date.now() + 24*60*60*1000) } : r));
     } catch (e) { console.error(e); }
   };
@@ -167,8 +167,8 @@ const AdminDashboard: React.FC = () => {
   const handleRejectDownload = async (id: string) => {
     if (!rejectReason.trim()) { alert('Please provide a reason for rejection'); return; }
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`${API_BASE_URL}/download-requests/${id}/reject`, { adminId: clerkUser?.id, reason: rejectReason }, { headers: { Authorization: `Bearer ${token}` } });
+      const headers = { 'x-clerk-id': clerkUser?.id || '' };
+      await axios.patch(`${API_BASE_URL}/download-requests/${id}/reject`, { adminId: clerkUser?.id, reason: rejectReason }, { headers });
       setDownloadRequests(prev => prev.map(r => r._id === id ? { ...r, status: 'rejected', reviewedAt: new Date(), rejectionReason: rejectReason } : r));
       setRejectReason('');
     } catch (e) { console.error(e); }
