@@ -428,6 +428,37 @@ app.get('/api/users/me', asyncHandler(async (req, res) => {
   res.json(user);
 }));
 
+// Verify invitation token
+app.get('/api/users/verify-invite', asyncHandler(async (req, res) => {
+  const token = req.query.token;
+  const email = req.query.email;
+  
+  if (!token || !email) {
+    return res.status(400).json({ error: 'Token and email are required' });
+  }
+  
+  const user = await UserManagement.findOne({ 
+    email: email,
+    invitationToken: token,
+    status: 'invited'
+  });
+  
+  if (!user) {
+    return res.status(404).json({ error: 'Invalid or expired invitation' });
+  }
+  
+  if (user.invitationExpiresAt && user.invitationExpiresAt < new Date()) {
+    return res.status(400).json({ error: 'Invitation has expired' });
+  }
+  
+  res.json({ 
+    valid: true, 
+    email: user.email,
+    invitedBy: user.invitedBy,
+    expiresAt: user.invitationExpiresAt
+  });
+}));
+
 app.patch('/api/users/:clerkId/role', requireSuperAdmin, asyncHandler(async (req, res) => {
   const { role, updatedBy } = req.body;
   const user = await UserManagement.findOne({ clerkId: req.params.clerkId });
