@@ -83,7 +83,7 @@ const AdminDashboard: React.FC = () => {
     if (!inviteEmail.trim()) return;
     try {
       const headers = { 'x-clerk-id': clerkUser?.id || '' };
-      const res = await axios.post(`${API_BASE_URL}/users/invite`, { email: inviteEmail, invitedBy: clerkUser?.id }, { headers });
+      const res = await axios.post<{ success?: boolean; email?: string; error?: string }>(`${API_BASE_URL}/users/invite`, { email: inviteEmail, invitedBy: clerkUser?.id }, { headers });
       setShowInviteModal(false);
       setInviteEmail('');
       fetchAll();
