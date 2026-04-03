@@ -2721,16 +2721,6 @@ const ResourceTable: React.FC = () => {
               })()}
             </div>
           )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-            </div>
-          )}
 
           {/* ── Section: Analytics ── */}
           {currentSection === 'analytics' && (() => {
