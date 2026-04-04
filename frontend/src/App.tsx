@@ -699,7 +699,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
     }, 4000);
     (window as any).__bannerTimer = timer;
     return () => clearInterval(timer);
-  }, [currentSection]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentSection]); // eslint-disable-line
   const handleJoinChallenge = async (id: string) => {
     if (joinedChallenges[id]) return;
     const current = challengeParticipants[id] || 0;
