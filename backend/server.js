@@ -432,17 +432,19 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
   // Check if user already exists
   const existingUser = await UserManagement.findOne({ clerkId });
   if (existingUser) {
-    // Update username if provided and different, or use firstName as fallback
-    const newUsername = username || (firstName ? firstName.toLowerCase().replace(/\s+/g, '') : '');
-    if (newUsername && newUsername !== existingUser.username) {
-      existingUser.username = newUsername;
+    // Only update username if: 
+    // 1. A NEW username is provided from Clerk AND
+    // 2. It's different from current stored username
+    // 3. Don't overwrite with empty string or firstName fallback if username already exists
+    if (username && username !== existingUser.username && username !== '') {
+      existingUser.username = username;
       await existingUser.save();
     }
     return res.json({ 
       success: true, 
       message: 'User already exists',
       role: existingUser.role,
-      username: existingUser.username || newUsername
+      username: existingUser.username
     });
   }
   

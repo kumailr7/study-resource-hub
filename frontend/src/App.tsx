@@ -474,7 +474,7 @@ const UsernamePage: React.FC = () => {
 };
 
 const ResourceTable: React.FC<{ username?: string }> = ({ username: _username }) => {
-  const { userIsAdmin } = useAuth();
+  const { userIsAdmin, userUsername } = useAuth();
   const { signOut } = useClerk();
   const { user } = useUser();
   const { isDarkTheme, toggleTheme } = useTheme();
@@ -1551,7 +1551,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                 {user?.fullName || user?.firstName || 'User'}
               </p>
               <p className="text-[10px] text-slate-500 truncate">
-                {user?.primaryEmailAddress?.emailAddress || ''}
+                @{userUsername || user?.username || 'user'} · {user?.primaryEmailAddress?.emailAddress || ''}
               </p>
             </div>
           </div>
