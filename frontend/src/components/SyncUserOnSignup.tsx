@@ -77,11 +77,12 @@ const SyncUserOnSignup: React.FC = () => {
 
   if (status === 'syncing') {
     return (
-      <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="text-4xl mb-4">⚙️</div>
-          <p className="animate-pulse">Setting up your account...</p>
-        </div>
+      <div className="min-h-screen bg-[#0e0e13] flex flex-col items-center justify-center text-white">
+        <div className="text-4xl mb-4 animate-spin">⚙️</div>
+        <p className="animate-pulse mb-4">Setting up your account...</p>
+        <button onClick={() => console.log('User object:', user)} className="text-xs text-slate-500">
+          Debug: Click to see user in console
+        </button>
       </div>
     );
   }
