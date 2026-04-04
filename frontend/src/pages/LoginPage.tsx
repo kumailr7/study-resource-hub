@@ -132,7 +132,7 @@ const LoginPage: React.FC = () => {
                 routing="path"
                 path="/signup"
                 signInUrl="/login"
-                afterSignUpUrl="/user"
+                afterSignUpUrl="/sync-signup"
                 appearance={{
                   variables: {
                     colorPrimary: '#ff86c2',
