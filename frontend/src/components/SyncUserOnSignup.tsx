@@ -24,12 +24,14 @@ const SyncUserOnSignup: React.FC = () => {
           clerkId: user.id,
           email: user.primaryEmailAddress?.emailAddress || email,
           firstName: user.firstName,
-          lastName: user.lastName
+          lastName: user.lastName,
+          username: user.username || user.firstName?.toLowerCase().replace(/\s+/g, '') || ''
         });
 
         setStatus('done');
         setTimeout(() => {
-          navigate('/user', { replace: true });
+          const username = user.username || user.firstName?.toLowerCase().replace(/\s+/g, '') || '';
+          navigate(`/${username}`, { replace: true });
         }, 500);
       } catch (err) {
         console.error('Sync error:', err);

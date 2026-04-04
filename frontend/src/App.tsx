@@ -874,6 +874,11 @@ const ResourceTable: React.FC = () => {
     }
   };
 
+  // Close challenge modal when switching sections
+  useEffect(() => {
+    setSelectedChallenge(null);
+  }, [currentSection]);
+
   // Fetch requests from the API
   const fetchRequests = async () => {
     try {
@@ -1212,6 +1217,18 @@ const ResourceTable: React.FC = () => {
       await axios.delete(`${API_BASE_URL}/sessions/${id}`);
       setSessions(prev => prev.filter(s => s.id !== id));
     } catch (err) { console.error('Error deleting session:', err); }
+  };
+
+  const handleUpdateSession = async (id: string, updates: { date?: string; time?: string; topic?: string; isCancelled?: boolean; cancelReason?: string }) => {
+    try {
+      const res = await axios.patch<any>(`${API_BASE_URL}/sessions/${id}`, updates);
+      setSessions(prev => prev.map(s => s.id === id ? { ...res.data, id: res.data._id } : s));
+      setSelectedSession(prev => prev?.id === id ? { ...res.data, id: res.data._id } : prev);
+      return true;
+    } catch (err) { 
+      console.error('Error updating session:', err);
+      return false;
+    }
   };
 
   const MAX_UPLOAD_MB = 500;
@@ -1597,11 +1614,12 @@ const ResourceTable: React.FC = () => {
             return (
             <div className="p-12 space-y-10">
 
-              {/* ── 4 Stat Cards ── */}
-              <section className="grid grid-cols-2 xl:grid-cols-4 gap-5">
+              {/* ── 5 Stat Cards ── */}
+              <section className="grid grid-cols-2 xl:grid-cols-5 gap-5">
                 {[
                   { label: 'Total Resources', value: resources.length, accent: '#ff86c2', sub: 'Uploaded materials' },
                   { label: 'Active Requests', value: requests.length, accent: '#bf81ff', sub: 'Community requests' },
+                  { label: 'Live Challenges', value: CHALLENGES.length, accent: '#f97316', sub: 'Active sprints' },
                   { label: 'Scheduled Sessions', value: sessions.length, accent: '#4ade80', sub: 'Tech & study sessions' },
                   { label: 'Suggestions', value: suggestions.length, accent: '#facc15', sub: 'Community ideas' },
                 ].map(card => (
@@ -1615,6 +1633,43 @@ const ResourceTable: React.FC = () => {
                   </BorderGlow>
                 ))}
               </section>
+
+              {/* ── Live Sessions Section ── */}
+              {(() => {
+                const now = new Date();
+                const upcomingSessions = sessions
+                  .filter(s => !s.isCancelled && new Date(s.date + 'T' + s.time) > now)
+                  .sort((a, b) => new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime())
+                  .slice(0, 5);
+                
+                if (upcomingSessions.length === 0) return null;
+                
+                return (
+                  <section className="bg-surface-container p-7 space-y-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Upcoming Sessions</p>
+                      <h3 className="text-lg font-black font-headline text-on-surface mt-1">Next in Line</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {upcomingSessions.map(s => {
+                        const sessionDate = new Date(s.date + 'T' + s.time);
+                        const localTime = getUserLocalTime(s);
+                        return (
+                          <div key={s.id} onClick={() => { setCurrentSection('schedule'); setSelectedSession(s); }}
+                            className="bg-surface-container-high p-4 cursor-pointer hover:bg-surface-container-highest transition-colors">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-green-400/20 text-green-400">{s.difficulty || 'beginner'}</span>
+                              {s.sessionType === 'deep-dive' && <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-purple-400/20 text-purple-400">Deep Dive</span>}
+                            </div>
+                            <h4 className="text-sm font-bold text-on-surface truncate">{s.topic}</h4>
+                            <p className="text-[10px] text-slate-500 mt-1">{localTime.convertedDate} · {localTime.converted}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })()}
 
               {/* ── Charts Row 1: 3 gradient bar charts ── */}
               <section className="grid grid-cols-12 gap-6">
@@ -2586,7 +2641,12 @@ const ResourceTable: React.FC = () => {
                           <h3 className="text-2xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.01em' }}>
                             {selectedSession.topic}
                           </h3>
-                          {(selectedSession.duration || 30) > 30 && (
+                          {selectedSession.isCancelled && (
+                            <span className="inline-block mt-2 text-[9px] font-black text-red-400 bg-red-400/20 px-2 py-0.5 uppercase tracking-widest">
+                              ⚠ CANCELLED: {selectedSession.cancelReason}
+                            </span>
+                          )}
+                          {(selectedSession.duration || 30) > 30 && !selectedSession.isCancelled && (
                             <span className="inline-block mt-2 text-[9px] font-black text-orange-400 bg-orange-400/10 px-2 py-0.5 uppercase tracking-widest">⚠ {selectedSession.duration} min session</span>
                           )}
                         </div>
@@ -2792,6 +2852,15 @@ END:VCALENDAR`;
                         const hasWhiteboard = selectedSession.whiteboardLink;
                         const meetingLink = selectedSession.meetingLink;
                         const displayLink = hasWhiteboard || meetingLink;
+                        const isCancelled = selectedSession.isCancelled;
+                        
+                        if (isCancelled) {
+                          return (
+                            <div className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-red-900/50 text-red-400">
+                              ⚠ Session Cancelled
+                            </div>
+                          );
+                        }
                         
                         if (isPast) {
                           return (
@@ -2963,10 +3032,38 @@ END:VCALENDAR`;
                       })()}
 
                       {userIsAdmin && (
-                        <button onClick={() => handleDeleteSession(selectedSession.id)}
-                          className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-red-400 transition-colors">
-                          Remove Session
-                        </button>
+                        <div className="space-y-2">
+                          <button onClick={() => {
+                            const newTopic = prompt('Enter new topic (leave empty to keep current):', selectedSession.topic);
+                            const newDate = prompt('Enter new date (YYYY-MM-DD):', selectedSession.date);
+                            const newTime = prompt('Enter new time (HH:MM):', selectedSession.time);
+                            const updates: any = {};
+                            if (newTopic && newTopic !== selectedSession.topic) updates.topic = newTopic;
+                            if (newDate && newDate !== selectedSession.date) updates.date = newDate;
+                            if (newTime && newTime !== selectedSession.time) updates.time = newTime;
+                            if (Object.keys(updates).length > 0) {
+                              if (confirm('This will notify all attendees about the change. Continue?')) {
+                                handleUpdateSession(selectedSession.id, updates);
+                              }
+                            }
+                          }}
+                            className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-primary transition-colors">
+                            Update Session
+                          </button>
+                          <button onClick={() => {
+                            const reason = prompt('Enter cancellation reason:');
+                            if (reason && confirm('This will notify all attendees about the cancellation. Continue?')) {
+                              handleUpdateSession(selectedSession.id, { isCancelled: true, cancelReason: reason });
+                            }
+                          }}
+                            className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-red-400 transition-colors">
+                            Cancel Session
+                          </button>
+                          <button onClick={() => handleDeleteSession(selectedSession.id)}
+                            className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-red-400 transition-colors">
+                            Remove Session
+                          </button>
+                        </div>
                       )}
                     </div>
                     );

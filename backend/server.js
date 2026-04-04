@@ -187,6 +187,7 @@ downloadRequestSchema.index({ sessionId: 1, userId: 1 }, { unique: true });
 const userManagementSchema = new mongoose.Schema({
   clerkId: { type: String, required: true, unique: true },
   email: { type: String, required: true },
+  username: { type: String, default: '' },
   name: { type: String, default: '' },
   role: { type: String, enum: ['super_admin', 'admin', 'user'], default: 'user' },
   status: { type: String, enum: ['active', 'invited', 'pending_removal', 'removed'], default: 'active' },
@@ -398,7 +399,7 @@ app.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
 }));
 
 app.post('/api/users/sync', asyncHandler(async (req, res) => {
-  const { clerkId, email, firstName, lastName } = req.body;
+  const { clerkId, email, firstName, lastName, username } = req.body;
   
   if (!clerkId || !email) {
     return res.status(400).json({ error: 'clerkId and email are required' });
@@ -414,6 +415,7 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
     // Update invited user to active
     invitedUser.clerkId = clerkId;
     invitedUser.name = firstName || lastName || '';
+    invitedUser.username = username || '';
     invitedUser.status = 'active';
     invitedUser.invitationToken = null;
     invitedUser.invitationExpiresAt = null;
@@ -422,7 +424,8 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
     return res.json({ 
       success: true, 
       message: 'User synced from invitation',
-      role: invitedUser.role
+      role: invitedUser.role,
+      username: invitedUser.username
     });
   }
   
@@ -432,7 +435,8 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
     return res.json({ 
       success: true, 
       message: 'User already exists',
-      role: existingUser.role
+      role: existingUser.role,
+      username: existingUser.username
     });
   }
   
@@ -440,6 +444,7 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
   const newUser = new UserManagement({
     clerkId,
     email,
+    username: username || '',
     name: firstName || lastName || '',
     role: 'user',
     status: 'active'
