@@ -8,6 +8,8 @@ interface AuthContextType {
   userIsAdmin: boolean;
   userIsSuperAdmin: boolean;
   userRole: 'super_admin' | 'admin' | 'user' | null;
+  userUsername: string | null;
+  userEmail: string | null;
   isLoaded: boolean;
 }
 
@@ -16,6 +18,8 @@ const AuthContext = createContext<AuthContextType>({
   userIsAdmin: false,
   userIsSuperAdmin: false,
   userRole: null,
+  userUsername: null,
+  userEmail: null,
   isLoaded: false,
 });
 
@@ -26,6 +30,8 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { user, isLoaded, isSignedIn } = useUser();
   const [userRole, setUserRole] = useState<'super_admin' | 'admin' | 'user' | null>(null);
+  const [userUsername, setUserUsername] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -33,6 +39,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     if (!isSignedIn) {
       setUserRole(null);
+      setUserUsername(null);
+      setUserEmail(null);
       return;
     }
 
@@ -40,21 +48,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const clerkRole = (user?.publicMetadata as { role?: string })?.role;
     if (clerkRole === 'super_admin') {
       setUserRole('super_admin');
+      setUserUsername(user?.username || user?.firstName?.toLowerCase().replace(/\s+/g, '') || null);
+      setUserEmail(user?.primaryEmailAddress?.emailAddress || null);
       return;
     }
     
     // If Clerk says admin, still check MongoDB for super_admin status
     if (clerkRole === 'admin') {
-      // Check MongoDB - if super_admin there, use that
       const fetchAndCheckRole = async () => {
         try {
-          const res = await axios.get<{ role?: string }>(`${API_BASE_URL}/users/me?clerkId=${user?.id}`);
+          const res = await axios.get<{ role?: string; username?: string; email?: string }>(`${API_BASE_URL}/users/me?clerkId=${user?.id}`);
           if (res.data?.role === 'super_admin') {
             setUserRole('super_admin');
-            return;
+          } else {
+            setUserRole('admin');
           }
+          setUserUsername(res.data?.username || user?.username || user?.firstName?.toLowerCase().replace(/\s+/g, '') || null);
+          setUserEmail(res.data?.email || user?.primaryEmailAddress?.emailAddress || null);
         } catch {}
-        setUserRole('admin');
       };
       fetchAndCheckRole();
       return;
@@ -63,17 +74,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // FALLBACK: Check MongoDB for non-Clerk metadata users
     const fetchRole = async () => {
       setIsLoading(true);
-      const userEmail = user?.primaryEmailAddress?.emailAddress || '';
+      const email = user?.primaryEmailAddress?.emailAddress || '';
+      setUserEmail(email);
       
       try {
-        const res = await axios.get<{ role?: string }>(`${API_BASE_URL}/users/me?clerkId=${user?.id}&email=${encodeURIComponent(userEmail)}`);
+        const res = await axios.get<{ role?: string; username?: string; email?: string }>(`${API_BASE_URL}/users/me?clerkId=${user?.id}&email=${encodeURIComponent(email)}`);
         if (res.data?.role && ['super_admin', 'admin', 'user'].includes(res.data.role)) {
           setUserRole(res.data.role as 'super_admin' | 'admin' | 'user');
         } else {
           setUserRole('user');
         }
+        setUserUsername(res.data?.username || user?.username || user?.firstName?.toLowerCase().replace(/\s+/g, '') || null);
       } catch {
         setUserRole('user');
+        setUserUsername(user?.username || user?.firstName?.toLowerCase().replace(/\s+/g, '') || null);
       } finally {
         setIsLoading(false);
       }
@@ -91,6 +105,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       userIsAdmin,
       userIsSuperAdmin,
       userRole,
+      userUsername,
+      userEmail,
       isLoaded: isLoaded && !isLoading,
     }}>
       {children}

@@ -491,7 +491,17 @@ app.get('/api/users/me', asyncHandler(async (req, res) => {
     user = await UserManagement.findOne({ email });
   }
   
-  res.json(user);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  
+  res.json({
+    clerkId: user.clerkId,
+    email: user.email,
+    username: user.username,
+    name: user.name,
+    role: user.role
+  });
 }));
 
 // Verify invitation token

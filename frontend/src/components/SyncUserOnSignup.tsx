@@ -19,24 +19,23 @@ const SyncUserOnSignup: React.FC = () => {
       try {
         const email = searchParams.get('email');
         
-        // Get username from Clerk username or firstName fallback
-        const userUsername = user.username || '';
-        const fallbackUsername = user.firstName ? user.firstName.toLowerCase().replace(/\s+/g, '') : '';
-        const finalUsername = userUsername || fallbackUsername;
-
-        const syncRes = await axios.post<{ username: string }>(`${API_BASE_URL}/users/sync`, {
+        // Sync user to backend
+        await axios.post(`${API_BASE_URL}/users/sync`, {
           clerkId: user.id,
           email: user.primaryEmailAddress?.emailAddress || email,
           firstName: user.firstName,
           lastName: user.lastName,
-          username: finalUsername
+          username: user.username || ''
         });
+
+        // Fetch the user from database to get the stored username
+        const userRes = await axios.get<{ username?: string }>(`${API_BASE_URL}/users/me?clerkId=${user.id}`);
+        const storedUsername = userRes.data?.username;
 
         setStatus('done');
         setTimeout(() => {
-          const username = syncRes.data?.username || finalUsername;
-          if (username) {
-            navigate(`/${username}`, { replace: true });
+          if (storedUsername) {
+            navigate(`/${storedUsername}`, { replace: true });
           } else {
             navigate('/user', { replace: true });
           }
