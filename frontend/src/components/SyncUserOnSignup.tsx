@@ -14,6 +14,15 @@ const SyncUserOnSignup: React.FC = () => {
     console.log('SyncSignup component loaded');
     console.log('isLoaded:', isLoaded);
     console.log('user:', user);
+    console.log('user.username:', user?.username);
+    console.log('user.firstName:', user?.firstName);
+    console.log('user.externalId:', user?.externalId);
+    
+    // Try to get username from different Clerk properties
+    if (user) {
+      const username = user.username || user.firstName?.toLowerCase().replace(/\s+/g, '') || '';
+      console.log('Computed username:', username);
+    }
     
     const syncUser = async () => {
       if (!isLoaded || !user) {
@@ -25,12 +34,16 @@ const SyncUserOnSignup: React.FC = () => {
         const token = searchParams.get('token');
         const email = searchParams.get('email');
         
-        console.log('Clerk user data:', {
-          id: user.id,
-          username: user.username,
+        // Get username - try different properties
+        const userUsername = user.username || '';
+        const fallbackUsername = user.firstName ? user.firstName.toLowerCase().replace(/\s+/g, '') : '';
+        
+        console.log('Sending to backend:', {
+          clerkId: user.id,
+          email: user.primaryEmailAddress?.emailAddress || email,
           firstName: user.firstName,
           lastName: user.lastName,
-          email: user.primaryEmailAddress?.emailAddress
+          username: userUsername || fallbackUsername
         });
 
         const syncRes = await axios.post<{ username: string }>(`${API_BASE_URL}/users/sync`, {
@@ -38,7 +51,7 @@ const SyncUserOnSignup: React.FC = () => {
           email: user.primaryEmailAddress?.emailAddress || email,
           firstName: user.firstName,
           lastName: user.lastName,
-          username: user.username || ''
+          username: userUsername || fallbackUsername
         });
 
         console.log('Backend response:', syncRes.data);
