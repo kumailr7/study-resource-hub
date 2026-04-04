@@ -454,7 +454,8 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
   res.json({ 
     success: true, 
     message: 'User created',
-    role: 'user'
+    role: 'user',
+    username: newUser.username
   });
 }));
 

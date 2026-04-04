@@ -20,7 +20,7 @@ const SyncUserOnSignup: React.FC = () => {
         const token = searchParams.get('token');
         const email = searchParams.get('email');
 
-        await axios.post(`${API_BASE_URL}/users/sync`, {
+        const syncRes = await axios.post<{ username: string }>(`${API_BASE_URL}/users/sync`, {
           clerkId: user.id,
           email: user.primaryEmailAddress?.emailAddress || email,
           firstName: user.firstName,
@@ -30,7 +30,7 @@ const SyncUserOnSignup: React.FC = () => {
 
         setStatus('done');
         setTimeout(() => {
-          const username = user.username || '';
+          const username = syncRes.data?.username || user.username || '';
           console.log('Redirecting to:', username);
           if (username) {
             navigate(`/${username}`, { replace: true });
