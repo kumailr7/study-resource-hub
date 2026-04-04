@@ -25,13 +25,18 @@ const SyncUserOnSignup: React.FC = () => {
           email: user.primaryEmailAddress?.emailAddress || email,
           firstName: user.firstName,
           lastName: user.lastName,
-          username: user.username || user.firstName?.toLowerCase().replace(/\s+/g, '') || ''
+          username: user.username || ''
         });
 
         setStatus('done');
         setTimeout(() => {
-          const username = user.username || user.firstName?.toLowerCase().replace(/\s+/g, '') || '';
-          navigate(`/${username}`, { replace: true });
+          const username = user.username || '';
+          console.log('Redirecting to:', username);
+          if (username) {
+            navigate(`/${username}`, { replace: true });
+          } else {
+            navigate('/user', { replace: true });
+          }
         }, 500);
       } catch (err) {
         console.error('Sync error:', err);
