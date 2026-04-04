@@ -432,6 +432,11 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
   // Check if user already exists
   const existingUser = await UserManagement.findOne({ clerkId });
   if (existingUser) {
+    // Update username if provided and different
+    if (username && username !== existingUser.username) {
+      existingUser.username = username;
+      await existingUser.save();
+    }
     return res.json({ 
       success: true, 
       message: 'User already exists',
