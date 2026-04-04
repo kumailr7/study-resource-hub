@@ -93,6 +93,7 @@ const formatDate = (dateString: string) => {
 interface Session {
   id: string;
   author: string;
+  authorUsername?: string;
   topic: string;
   date: string;
   time: string;
@@ -111,6 +112,13 @@ interface Session {
   registeredUsers?: string[];
   recordingDeleted?: boolean;
   recordingDeleteReason?: string;
+  sessionType?: 'general' | 'deep-dive';
+  difficulty?: 'beginner' | 'medium' | 'advanced';
+  cohostUsername?: string;
+  cohostStatus?: 'none' | 'pending' | 'accepted' | 'rejected';
+  isCancelled?: boolean;
+  cancelReason?: string;
+  lastUpdatedAt?: string;
 }
 
 // Helper function to convert session time to user's local timezone
@@ -524,6 +532,12 @@ const ResourceTable: React.FC = () => {
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [sessionLinkedIn, setSessionLinkedIn] = useState("");
   const [sessionDuration, setSessionDuration] = useState("30");
+  const [sessionType, setSessionType] = useState<'general' | 'deep-dive'>('general');
+  const [sessionDifficulty, setSessionDifficulty] = useState<'beginner' | 'medium' | 'advanced'>('beginner');
+  const [sessionCohostEnabled, setSessionCohostEnabled] = useState(false);
+  const [sessionCohostUsername, setSessionCohostUsername] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const availableTags = ['DevOps', 'Kubernetes', 'Docker', 'AWS', 'GCP', 'Azure', 'Terraform', 'CI/CD', 'Linux', 'Python', 'Security', 'Networking', 'Git', 'IaC', 'Monitoring', 'Microservices'];
   const [viewAllResources, setViewAllResources] = useState(false);
   const [newResourceAddedBy, setNewResourceAddedBy] = useState('');
   const [sgScheduledAt, setSgScheduledAt] = useState('');
@@ -543,10 +557,10 @@ const ResourceTable: React.FC = () => {
   // Session confirmation modal
   const [showSessionConfirmModal, setShowSessionConfirmModal] = useState(false);
   const [pendingSessionData, setPendingSessionData] = useState<{
-    author: string; topic: string; date: string; time: string;
+    author: string; authorUsername: string; topic: string; date: string; time: string;
     tag: string; meetingLink: string; platform: string; whiteboardLink: string;
     agenda: string; willRecord: boolean; hostLinkedIn: string; duration: number;
-    timezone: string;
+    timezone: string; sessionType: string; difficulty: string; cohostUsername: string;
   } | null>(null);
 
   // Challenges state (must be at top level — hooks cannot be called inside IIFEs)
@@ -1121,20 +1135,24 @@ const ResourceTable: React.FC = () => {
   };
 
   const handleAddSession = async (sessionData?: {
-    author: string; topic: string; date: string; time: string;
+    author: string; authorUsername: string; topic: string; date: string; time: string;
     tag: string; meetingLink: string; platform: string; whiteboardLink: string;
     agenda: string; willRecord: boolean; hostLinkedIn: string; duration: number;
-    timezone: string;
+    timezone: string; sessionType: string; difficulty: string; cohostUsername: string;
   }) => {
     if (sessionData) {
       try {
         const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
-          author: sessionData.author, topic: sessionData.topic,
+          author: sessionData.author, 
+          authorUsername: sessionData.authorUsername,
+          topic: sessionData.topic,
           date: sessionData.date, time: sessionData.time, timezone: sessionData.timezone || sessionTimezone,
           tag: sessionData.tag, meetingLink: sessionData.meetingLink, platform: sessionData.platform,
           whiteboardLink: sessionData.whiteboardLink,
           agenda: sessionData.agenda, willRecord: sessionData.willRecord, recordingLink: '', aiSummary: '',
           hostLinkedIn: sessionData.hostLinkedIn, attendeeCount: 0, duration: sessionData.duration,
+          sessionType: sessionData.sessionType, difficulty: sessionData.difficulty,
+          cohostUsername: sessionData.cohostUsername, cohostStatus: sessionData.cohostUsername ? 'pending' : 'none',
         });
         setSessions(prev => [...prev, { ...res.data, id: res.data._id }]);
         setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
@@ -1142,6 +1160,7 @@ const ResourceTable: React.FC = () => {
         setSessionTag(""); setSessionLink("");
         setSessionPlatform('Google Meet'); setSessionWhiteboardEnabled(false); setSessionWhiteboardLink("");
         setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn(""); setSessionDuration("30");
+        setSessionType('general'); setSessionDifficulty('beginner'); setSessionCohostEnabled(false); setSessionCohostUsername(""); setSelectedTags([]);
       } catch (err) { console.error('Error adding session:', err); }
       return;
     }
@@ -1168,10 +1187,11 @@ const ResourceTable: React.FC = () => {
     
     setPendingSessionData({
       author: sessionAuthor,
+      authorUsername: '', // Will be filled from Clerk user
       topic: sessionTopic,
       date: sessionDate,
       time: sessionTime,
-      tag: sessionTag,
+      tag: selectedTags.join(', ') || sessionTag,
       meetingLink: sessionLink,
       platform: sessionPlatform,
       whiteboardLink,
@@ -1180,6 +1200,9 @@ const ResourceTable: React.FC = () => {
       hostLinkedIn: sessionLinkedIn,
       duration: Number(sessionDuration) || 30,
       timezone: sessionTimezone,
+      sessionType: sessionType,
+      difficulty: sessionDifficulty,
+      cohostUsername: sessionCohostEnabled ? sessionCohostUsername : '',
     });
     setShowSessionConfirmModal(true);
   };
@@ -2457,6 +2480,60 @@ const ResourceTable: React.FC = () => {
                       </p>
                     </div>
                     <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Session Type</label>
+                      <div className="flex items-center gap-4">
+                        {['general', 'deep-dive'].map(type => (
+                          <label key={type} className="flex items-center gap-2 cursor-pointer group">
+                            <span className={`w-4 h-4 border-2 flex items-center justify-center transition-colors ${sessionType === type ? 'border-primary bg-primary' : 'border-outline-variant bg-transparent'}`}
+                              onClick={() => setSessionType(type as 'general' | 'deep-dive')}>
+                              {sessionType === type && <span className="w-2 h-2 bg-on-primary block"></span>}
+                            </span>
+                            <span className={`text-sm capitalize transition-colors ${sessionType === type ? 'text-on-surface font-bold' : 'text-slate-500 group-hover:text-slate-300'}`}>
+                              {type === 'general' ? 'General' : 'Deep Dive'}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    {sessionType === 'general' && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Tags</label>
+                        <div className="flex flex-wrap gap-2">
+                          {availableTags.map(tag => (
+                            <button key={tag} onClick={() => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                              className={`text-[10px] font-bold px-2 py-1 rounded border transition-all ${selectedTags.includes(tag) ? 'border-primary bg-primary/20 text-primary' : 'border-outline-variant text-slate-500 hover:border-slate-400'}`}>
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Difficulty Level</label>
+                      <select value={sessionDifficulty} onChange={e => setSessionDifficulty(e.target.value as 'beginner' | 'medium' | 'advanced')}
+                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }} value="beginner">Beginner</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }} value="medium">Medium</option>
+                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }} value="advanced">Advanced</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Add Co-host</label>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <span className={`w-4 h-4 border-2 flex items-center justify-center transition-colors ${sessionCohostEnabled ? 'border-primary bg-primary' : 'border-outline-variant bg-transparent'}`}
+                            onClick={() => setSessionCohostEnabled(!sessionCohostEnabled)}>
+                            {sessionCohostEnabled && <span className="w-2 h-2 bg-on-primary block"></span>}
+                          </span>
+                          <span className={`text-sm transition-colors ${sessionCohostEnabled ? 'text-on-surface font-bold' : 'text-slate-500 group-hover:text-slate-300'}`}>Enable</span>
+                        </label>
+                      </div>
+                      {sessionCohostEnabled && (
+                        <input type="text" placeholder="Enter cohost username" value={sessionCohostUsername} onChange={e => setSessionCohostUsername(e.target.value)}
+                          className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Meeting Link</label>
                       <input type="url" placeholder="https://meet.google.com/..." value={sessionLink} onChange={e => setSessionLink(e.target.value)}
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
@@ -2571,6 +2648,40 @@ const ResourceTable: React.FC = () => {
                             Duration: <span className="text-green-400">{selectedSession.duration || 30} min</span>
                           </div>
                         </div>
+                        {selectedSession.sessionType && (
+                          <div className="bg-surface-container-high p-4">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Session Type</p>
+                            <span className={`text-xs font-bold uppercase px-2 py-1 ${selectedSession.sessionType === 'deep-dive' ? 'text-purple-400 bg-purple-400/20' : 'text-blue-400 bg-blue-400/20'}`}>
+                              {selectedSession.sessionType === 'deep-dive' ? 'Deep Dive' : 'General'}
+                            </span>
+                            {selectedSession.difficulty && (
+                              <span className={`ml-2 text-xs font-bold uppercase px-2 py-1 ${
+                                selectedSession.difficulty === 'beginner' ? 'text-green-400 bg-green-400/20' :
+                                selectedSession.difficulty === 'medium' ? 'text-yellow-400 bg-yellow-400/20' :
+                                'text-red-400 bg-red-400/20'
+                              }`}>
+                                {selectedSession.difficulty}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {selectedSession.cohostUsername && (
+                          <div className="bg-surface-container-high p-4">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Co-host</p>
+                            <span className="text-xs font-bold text-on-surface">
+                              {selectedSession.cohostUsername}
+                              {selectedSession.cohostStatus === 'pending' && (
+                                <span className="ml-2 text-yellow-400 text-[10px]">(Pending approval)</span>
+                              )}
+                              {selectedSession.cohostStatus === 'accepted' && (
+                                <span className="ml-2 text-green-400 text-[10px]">(Accepted)</span>
+                              )}
+                              {selectedSession.cohostStatus === 'rejected' && (
+                                <span className="ml-2 text-red-400 text-[10px]">(Rejected)</span>
+                              )}
+                            </span>
+                          </div>
+                        )}
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Add to Calendar</p>
                           {(() => {

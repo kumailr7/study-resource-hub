@@ -125,6 +125,7 @@ const requireSuperAdmin = asyncHandler(async (req, res, next) => {
 
 const sessionSchema = new mongoose.Schema({
   author: { type: String, required: true },
+  authorUsername: { type: String, default: '' },
   topic: { type: String, required: true },
   date: { type: String, required: true },
   time: { type: String, required: true },
@@ -143,6 +144,14 @@ const sessionSchema = new mongoose.Schema({
   registeredUsers: { type: [String], default: [] },
   recordingDeleted: { type: Boolean, default: false },
   recordingDeleteReason: { type: String, default: '' },
+  // New fields for session features
+  sessionType: { type: String, enum: ['general', 'deep-dive'], default: 'general' },
+  difficulty: { type: String, enum: ['beginner', 'medium', 'advanced'], default: 'beginner' },
+  cohostUsername: { type: String, default: '' },
+  cohostStatus: { type: String, enum: ['none', 'pending', 'accepted', 'rejected'], default: 'none' },
+  isCancelled: { type: Boolean, default: false },
+  cancelReason: { type: String, default: '' },
+  lastUpdatedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 const studyGroupSchema = new mongoose.Schema({
@@ -255,6 +264,44 @@ app.patch('/api/sessions/:id/register', asyncHandler(async (req, res) => {
   } else if (action === 'unregister' && alreadyRegistered) {
     session.registeredUsers = session.registeredUsers.filter(u => u !== userId);
     session.attendeeCount = Math.max(0, session.attendeeCount - 1);
+  }
+  await session.save();
+  res.json(session);
+}));
+
+// PATCH /api/sessions/:id - Update session (including cancel)
+app.patch('/api/sessions/:id', asyncHandler(async (req, res) => {
+  const session = await SessionModel.findById(req.params.id);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  
+  const { isCancelled, cancelReason, date, time, topic, ...otherUpdates } = req.body;
+  
+  // If updating time/topic or cancelling, set lastUpdatedAt
+  if (date || time || topic || isCancelled !== undefined) {
+    session.lastUpdatedAt = new Date();
+  }
+  
+  if (isCancelled !== undefined) session.isCancelled = isCancelled;
+  if (cancelReason) session.cancelReason = cancelReason;
+  if (date) session.date = date;
+  if (time) session.time = time;
+  if (topic) session.topic = topic;
+  
+  Object.assign(session, otherUpdates);
+  await session.save();
+  res.json(session);
+}));
+
+// POST /api/sessions/:id/cohost-response - Respond to cohost invitation
+app.post('/api/sessions/:id/cohost-response', asyncHandler(async (req, res) => {
+  const { action } = req.body; // 'accept' or 'reject'
+  const session = await SessionModel.findById(req.params.id);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  
+  if (action === 'accept') {
+    session.cohostStatus = 'accepted';
+  } else if (action === 'reject') {
+    session.cohostStatus = 'rejected';
   }
   await session.save();
   res.json(session);
