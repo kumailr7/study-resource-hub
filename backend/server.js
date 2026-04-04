@@ -401,13 +401,6 @@ app.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
 app.post('/api/users/sync', asyncHandler(async (req, res) => {
   const { clerkId, email, firstName, lastName, username } = req.body;
   
-  console.log('=== SYNC USER REQUEST ===');
-  console.log('clerkId:', clerkId);
-  console.log('email:', email);
-  console.log('firstName:', firstName);
-  console.log('lastName:', lastName);
-  console.log('username from Clerk:', username);
-  
   if (!clerkId || !email) {
     return res.status(400).json({ error: 'clerkId and email are required' });
   }

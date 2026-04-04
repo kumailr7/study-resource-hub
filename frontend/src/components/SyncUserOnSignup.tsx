@@ -11,59 +11,30 @@ const SyncUserOnSignup: React.FC = () => {
   const [status, setStatus] = useState<'syncing' | 'done' | 'error'>('syncing');
 
   useEffect(() => {
-    // Show alert to debug
-    window.alert(`useEffect: isLoaded=${isLoaded}, user exists=${!!user}`);
-    console.log('SyncSignup component loaded');
-    console.log('isLoaded:', isLoaded);
-    console.log('user:', user);
-    console.log('user?.username:', user?.username);
-    
-    // Try to get username from different Clerk properties
-    if (user) {
-      const username = user.username || user.firstName?.toLowerCase().replace(/\s+/g, '') || '';
-      console.log('Computed username:', username);
-    }
-    
     const syncUser = async () => {
       if (!isLoaded || !user) {
-        window.alert(`Skipping: isLoaded=${isLoaded}, user=${user}`);
-        console.log('Skipping sync - not loaded or no user');
         return;
       }
 
       try {
-        const token = searchParams.get('token');
         const email = searchParams.get('email');
         
-        // Get username - try different properties
+        // Get username from Clerk username or firstName fallback
         const userUsername = user.username || '';
         const fallbackUsername = user.firstName ? user.firstName.toLowerCase().replace(/\s+/g, '') : '';
-        
-        window.alert(`Sending to backend - username: ${userUsername || fallbackUsername}`);
-        console.log('Sending to backend:', {
-          clerkId: user.id,
-          email: user.primaryEmailAddress?.emailAddress || email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          username: userUsername || fallbackUsername
-        });
+        const finalUsername = userUsername || fallbackUsername;
 
         const syncRes = await axios.post<{ username: string }>(`${API_BASE_URL}/users/sync`, {
           clerkId: user.id,
           email: user.primaryEmailAddress?.emailAddress || email,
           firstName: user.firstName,
           lastName: user.lastName,
-          username: userUsername || fallbackUsername
+          username: finalUsername
         });
-
-        console.log('Backend response:', syncRes.data);
-        window.alert(`Backend response: ${JSON.stringify(syncRes.data)}`);
 
         setStatus('done');
         setTimeout(() => {
-          const username = syncRes.data?.username || user.username || user.firstName?.toLowerCase().replace(/\s+/g, '') || '';
-          console.log('Redirecting to:', username);
-          window.alert(`Redirecting to: /${username}`);
+          const username = syncRes.data?.username || finalUsername;
           if (username) {
             navigate(`/${username}`, { replace: true });
           } else {
@@ -72,7 +43,6 @@ const SyncUserOnSignup: React.FC = () => {
         }, 500);
       } catch (err) {
         console.error('Sync error:', err);
-        window.alert(`Error: ${err}`);
         setStatus('error');
         setTimeout(() => {
           navigate('/user', { replace: true });
@@ -95,12 +65,9 @@ const SyncUserOnSignup: React.FC = () => {
 
   if (status === 'syncing') {
     return (
-      <div className="min-h-screen bg-[#0e0e13] flex flex-col items-center justify-center text-white">
-        <div className="text-4xl mb-4 animate-spin">⚙️</div>
-        <p className="animate-pulse mb-4">Setting up your account...</p>
-        <button onClick={() => console.log('User object:', user)} className="text-xs text-slate-500">
-          Debug: Click to see user in console
-        </button>
+      <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center text-white text-center">
+        <div className="text-4xl mb-4">⚙️</div>
+        <p className="animate-pulse">Setting up your account...</p>
       </div>
     );
   }
