@@ -45,7 +45,7 @@ const SyncUserOnSignup: React.FC = () => {
 
         setStatus('done');
         setTimeout(() => {
-          const username = syncRes.data?.username || user.username || '';
+          const username = syncRes.data?.username || user.username || user.firstName?.toLowerCase().replace(/\s+/g, '') || '';
           console.log('Redirecting to:', username);
           if (username) {
             navigate(`/${username}`, { replace: true });

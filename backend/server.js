@@ -401,6 +401,13 @@ app.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
 app.post('/api/users/sync', asyncHandler(async (req, res) => {
   const { clerkId, email, firstName, lastName, username } = req.body;
   
+  console.log('=== SYNC USER REQUEST ===');
+  console.log('clerkId:', clerkId);
+  console.log('email:', email);
+  console.log('firstName:', firstName);
+  console.log('lastName:', lastName);
+  console.log('username from Clerk:', username);
+  
   if (!clerkId || !email) {
     return res.status(400).json({ error: 'clerkId and email are required' });
   }
@@ -432,16 +439,17 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
   // Check if user already exists
   const existingUser = await UserManagement.findOne({ clerkId });
   if (existingUser) {
-    // Update username if provided and different
-    if (username && username !== existingUser.username) {
-      existingUser.username = username;
+    // Update username if provided and different, or use firstName as fallback
+    const newUsername = username || (firstName ? firstName.toLowerCase().replace(/\s+/g, '') : '');
+    if (newUsername && newUsername !== existingUser.username) {
+      existingUser.username = newUsername;
       await existingUser.save();
     }
     return res.json({ 
       success: true, 
       message: 'User already exists',
       role: existingUser.role,
-      username: existingUser.username
+      username: existingUser.username || newUsername
     });
   }
   
@@ -449,7 +457,7 @@ app.post('/api/users/sync', asyncHandler(async (req, res) => {
   const newUser = new UserManagement({
     clerkId,
     email,
-    username: username || '',
+    username: username || (firstName ? firstName.toLowerCase().replace(/\s+/g, '') : ''),
     name: firstName || lastName || '',
     role: 'user',
     status: 'active'
