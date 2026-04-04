@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
+import React, { useState, useRef, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { useClerk, useUser } from '@clerk/clerk-react';
 import { ThemeProvider, useTheme } from "./ThemeContext";
@@ -15,7 +15,6 @@ import BorderGlow from './components/BorderGlow';
 import LightPillar from './components/LightPillar';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useEffect } from 'react';
 import SignupPage from './pages/SignupPage';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -456,6 +455,7 @@ const App: React.FC = () => {
             <Route path="/sync-signup" element={<RequireAuth><SyncSignup /></RequireAuth>} />
             <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} />} />
             <Route path="/user" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/" element={<Navigate to="/login" />} />
@@ -468,7 +468,12 @@ const App: React.FC = () => {
 };
 
 // ResourceTable Component
-const ResourceTable: React.FC = () => {
+const UsernamePage: React.FC = () => {
+  const { username } = useParams<{ username: string }>();
+  return <ResourceTable />;
+};
+
+const ResourceTable: React.FC<{ username?: string }> = ({ username: _username }) => {
   const { userIsAdmin } = useAuth();
   const { signOut } = useClerk();
   const { user } = useUser();
