@@ -149,6 +149,7 @@ const sessionSchema = new mongoose.Schema({
   difficulty: { type: String, enum: ['beginner', 'medium', 'advanced'], default: 'beginner' },
   cohostUsername: { type: String, default: '' },
   cohostStatus: { type: String, enum: ['none', 'pending', 'accepted', 'rejected'], default: 'none' },
+  cohostRejectReason: { type: String, default: '' },
   isCancelled: { type: Boolean, default: false },
   cancelReason: { type: String, default: '' },
   lastUpdatedAt: { type: Date, default: null },
@@ -293,16 +294,25 @@ app.patch('/api/sessions/:id', asyncHandler(async (req, res) => {
   res.json(session);
 }));
 
+// GET /api/sessions/cohost-pending - Fetch sessions where user is a pending cohost
+app.get('/api/sessions/cohost-pending', asyncHandler(async (req, res) => {
+  const { username } = req.query;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  const sessions = await SessionModel.find({ cohostUsername: username, cohostStatus: 'pending' });
+  res.json(sessions);
+}));
+
 // POST /api/sessions/:id/cohost-response - Respond to cohost invitation
 app.post('/api/sessions/:id/cohost-response', asyncHandler(async (req, res) => {
-  const { action } = req.body; // 'accept' or 'reject'
+  const { action, reason } = req.body; // 'accept' or 'reject', optional reason
   const session = await SessionModel.findById(req.params.id);
   if (!session) return res.status(404).json({ error: 'Session not found' });
-  
+
   if (action === 'accept') {
     session.cohostStatus = 'accepted';
   } else if (action === 'reject') {
     session.cohostStatus = 'rejected';
+    session.cohostRejectReason = reason || '';
   }
   await session.save();
   res.json(session);

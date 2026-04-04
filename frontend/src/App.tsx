@@ -115,6 +115,7 @@ interface Session {
   difficulty?: 'beginner' | 'medium' | 'advanced';
   cohostUsername?: string;
   cohostStatus?: 'none' | 'pending' | 'accepted' | 'rejected';
+  cohostRejectReason?: string;
   isCancelled?: boolean;
   cancelReason?: string;
   lastUpdatedAt?: string;
@@ -543,6 +544,10 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const [sessionDifficulty, setSessionDifficulty] = useState<'beginner' | 'medium' | 'advanced'>('beginner');
   const [sessionCohostEnabled, setSessionCohostEnabled] = useState(false);
   const [sessionCohostUsername, setSessionCohostUsername] = useState("");
+  const [pendingCohostInvites, setPendingCohostInvites] = useState<Session[]>([]);
+  const [cohostRejectModal, setCohostRejectModal] = useState<{ sessionId: string; topic: string } | null>(null);
+  const [cohostRejectReason, setCohostRejectReason] = useState('');
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const availableTags = ['DevOps', 'Kubernetes', 'Docker', 'AWS', 'GCP', 'Azure', 'Terraform', 'CI/CD', 'Linux', 'Python', 'Security', 'Networking', 'Git', 'IaC', 'Monitoring', 'Microservices'];
   const [viewAllResources, setViewAllResources] = useState(false);
@@ -866,6 +871,27 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
     };
     fetchShared();
   }, [user?.id]);
+
+  // Fetch pending cohost invitations for the current user
+  useEffect(() => {
+    if (!userUsername) return;
+    axios.get<any[]>(`${API_BASE_URL}/sessions/cohost-pending?username=${userUsername}`)
+      .then(res => setPendingCohostInvites(res.data.map((s: any) => ({ ...s, id: s._id }))))
+      .catch(() => {});
+  }, [userUsername]);
+
+  const handleCohostResponse = async (sessionId: string, action: 'accept' | 'reject', reason?: string) => {
+    try {
+      await axios.post(`${API_BASE_URL}/sessions/${sessionId}/cohost-response`, { action, reason });
+      setPendingCohostInvites(prev => prev.filter(s => s.id !== sessionId));
+      setSessions(prev => prev.map(s => s.id === sessionId
+        ? { ...s, cohostStatus: action === 'accept' ? 'accepted' : 'rejected', cohostRejectReason: reason || '' }
+        : s
+      ));
+    } catch (err) {
+      console.error('Cohost response error:', err);
+    }
+  };
 
   // Fetch resources from the API
   const fetchResources = async () => {
@@ -1586,7 +1612,52 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                 <span className="ml-2 text-xs text-slate-600 border border-slate-700 px-1.5 py-0.5">⌘K</span>
               </button>
               <div className="flex items-center gap-3 text-slate-400">
-                <button className="hover:bg-surface-container-highest p-2 transition-colors"><Bell size={18} /></button>
+                {/* Bell with cohost notification panel */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNotifPanel(v => !v)}
+                    className="hover:bg-surface-container-highest p-2 transition-colors relative"
+                  >
+                    <Bell size={18} />
+                    {pendingCohostInvites.length > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#ff86c2]" />
+                    )}
+                  </button>
+                  {showNotifPanel && (
+                    <div className="absolute right-0 top-11 w-80 bg-[#19191f] border border-outline-variant shadow-2xl z-50">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-4 pt-3 pb-2">
+                        Co-host Invitations {pendingCohostInvites.length > 0 ? `(${pendingCohostInvites.length})` : ''}
+                      </p>
+                      {pendingCohostInvites.length === 0 ? (
+                        <p className="text-xs text-slate-500 px-4 pb-4">No pending invitations.</p>
+                      ) : (
+                        pendingCohostInvites.map(s => (
+                          <div key={s.id} className="px-4 py-3 border-t border-outline-variant">
+                            <p className="text-sm font-bold text-on-surface">{s.topic}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Hosted by <span className="text-[#ff86c2]">{s.author}</span>
+                            </p>
+                            <p className="text-xs text-slate-500">{s.date} · {s.time}</p>
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                onClick={() => { handleCohostResponse(s.id, 'accept'); setShowNotifPanel(false); }}
+                                className="text-xs font-bold px-3 py-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={() => { setCohostRejectModal({ sessionId: s.id, topic: s.topic }); setShowNotifPanel(false); }}
+                                className="text-xs font-bold px-3 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
                 <button onClick={() => toggleTheme()} className="hover:bg-surface-container-highest p-2 transition-colors">
                   {isDarkTheme ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
@@ -1623,6 +1694,41 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
 
             return (
             <div className="p-12 space-y-10">
+
+              {/* ── Co-host Invitation Banner ── */}
+              {pendingCohostInvites.length > 0 && (
+                <div className="border border-yellow-400/40 bg-yellow-400/5 p-5">
+                  <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <span>⏳</span> Co-host Invitation{pendingCohostInvites.length > 1 ? 's' : ''} Pending ({pendingCohostInvites.length})
+                  </p>
+                  <div className="space-y-3">
+                    {pendingCohostInvites.map(s => (
+                      <div key={s.id} className="flex items-center justify-between border-t border-yellow-400/10 pt-3">
+                        <div>
+                          <p className="text-sm font-bold text-on-surface">{s.topic}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Hosted by <span className="text-[#ff86c2]">{s.author}</span> · {s.date} at {s.time}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 ml-4 flex-shrink-0">
+                          <button
+                            onClick={() => handleCohostResponse(s.id, 'accept')}
+                            className="text-xs font-bold px-3 py-1.5 bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => setCohostRejectModal({ sessionId: s.id, topic: s.topic })}
+                            className="text-xs font-bold px-3 py-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* ── 5 Stat Cards ── */}
               <section className="grid grid-cols-2 xl:grid-cols-5 gap-5">
@@ -2750,6 +2856,27 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                                 <span className="ml-2 text-red-400 text-[10px]">(Rejected)</span>
                               )}
                             </span>
+                            {/* Show accept/reject if the viewer is the pending cohost */}
+                            {selectedSession.cohostStatus === 'pending' &&
+                              selectedSession.cohostUsername === userUsername && (
+                              <div className="flex gap-2 mt-3">
+                                <button
+                                  onClick={() => handleCohostResponse(selectedSession.id, 'accept')}
+                                  className="text-xs font-bold px-3 py-1.5 bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                                >
+                                  Accept
+                                </button>
+                                <button
+                                  onClick={() => setCohostRejectModal({ sessionId: selectedSession.id, topic: selectedSession.topic })}
+                                  className="text-xs font-bold px-3 py-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                            {selectedSession.cohostStatus === 'rejected' && selectedSession.cohostRejectReason && (
+                              <p className="text-[10px] text-slate-500 mt-1">Reason: {selectedSession.cohostRejectReason}</p>
+                            )}
                           </div>
                         )}
                         <div className="bg-surface-container-high p-4">
@@ -3883,6 +4010,50 @@ END:VCALENDAR`;
         </main>
 
         {/* Community Join Modal */}
+        {/* ── Co-host Rejection Reason Modal ── */}
+        {cohostRejectModal && (
+          <div
+            className="fixed inset-0 z-[110] flex items-center justify-center px-4"
+            style={{ background: 'rgba(14,14,19,0.88)', backdropFilter: 'blur(20px)' }}
+            onClick={e => { if (e.target === e.currentTarget) { setCohostRejectModal(null); setCohostRejectReason(''); } }}
+          >
+            <div className="w-full max-w-md bg-[#19191f] border border-outline-variant p-6">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Reject Co-host Invitation</p>
+              <p className="text-base font-bold text-on-surface mb-4">{cohostRejectModal.topic}</p>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+                Reason for rejecting <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={cohostRejectReason}
+                onChange={e => setCohostRejectReason(e.target.value)}
+                placeholder="Let the host know why you're declining..."
+                rows={3}
+                className="w-full bg-surface-container-low border border-outline-variant text-sm text-on-surface placeholder-slate-600 px-3 py-2 outline-none focus:border-primary resize-none"
+              />
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    if (!cohostRejectReason.trim()) return;
+                    handleCohostResponse(cohostRejectModal.sessionId, 'reject', cohostRejectReason.trim());
+                    setCohostRejectModal(null);
+                    setCohostRejectReason('');
+                  }}
+                  disabled={!cohostRejectReason.trim()}
+                  className="flex-1 text-xs font-bold py-2.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Confirm Reject
+                </button>
+                <button
+                  onClick={() => { setCohostRejectModal(null); setCohostRejectReason(''); }}
+                  className="flex-1 text-xs font-bold py-2.5 bg-surface-container text-slate-400 hover:bg-surface-container-high transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showCommunityModal && (
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center px-4"
