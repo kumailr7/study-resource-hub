@@ -29,7 +29,7 @@ const LoginPage: React.FC = () => {
   }
 
   if (isSignedIn) {
-    return <Navigate to="/user" replace />;
+    return <Navigate to="/sync-signup" replace />;
   }
 
   return (

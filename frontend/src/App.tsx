@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useParams } from "react-router-dom";
+import React, { useState, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useClerk, useUser } from '@clerk/clerk-react';
 import { ThemeProvider, useTheme } from "./ThemeContext";
@@ -15,9 +15,8 @@ import BorderGlow from './components/BorderGlow';
 import LightPillar from './components/LightPillar';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useEffect } from 'react';
 import SignupPage from './pages/SignupPage';
-import TermsOfService from './pages/TermsOfService';
-import PrivacyPolicy from './pages/PrivacyPolicy';
 import { API_BASE_URL } from './config';
 
 
@@ -92,15 +91,12 @@ const formatDate = (dateString: string) => {
 interface Session {
   id: string;
   author: string;
-  authorUsername?: string;
   topic: string;
   date: string;
   time: string;
-  timezone?: string;
   tag: string;
   meetingLink: string;
-  platform: 'Google Meet' | 'Zoom' | 'Teams' | 'Excalidraw' | 'Other';
-  whiteboardLink?: string;
+  platform: 'Google Meet' | 'Zoom' | 'Teams' | 'Other';
   agenda: string;
   willRecord: boolean;
   recordingLink: string;
@@ -111,110 +107,7 @@ interface Session {
   registeredUsers?: string[];
   recordingDeleted?: boolean;
   recordingDeleteReason?: string;
-  sessionType?: 'general' | 'deep-dive';
-  difficulty?: 'beginner' | 'medium' | 'advanced';
-  cohostUsername?: string;
-  cohostStatus?: 'none' | 'pending' | 'accepted' | 'rejected';
-  isCancelled?: boolean;
-  cancelReason?: string;
-  lastUpdatedAt?: string;
 }
-
-// Helper function to convert session time to user's local timezone
-const getUserLocalTime = (session: Session): { original: string; converted: string; convertedDate: string; userTimezone: string; showConversion: boolean } => {
-  const sessionDateTime = new Date(`${session.date}T${session.time}:00`);
-  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  
-  // Format with 12-hour time, AM/PM, and timezone offset
-  const options: Intl.DateTimeFormatOptions = {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: userTimezone,
-  };
-  
-  // Get timezone offset like "GMT+4:00" or "GMT-5:00"
-  const getGMTOffset = (tz: string): string => {
-    const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz,
-      timeZoneName: 'shortOffset'
-    });
-    const parts = formatter.formatToParts(now);
-    const offsetPart = parts.find(p => p.type === 'timeZoneName');
-    return offsetPart?.value || '';
-  };
-  
-  const gmtOffset = getGMTOffset(userTimezone);
-  
-  const convertedTime = sessionDateTime.toLocaleString('en-US', options);
-  const convertedDateStr = sessionDateTime.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    timeZone: userTimezone
-  });
-  
-  const formattedTime = `${convertedTime} (${gmtOffset})`;
-  
-  // Show conversion if user's timezone differs from stored timezone or if there's no stored timezone
-  const hostTz = session.timezone || 'UTC';
-  const showConversion = hostTz !== userTimezone || hostTz === 'UTC';
-  
-  return {
-    original: session.time,
-    converted: formattedTime,
-    convertedDate: convertedDateStr,
-    userTimezone: gmtOffset,
-    showConversion
-  };
-};
-
-const getUserLocalGroupTime = (group: StudyGroup): { original: string; converted: string; convertedDate: string; userTimezone: string; showConversion: boolean } => {
-  if (!group.scheduledAt) {
-    return { original: '', converted: '', convertedDate: '', userTimezone: '', showConversion: false };
-  }
-  
-  const sessionDateTime = new Date(group.scheduledAt);
-  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  
-  const options: Intl.DateTimeFormatOptions = {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: userTimezone,
-    timeZoneName: 'short'
-  };
-  
-  const convertedDateTime = sessionDateTime.toLocaleString('en-US', {
-    ...options,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  
-  const convertedTime = sessionDateTime.toLocaleString('en-US', options);
-  const timePart = convertedTime.split(', ')[1] || convertedTime;
-  const datePart = convertedDateTime.split(', ')[0] || group.scheduledAt.split('T')[0];
-  
-  const hostTz = group.scheduledTimezone || 'UTC';
-  const showConversion = hostTz !== userTimezone || hostTz === 'UTC';
-  
-  return {
-    original: sessionDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: hostTz }),
-    converted: timePart,
-    convertedDate: datePart,
-    userTimezone,
-    showConversion
-  };
-};
-
-const calculateEndTime = (startTime: string, durationMinutes: number): string => {
-  const [hours, minutes] = startTime.split(':').map(Number);
-  const totalMinutes = hours * 60 + minutes + durationMinutes;
-  const endHours = Math.floor(totalMinutes / 60) % 24;
-  const endMins = totalMinutes % 60;
-  return `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
-};
 
 interface Suggestion {
   id: string;
@@ -231,8 +124,7 @@ interface StudyGroup {
   createdAt: string;
   isActive: boolean;
   memberCount: number;
-  scheduledAt?: string;
-  scheduledTimezone?: string;
+  scheduledAt: string;
 }
 
 interface AuthState {
@@ -410,38 +302,40 @@ const CATEGORY_META: Record<string, { color: string; abbr: string }> = {
   'Networking': { color: '#fb923c', abbr: 'NET' },
 };
 
-// Syncs the newly signed-up invited user to MongoDB then sends them to /user
+// Syncs the user to MongoDB then redirects to /{username}
 const SyncSignup: React.FC = () => {
   const { user } = useUser();
+  const navigate = useNavigate();
   const [done, setDone] = React.useState(false);
 
   useEffect(() => {
     if (!user || done) return;
     const sync = async () => {
+      let storedUsername = '';
       try {
-        await axios.post(`${API_BASE_URL}/users/sync`, {
+        const res = await axios.post<{ username?: string }>(`${API_BASE_URL}/users/sync`, {
           clerkId: user.id,
           email: user.primaryEmailAddress?.emailAddress || '',
           firstName: user.firstName || '',
           lastName: user.lastName || '',
+          username: user.username || '',
         });
+        storedUsername = res.data?.username || '';
       } catch (_) {
         // Sync failure is non-fatal; user can still access the app
       } finally {
         setDone(true);
+        navigate(storedUsername ? `/${storedUsername}` : '/user', { replace: true });
       }
     };
     sync();
-  }, [user, done]);
+  }, [user, done, navigate]);
 
-  if (!done) {
-    return (
-      <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center">
-        <p className="text-slate-400 text-sm animate-pulse">Setting up your account…</p>
-      </div>
-    );
-  }
-  return <Navigate to="/user" replace />;
+  return (
+    <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center">
+      <p className="text-slate-400 text-sm animate-pulse">Setting up your account…</p>
+    </div>
+  );
 };
 
 const App: React.FC = () => {
@@ -456,8 +350,6 @@ const App: React.FC = () => {
             <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} />} />
             <Route path="/user" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/:username" element={<RequireAuth><ResourceTable /></RequireAuth>} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
@@ -468,12 +360,7 @@ const App: React.FC = () => {
 };
 
 // ResourceTable Component
-const UsernamePage: React.FC = () => {
-  const { username } = useParams<{ username: string }>();
-  return <ResourceTable />;
-};
-
-const ResourceTable: React.FC<{ username?: string }> = ({ username: _username }) => {
+const ResourceTable: React.FC = () => {
   const { userIsAdmin, userUsername } = useAuth();
   const { signOut } = useClerk();
   const { user } = useUser();
@@ -521,12 +408,9 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const [sessionTopic, setSessionTopic] = useState("");
   const [sessionDate, setSessionDate] = useState("");
   const [sessionTime, setSessionTime] = useState("");
-  const [sessionTimezone, setSessionTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [sessionTag, setSessionTag] = useState("");
   const [sessionLink, setSessionLink] = useState("");
   const [sessionPlatform, setSessionPlatform] = useState<Session['platform']>('Google Meet');
-  const [sessionWhiteboardEnabled, setSessionWhiteboardEnabled] = useState(false);
-  const [sessionWhiteboardLink, setSessionWhiteboardLink] = useState("");
   const [sessionAgenda, setSessionAgenda] = useState("");
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -537,16 +421,9 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [sessionLinkedIn, setSessionLinkedIn] = useState("");
   const [sessionDuration, setSessionDuration] = useState("30");
-  const [sessionType, setSessionType] = useState<'general' | 'deep-dive'>('general');
-  const [sessionDifficulty, setSessionDifficulty] = useState<'beginner' | 'medium' | 'advanced'>('beginner');
-  const [sessionCohostEnabled, setSessionCohostEnabled] = useState(false);
-  const [sessionCohostUsername, setSessionCohostUsername] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const availableTags = ['DevOps', 'Kubernetes', 'Docker', 'AWS', 'GCP', 'Azure', 'Terraform', 'CI/CD', 'Linux', 'Python', 'Security', 'Networking', 'Git', 'IaC', 'Monitoring', 'Microservices'];
   const [viewAllResources, setViewAllResources] = useState(false);
   const [newResourceAddedBy, setNewResourceAddedBy] = useState('');
   const [sgScheduledAt, setSgScheduledAt] = useState('');
-  const [sgScheduledTimezone, setSgScheduledTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [myRegisteredSessions, setMyRegisteredSessions] = useState<Record<string, boolean>>({});
   const [myJoinedGroups, setMyJoinedGroups] = useState<Record<string, boolean>>({});
   const [collections, setCollections] = useState<ResourceCollection[]>(() => {
@@ -558,15 +435,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
 
   // Request new modal
   const [showRequestModal, setShowRequestModal] = useState(false);
-
-  // Session confirmation modal
-  const [showSessionConfirmModal, setShowSessionConfirmModal] = useState(false);
-  const [pendingSessionData, setPendingSessionData] = useState<{
-    author: string; authorUsername: string; topic: string; date: string; time: string;
-    tag: string; meetingLink: string; platform: string; whiteboardLink: string;
-    agenda: string; willRecord: boolean; hostLinkedIn: string; duration: number;
-    timezone: string; sessionType: string; difficulty: string; cohostUsername: string;
-  } | null>(null);
 
   // Challenges state (must be at top level — hooks cannot be called inside IIFEs)
   const CHALLENGES = [
@@ -879,11 +747,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
     }
   };
 
-  // Close challenge modal when switching sections
-  useEffect(() => {
-    setSelectedChallenge(null);
-  }, [currentSection]);
-
   // Fetch requests from the API
   const fetchRequests = async () => {
     try {
@@ -1109,10 +972,9 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
         isActive: true,
         memberCount: 0,
         scheduledAt: sgScheduledAt,
-        scheduledTimezone: sgScheduledAt ? sgScheduledTimezone : undefined,
       });
       setStudyGroups(prev => [{ ...res.data, id: res.data._id }, ...prev]);
-      setSgTitle(''); setSgAgenda(''); setSgScheduledAt(''); setSgScheduledTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+      setSgTitle(''); setSgAgenda(''); setSgScheduledAt('');
     } catch (err) { console.error('Error creating study group:', err); }
   };
 
@@ -1144,77 +1006,21 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  const handleAddSession = async (sessionData?: {
-    author: string; authorUsername: string; topic: string; date: string; time: string;
-    tag: string; meetingLink: string; platform: string; whiteboardLink: string;
-    agenda: string; willRecord: boolean; hostLinkedIn: string; duration: number;
-    timezone: string; sessionType: string; difficulty: string; cohostUsername: string;
-  }) => {
-    if (sessionData) {
-      try {
-        const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
-          author: sessionData.author, 
-          authorUsername: sessionData.authorUsername,
-          topic: sessionData.topic,
-          date: sessionData.date, time: sessionData.time, timezone: sessionData.timezone || sessionTimezone,
-          tag: sessionData.tag, meetingLink: sessionData.meetingLink, platform: sessionData.platform,
-          whiteboardLink: sessionData.whiteboardLink,
-          agenda: sessionData.agenda, willRecord: sessionData.willRecord, recordingLink: '', aiSummary: '',
-          hostLinkedIn: sessionData.hostLinkedIn, attendeeCount: 0, duration: sessionData.duration,
-          sessionType: sessionData.sessionType, difficulty: sessionData.difficulty,
-          cohostUsername: sessionData.cohostUsername, cohostStatus: sessionData.cohostUsername ? 'pending' : 'none',
-        });
-        setSessions(prev => [...prev, { ...res.data, id: res.data._id }]);
-        setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
-        setSessionTime(""); setSessionTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-        setSessionTag(""); setSessionLink("");
-        setSessionPlatform('Google Meet'); setSessionWhiteboardEnabled(false); setSessionWhiteboardLink("");
-        setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn(""); setSessionDuration("30");
-        setSessionType('general'); setSessionDifficulty('beginner'); setSessionCohostEnabled(false); setSessionCohostUsername(""); setSelectedTags([]);
-      } catch (err) { console.error('Error adding session:', err); }
-      return;
-    }
-
-    // Show confirmation modal
-    if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime) {
-      alert('Please fill in all required fields: Author, Topic, Date, and Time');
-      return;
-    }
-    if (!sessionWhiteboardEnabled && !sessionLink) {
-      alert('Please either enable Whiteboard or provide a Meeting Link');
-      return;
-    }
-    
-    let whiteboardLink = '';
-    if (sessionWhiteboardEnabled) {
-      if (sessionWhiteboardLink) {
-        whiteboardLink = sessionWhiteboardLink;
-      } else {
-        const topicSlug = sessionTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-        whiteboardLink = `https://excalidraw.com/#name=${encodeURIComponent(sessionTopic)}`;
-      }
-    }
-    
-    setPendingSessionData({
-      author: sessionAuthor,
-      authorUsername: '', // Will be filled from Clerk user
-      topic: sessionTopic,
-      date: sessionDate,
-      time: sessionTime,
-      tag: selectedTags.join(', ') || sessionTag,
-      meetingLink: sessionLink,
-      platform: sessionPlatform,
-      whiteboardLink,
-      agenda: sessionAgenda,
-      willRecord: sessionWillRecord,
-      hostLinkedIn: sessionLinkedIn,
-      duration: Number(sessionDuration) || 30,
-      timezone: sessionTimezone,
-      sessionType: sessionType,
-      difficulty: sessionDifficulty,
-      cohostUsername: sessionCohostEnabled ? sessionCohostUsername : '',
-    });
-    setShowSessionConfirmModal(true);
+  const handleAddSession = async () => {
+    if (!sessionAuthor || !sessionTopic || !sessionDate || !sessionTime || !sessionLink) return;
+    try {
+      const res = await axios.post<any>(`${API_BASE_URL}/sessions`, {
+        author: sessionAuthor, topic: sessionTopic,
+        date: sessionDate, time: sessionTime,
+        tag: sessionTag, meetingLink: sessionLink, platform: sessionPlatform,
+        agenda: sessionAgenda, willRecord: sessionWillRecord, recordingLink: '', aiSummary: '',
+        hostLinkedIn: sessionLinkedIn, attendeeCount: 0, duration: Number(sessionDuration) || 30,
+      });
+      setSessions(prev => [...prev, { ...res.data, id: res.data._id }]);
+      setSessionAuthor(""); setSessionTopic(""); setSessionDate("");
+      setSessionTime(""); setSessionTag(""); setSessionLink("");
+      setSessionPlatform('Google Meet'); setSessionAgenda(""); setSessionWillRecord(false); setSessionLinkedIn(""); setSessionDuration("30");
+    } catch (err) { console.error('Error adding session:', err); }
   };
 
   const handleDeleteSession = async (id: string) => {
@@ -1222,18 +1028,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
       await axios.delete(`${API_BASE_URL}/sessions/${id}`);
       setSessions(prev => prev.filter(s => s.id !== id));
     } catch (err) { console.error('Error deleting session:', err); }
-  };
-
-  const handleUpdateSession = async (id: string, updates: { date?: string; time?: string; topic?: string; isCancelled?: boolean; cancelReason?: string }) => {
-    try {
-      const res = await axios.patch<any>(`${API_BASE_URL}/sessions/${id}`, updates);
-      setSessions(prev => prev.map(s => s.id === id ? { ...res.data, id: res.data._id } : s));
-      setSelectedSession(prev => prev?.id === id ? { ...res.data, id: res.data._id } : prev);
-      return true;
-    } catch (err) { 
-      console.error('Error updating session:', err);
-      return false;
-    }
   };
 
   const MAX_UPLOAD_MB = 500;
@@ -1394,18 +1188,10 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   };
 
   const platformColor: Record<Session['platform'], string> = {
-    'Google Meet': '#00ac47', 'Zoom': '#2D8CFF', 'Teams': '#6264A7', 'Excalidraw': '#ff6b35', 'Other': '#ff86c2',
+    'Google Meet': '#00ac47', 'Zoom': '#2D8CFF', 'Teams': '#6264A7', 'Other': '#ff86c2',
   };
 
   const PlatformIcon = ({ platform, size = 14 }: { platform: Session['platform']; size?: number }) => {
-    if (platform === 'Excalidraw') return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#ff6b35" strokeWidth="2">
-        <path d="M12 19l7-7 3 3-7 7-3-3z"/>
-        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
-        <path d="M2 2l7.586 7.586"/>
-        <circle cx="11" cy="11" r="2"/>
-      </svg>
-    );
     if (platform === 'Google Meet') return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <path d="M22 7.5L17 12l5 4.5V7.5z" fill="#00832d"/>
@@ -1551,7 +1337,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                 {user?.fullName || user?.firstName || 'User'}
               </p>
               <p className="text-[10px] text-slate-500 truncate">
-                @{userUsername || user?.username || 'user'} · {user?.primaryEmailAddress?.emailAddress || ''}
+                {user?.primaryEmailAddress?.emailAddress || ''}
               </p>
             </div>
           </div>
@@ -1596,6 +1382,9 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                       </div>
                   }
                 </div>
+                {userUsername && (
+                  <span className="text-sm text-slate-400 font-medium">@{userUsername}</span>
+                )}
               </div>
             </div>
           </header>
@@ -1619,12 +1408,11 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
             return (
             <div className="p-12 space-y-10">
 
-              {/* ── 5 Stat Cards ── */}
-              <section className="grid grid-cols-2 xl:grid-cols-5 gap-5">
+              {/* ── 4 Stat Cards ── */}
+              <section className="grid grid-cols-2 xl:grid-cols-4 gap-5">
                 {[
                   { label: 'Total Resources', value: resources.length, accent: '#ff86c2', sub: 'Uploaded materials' },
                   { label: 'Active Requests', value: requests.length, accent: '#bf81ff', sub: 'Community requests' },
-                  { label: 'Live Challenges', value: CHALLENGES.length, accent: '#f97316', sub: 'Active sprints' },
                   { label: 'Scheduled Sessions', value: sessions.length, accent: '#4ade80', sub: 'Tech & study sessions' },
                   { label: 'Suggestions', value: suggestions.length, accent: '#facc15', sub: 'Community ideas' },
                 ].map(card => (
@@ -1638,43 +1426,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                   </BorderGlow>
                 ))}
               </section>
-
-              {/* ── Live Sessions Section ── */}
-              {(() => {
-                const now = new Date();
-                const upcomingSessions = sessions
-                  .filter(s => !s.isCancelled && new Date(s.date + 'T' + s.time) > now)
-                  .sort((a, b) => new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime())
-                  .slice(0, 5);
-                
-                if (upcomingSessions.length === 0) return null;
-                
-                return (
-                  <section className="bg-surface-container p-7 space-y-4">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Upcoming Sessions</p>
-                      <h3 className="text-lg font-black font-headline text-on-surface mt-1">Next in Line</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {upcomingSessions.map(s => {
-                        const sessionDate = new Date(s.date + 'T' + s.time);
-                        const localTime = getUserLocalTime(s);
-                        return (
-                          <div key={s.id} onClick={() => { setCurrentSection('schedule'); setSelectedSession(s); }}
-                            className="bg-surface-container-high p-4 cursor-pointer hover:bg-surface-container-highest transition-colors">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-green-400/20 text-green-400">{s.difficulty || 'beginner'}</span>
-                              {s.sessionType === 'deep-dive' && <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-purple-400/20 text-purple-400">Deep Dive</span>}
-                            </div>
-                            <h4 className="text-sm font-bold text-on-surface truncate">{s.topic}</h4>
-                            <p className="text-[10px] text-slate-500 mt-1">{localTime.convertedDate} · {localTime.converted}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })()}
 
               {/* ── Charts Row 1: 3 gradient bar charts ── */}
               <section className="grid grid-cols-12 gap-6">
@@ -2185,16 +1936,13 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
               const isJoined = myJoinedGroups[g.id];
               const groupTagColor = getTagColor(g.title + ' ' + g.agenda);
               const now = new Date();
-              const localTime = getUserLocalGroupTime(g);
               const scheduledDate = g.scheduledAt ? new Date(g.scheduledAt) : null;
               const minsUntil = scheduledDate ? Math.round((scheduledDate.getTime() - now.getTime()) / 60000) : null;
               const timeLabel = minsUntil === null ? null
                 : minsUntil < 0 ? 'Session ended'
                 : minsUntil < 60 ? `Starts in ${minsUntil}m`
                 : minsUntil < 1440 ? `Starts in ${Math.round(minsUntil / 60)}h`
-                : localTime.showConversion 
-                  ? `${localTime.convertedDate} at ${localTime.converted}`
-                  : scheduledDate!.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' at ' + scheduledDate!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                : scheduledDate!.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' at ' + scheduledDate!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
               return (
                 <div className="bg-surface-container p-6 flex flex-col gap-4 relative overflow-hidden"
@@ -2301,21 +2049,8 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Scheduled Date & Time</label>
-                      <div className="flex gap-2">
-                        <input type="datetime-local" value={sgScheduledAt} onChange={e => setSgScheduledAt(e.target.value)}
-                          className="flex-1 bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
-                        {sgScheduledAt && (
-                          <select value={sgScheduledTimezone} onChange={e => setSgScheduledTimezone(e.target.value)}
-                            className="bg-surface-container-low border-b border-outline-variant focus:border-primary px-2 py-2.5 text-sm text-on-surface outline-none transition-colors">
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>UTC</option>
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/New_York</option>
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/London</option>
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Dubai</option>
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Kolkata</option>
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Singapore</option>
-                          </select>
-                        )}
-                      </div>
+                      <input type="datetime-local" value={sgScheduledAt} onChange={e => setSgScheduledAt(e.target.value)}
+                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
                     </div>
                   </div>
                   <button onClick={handleCreateStudyGroup}
@@ -2419,12 +2154,11 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         <div className="space-y-0.5">
                           {daySessions.slice(0, 3).map(s => {
                             const tc = s.tag ? getTagColor(s.tag) : platformColor[s.platform];
-                            const localTime = getUserLocalTime(s);
                             return (
                             <button key={s.id} onClick={() => setSelectedSession(s)}
                               className="w-full text-left px-1.5 py-0.5 text-[10px] font-semibold truncate transition-opacity hover:opacity-80"
                               style={{ background: tc + '30', color: tc, borderLeft: `2px solid ${tc}` }}>
-                              {localTime.showConversion ? localTime.converted : s.time} {s.topic}
+                              {s.time} {s.topic}
                             </button>
                             );
                           })}
@@ -2468,26 +2202,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Timezone</label>
-                      <select value={sessionTimezone} onChange={e => setSessionTimezone(e.target.value)}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>UTC</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/New_York</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/Chicago</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/Denver</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/Los_Angeles</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/London</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/Paris</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/Berlin</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Dubai</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Kolkata</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Singapore</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Tokyo</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Australia/Sydney</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Pacific/Auckland</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Tag</label>
                       <input type="text" placeholder="e.g. DevOps, Cloud" value={sessionTag} onChange={e => setSessionTag(e.target.value)}
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
@@ -2505,25 +2219,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         </select>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Whiteboard</label>
-                      <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-2 cursor-pointer group">
-                          <span className={`w-4 h-4 border-2 flex items-center justify-center transition-colors ${sessionWhiteboardEnabled ? 'border-primary bg-primary' : 'border-outline-variant bg-transparent'}`}
-                            onClick={() => setSessionWhiteboardEnabled(!sessionWhiteboardEnabled)}>
-                            {sessionWhiteboardEnabled && <span className="w-2 h-2 bg-on-primary block"></span>}
-                          </span>
-                          <span className={`text-sm transition-colors ${sessionWhiteboardEnabled ? 'text-on-surface font-bold' : 'text-slate-500 group-hover:text-slate-300'}`}>Enable Whiteboard</span>
-                        </label>
-                      </div>
-                      {sessionWhiteboardEnabled && (
-                        <div className="space-y-1">
-                          <input type="url" placeholder="https://excalidraw.com/..." value={sessionWhiteboardLink} onChange={e => setSessionWhiteboardLink(e.target.value)}
-                            className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
-                          <p className="text-[9px] text-slate-500">Leave empty to auto-generate with session topic</p>
-                        </div>
-                      )}
-                    </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
                         Duration (mins)
@@ -2533,65 +2228,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                       </label>
                       <input type="number" min="5" max="180" value={sessionDuration} onChange={e => setSessionDuration(e.target.value)}
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors" />
-                      <p className="text-[10px] text-green-400 font-bold mt-1">
-                        {sessionTime 
-                          ? `End Time: ${calculateEndTime(sessionTime, Number(sessionDuration) || 30)}`
-                          : `Set time to see end time (Duration: ${sessionDuration || 30} min)`}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Session Type</label>
-                      <div className="flex items-center gap-4">
-                        {['general', 'deep-dive'].map(type => (
-                          <label key={type} className="flex items-center gap-2 cursor-pointer group">
-                            <span className={`w-4 h-4 border-2 flex items-center justify-center transition-colors ${sessionType === type ? 'border-primary bg-primary' : 'border-outline-variant bg-transparent'}`}
-                              onClick={() => setSessionType(type as 'general' | 'deep-dive')}>
-                              {sessionType === type && <span className="w-2 h-2 bg-on-primary block"></span>}
-                            </span>
-                            <span className={`text-sm capitalize transition-colors ${sessionType === type ? 'text-on-surface font-bold' : 'text-slate-500 group-hover:text-slate-300'}`}>
-                              {type === 'general' ? 'General' : 'Deep Dive'}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    {sessionType === 'general' && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Tags</label>
-                        <div className="flex flex-wrap gap-2">
-                          {availableTags.map(tag => (
-                            <button key={tag} onClick={() => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
-                              className={`text-[10px] font-bold px-2 py-1 rounded border transition-all ${selectedTags.includes(tag) ? 'border-primary bg-primary/20 text-primary' : 'border-outline-variant text-slate-500 hover:border-slate-400'}`}>
-                              {tag}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Difficulty Level</label>
-                      <select value={sessionDifficulty} onChange={e => setSessionDifficulty(e.target.value as 'beginner' | 'medium' | 'advanced')}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }} value="beginner">Beginner</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }} value="medium">Medium</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }} value="advanced">Advanced</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Add Co-host</label>
-                      <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-2 cursor-pointer group">
-                          <span className={`w-4 h-4 border-2 flex items-center justify-center transition-colors ${sessionCohostEnabled ? 'border-primary bg-primary' : 'border-outline-variant bg-transparent'}`}
-                            onClick={() => setSessionCohostEnabled(!sessionCohostEnabled)}>
-                            {sessionCohostEnabled && <span className="w-2 h-2 bg-on-primary block"></span>}
-                          </span>
-                          <span className={`text-sm transition-colors ${sessionCohostEnabled ? 'text-on-surface font-bold' : 'text-slate-500 group-hover:text-slate-300'}`}>Enable</span>
-                        </label>
-                      </div>
-                      {sessionCohostEnabled && (
-                        <input type="text" placeholder="Enter cohost username" value={sessionCohostUsername} onChange={e => setSessionCohostUsername(e.target.value)}
-                          className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
-                      )}
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Meeting Link</label>
@@ -2623,7 +2259,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => handleAddSession()}
+                  <button onClick={handleAddSession}
                     className="mt-6 bg-primary text-on-primary px-8 py-4 text-xs font-black uppercase tracking-[0.2em] neon-glow-primary transition-all">
                     Schedule Session
                   </button>
@@ -2646,12 +2282,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                           <h3 className="text-2xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.01em' }}>
                             {selectedSession.topic}
                           </h3>
-                          {selectedSession.isCancelled && (
-                            <span className="inline-block mt-2 text-[9px] font-black text-red-400 bg-red-400/20 px-2 py-0.5 uppercase tracking-widest">
-                              ⚠ CANCELLED: {selectedSession.cancelReason}
-                            </span>
-                          )}
-                          {(selectedSession.duration || 30) > 30 && !selectedSession.isCancelled && (
+                          {(selectedSession.duration || 30) > 30 && (
                             <span className="inline-block mt-2 text-[9px] font-black text-orange-400 bg-orange-400/10 px-2 py-0.5 uppercase tracking-widest">⚠ {selectedSession.duration} min session</span>
                           )}
                         </div>
@@ -2674,33 +2305,8 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Date & Time</p>
-                          {(() => {
-                            const localTime = getUserLocalTime(selectedSession);
-                            const duration = selectedSession.duration || 30;
-                            const endTime = calculateEndTime(selectedSession.time, duration);
-                            return (
-                              <>
-                                <p className="text-sm font-bold text-on-surface mb-1">
-                                  {localTime.showConversion ? localTime.convertedDate : selectedSession.date}
-                                </p>
-                                <p className="text-xs text-slate-400">
-                                  {localTime.showConversion ? (
-                                    <span>
-                                      <span className="text-slate-500 line-through mr-2">{localTime.original}</span>
-                                      <span className="text-green-400">{localTime.converted}</span>
-                                    </span>
-                                  ) : (
-                                    localTime.original
-                                  )}
-                                  <span className="text-slate-500 mx-1">-</span>
-                                  <span className="text-green-400">{endTime}</span>
-                                </p>
-                                <p className="text-[9px] font-bold text-primary mt-1">
-                                  Your timezone: {localTime.userTimezone}
-                                </p>
-                              </>
-                            );
-                          })()}
+                          <p className="text-sm font-bold text-on-surface">{selectedSession.date}</p>
+                          <p className="text-xs text-slate-400">{selectedSession.time}</p>
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Platform</p>
@@ -2709,116 +2315,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                             <PlatformIcon platform={selectedSession.platform} size={13} />
                             {selectedSession.platform}
                           </span>
-                          <div className="mt-2 text-[10px] font-bold text-slate-400">
-                            Duration: <span className="text-green-400">{selectedSession.duration || 30} min</span>
-                          </div>
-                        </div>
-                        {selectedSession.sessionType && (
-                          <div className="bg-surface-container-high p-4">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Session Type</p>
-                            <span className={`text-xs font-bold uppercase px-2 py-1 ${selectedSession.sessionType === 'deep-dive' ? 'text-purple-400 bg-purple-400/20' : 'text-blue-400 bg-blue-400/20'}`}>
-                              {selectedSession.sessionType === 'deep-dive' ? 'Deep Dive' : 'General'}
-                            </span>
-                            {selectedSession.difficulty && (
-                              <span className={`ml-2 text-xs font-bold uppercase px-2 py-1 ${
-                                selectedSession.difficulty === 'beginner' ? 'text-green-400 bg-green-400/20' :
-                                selectedSession.difficulty === 'medium' ? 'text-yellow-400 bg-yellow-400/20' :
-                                'text-red-400 bg-red-400/20'
-                              }`}>
-                                {selectedSession.difficulty}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {selectedSession.cohostUsername && (
-                          <div className="bg-surface-container-high p-4">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Co-host</p>
-                            <span className="text-xs font-bold text-on-surface">
-                              {selectedSession.cohostUsername}
-                              {selectedSession.cohostStatus === 'pending' && (
-                                <span className="ml-2 text-yellow-400 text-[10px]">(Pending approval)</span>
-                              )}
-                              {selectedSession.cohostStatus === 'accepted' && (
-                                <span className="ml-2 text-green-400 text-[10px]">(Accepted)</span>
-                              )}
-                              {selectedSession.cohostStatus === 'rejected' && (
-                                <span className="ml-2 text-red-400 text-[10px]">(Rejected)</span>
-                              )}
-                            </span>
-                          </div>
-                        )}
-                        <div className="bg-surface-container-high p-4">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Add to Calendar</p>
-                          {(() => {
-                            const isPast = new Date(selectedSession.date + 'T' + selectedSession.time) < new Date();
-                            if (isPast) {
-                              return (
-                                <div className="flex flex-col gap-2">
-                                  <span className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-slate-800 text-slate-500 cursor-not-allowed">
-                                    📅 Google Calendar
-                                  </span>
-                                  <span className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-slate-800 text-slate-500 cursor-not-allowed">
-                                    📥 Download ICS
-                                  </span>
-                                </div>
-                              );
-                            }
-                            return (
-                              <div className="flex flex-col gap-2">
-                                {(() => {
-                                  const duration = selectedSession.duration || 30;
-                                  const startTime = selectedSession.time;
-                                  const endTime = calculateEndTime(startTime, duration);
-                                  const startDt = `${selectedSession.date.replace(/-/g, '')}T${startTime.replace(':', '')}00`;
-                                  const endDt = `${selectedSession.date.replace(/-/g, '')}T${endTime.replace(':', '')}00`;
-                                  return (
-                                <a 
-                                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(selectedSession.topic)}&dates=${startDt}/${endDt}&details=${encodeURIComponent(`Host: ${selectedSession.author}\\nPlatform: ${selectedSession.platform}\\nLink: ${selectedSession.meetingLink}`)}&location=${encodeURIComponent(selectedSession.meetingLink)}`}
-                                  target="_blank" rel="noreferrer"
-                                  className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
-                                >
-                                  📅 Google Calendar
-                                </a>
-                                  );
-                                })()}
-                                <button 
-                                  onClick={() => {
-                                    const formatDate = (date: string, time: string) => {
-                                      const d = date.replace(/-/g, '');
-                                      const t = time.replace(':', '') + '00';
-                                      return `${d}T${t}`;
-                                    };
-                                    const duration = selectedSession.duration || 30;
-                                    const startTime = selectedSession.time;
-                                    const endTime = calculateEndTime(startTime, duration);
-                                    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Study Resource Hub//EN
-BEGIN:VEVENT
-UID:${selectedSession.id}@study-resource-hub
-DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z
-DTSTART:${formatDate(selectedSession.date, startTime)}
-DTEND:${formatDate(selectedSession.date, endTime)}
-SUMMARY:${selectedSession.topic}
-DESCRIPTION:Host: ${selectedSession.author}\\nPlatform: ${selectedSession.platform}\\nLink: ${selectedSession.meetingLink}
-LOCATION:${selectedSession.meetingLink}
-END:VEVENT
-END:VCALENDAR`;
-                                    const blob = new Blob([icsContent], { type: 'text/calendar' });
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = `${selectedSession.topic.replace(/\\s+/g, '-').toLowerCase()}.ics`;
-                                    a.click();
-                                    URL.revokeObjectURL(url);
-                                  }}
-                                  className="text-[10px] font-bold uppercase px-3 py-2 text-center bg-slate-700/50 text-slate-400 hover:bg-slate-700 transition-colors"
-                                >
-                                  📥 Download ICS
-                                </button>
-                              </div>
-                            );
-                          })()}
                         </div>
                         <div className="bg-surface-container-high p-4">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Attendees</p>
@@ -2851,60 +2347,12 @@ END:VCALENDAR`;
                         </div>
                       </div>
 
-                      {/* Meeting link CTA or Whiteboard CTA */}
-                      {(() => {
-                        const isPast = new Date(selectedSession.date + 'T' + selectedSession.time) < new Date();
-                        const hasWhiteboard = selectedSession.whiteboardLink;
-                        const meetingLink = selectedSession.meetingLink;
-                        const displayLink = hasWhiteboard || meetingLink;
-                        const isCancelled = selectedSession.isCancelled;
-                        
-                        if (isCancelled) {
-                          return (
-                            <div className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-red-900/50 text-red-400">
-                              ⚠ Session Cancelled
-                            </div>
-                          );
-                        }
-                        
-                        if (isPast) {
-                          return (
-                            <div className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-slate-700 text-slate-400 cursor-not-allowed">
-                              <Video size={14} /> {hasWhiteboard ? 'Session Ended' : 'Meeting Ended'}
-                            </div>
-                          );
-                        }
-                        
-                        // If has whiteboard, show whiteboard link with share option
-                        if (hasWhiteboard) {
-                          return (
-                            <div className="flex flex-col gap-2">
-                              <a href={selectedSession.whiteboardLink!} target="_blank" rel="noreferrer"
-                                className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all"
-                                style={{ background: '#ff6b35', color: '#0e0e13' }}>
-                                🎨 Open Whiteboard
-                              </a>
-                              <button 
-                                onClick={() => {
-                                  navigator.clipboard.writeText(selectedSession.whiteboardLink || '');
-                                  alert('Whiteboard link copied to clipboard!');
-                                }}
-                                className="flex items-center justify-center gap-2 w-full py-2 text-[10px] font-bold uppercase tracking-widest bg-surface-container-high text-slate-400 hover:text-white transition-colors"
-                              >
-                                📋 Copy Whiteboard Link
-                              </button>
-                            </div>
-                          );
-                        }
-                        
-                        return (
-                          <a href={selectedSession.meetingLink} target="_blank" rel="noreferrer"
-                            className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all"
-                            style={{ background: sessionColor, color: '#0e0e13' }}>
-                            <Video size={14} /> Join Meeting
-                          </a>
-                        );
-                      })()}
+                      {/* Meeting link CTA */}
+                      <a href={selectedSession.meetingLink} target="_blank" rel="noreferrer"
+                        className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all"
+                        style={{ background: sessionColor, color: '#0e0e13' }}>
+                        <Video size={14} /> Join Meeting
+                      </a>
 
                       {/* Recording section */}
                       {selectedSession.willRecord && (() => {
@@ -3037,38 +2485,10 @@ END:VCALENDAR`;
                       })()}
 
                       {userIsAdmin && (
-                        <div className="space-y-2">
-                          <button onClick={() => {
-                            const newTopic = prompt('Enter new topic (leave empty to keep current):', selectedSession.topic);
-                            const newDate = prompt('Enter new date (YYYY-MM-DD):', selectedSession.date);
-                            const newTime = prompt('Enter new time (HH:MM):', selectedSession.time);
-                            const updates: any = {};
-                            if (newTopic && newTopic !== selectedSession.topic) updates.topic = newTopic;
-                            if (newDate && newDate !== selectedSession.date) updates.date = newDate;
-                            if (newTime && newTime !== selectedSession.time) updates.time = newTime;
-                            if (Object.keys(updates).length > 0) {
-                              if (confirm('This will notify all attendees about the change. Continue?')) {
-                                handleUpdateSession(selectedSession.id, updates);
-                              }
-                            }
-                          }}
-                            className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-primary transition-colors">
-                            Update Session
-                          </button>
-                          <button onClick={() => {
-                            const reason = prompt('Enter cancellation reason:');
-                            if (reason && confirm('This will notify all attendees about the cancellation. Continue?')) {
-                              handleUpdateSession(selectedSession.id, { isCancelled: true, cancelReason: reason });
-                            }
-                          }}
-                            className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-red-400 transition-colors">
-                            Cancel Session
-                          </button>
-                          <button onClick={() => handleDeleteSession(selectedSession.id)}
-                            className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-red-400 transition-colors">
-                            Remove Session
-                          </button>
-                        </div>
+                        <button onClick={() => handleDeleteSession(selectedSession.id)}
+                          className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:text-red-400 transition-colors">
+                          Remove Session
+                        </button>
                       )}
                     </div>
                     );
@@ -3083,24 +2503,13 @@ END:VCALENDAR`;
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">All Sessions</p>
                           {[...sessions].sort((a,b) => new Date(a.date+'T'+a.time).getTime()-new Date(b.date+'T'+b.time).getTime()).map(s => {
                             const isRegistered = myRegisteredSessions[s.id] || false;
-                            const localTime = getUserLocalTime(s);
                             return (
                             <div key={s.id} className="w-full flex items-center gap-3 px-3 py-2 bg-surface-container-high hover:bg-surface-container-highest transition-colors group">
                               <button onClick={() => setSelectedSession(s)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
                                 <PlatformIcon platform={s.platform} size={14} />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs font-bold text-on-surface truncate">{s.topic}</p>
-                                  <p className="text-[10px] text-slate-500">
-                                    {localTime.showConversion ? (
-                                      <span>
-                                        {localTime.convertedDate} · 
-                                        <span className="text-green-400">{localTime.converted}</span>
-                                      </span>
-                                    ) : (
-                                      <span>{s.date} · {s.time}</span>
-                                    )}
-                                    {' · '}<span className="text-slate-400">{s.attendeeCount || 0} attending</span>{s.recordingDeleted && <span className="text-red-400 ml-1">· rec. removed</span>}
-                                  </p>
+                                  <p className="text-[10px] text-slate-500">{s.date} · {s.time} · <span className="text-slate-400">{s.attendeeCount || 0} attending</span>{s.recordingDeleted && <span className="text-red-400 ml-1">· rec. removed</span>}</p>
                                 </div>
                               </button>
                               <button
@@ -3201,9 +2610,7 @@ END:VCALENDAR`;
                       <p className="text-sm text-slate-500 mt-1">History of completed sessions</p>
                     </div>
                     <div className="space-y-1">
-                      {past.map(s => {
-                        const localTime = getUserLocalTime(s);
-                        return (
+                      {past.map(s => (
                         <div key={s.id}
                           className="flex items-center gap-4 px-4 py-3 bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer group"
                           onClick={() => setSelectedSession(s)}
@@ -3211,13 +2618,7 @@ END:VCALENDAR`;
                           <div className="w-1.5 h-1.5 flex-shrink-0 opacity-40" style={{ background: platformColor[s.platform] }}></div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-on-surface truncate group-hover:text-primary transition-colors">{s.topic}</p>
-                            <p className="text-[10px] text-slate-500">
-                              {s.author} · {localTime.showConversion ? (
-                                <span>{localTime.convertedDate} at <span className="text-green-400">{localTime.converted}</span></span>
-                              ) : (
-                                <span>{s.date} at {s.time}</span>
-                              )}
-                            </p>
+                            <p className="text-[10px] text-slate-500">{s.author} · {s.date} at {s.time}</p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <span className="text-[9px] font-bold uppercase px-2 py-0.5"
@@ -3229,11 +2630,12 @@ END:VCALENDAR`;
                             )}
                           </div>
                         </div>
-                      )})}
+                      ))}
                     </div>
                   </div>
                 );
               })()}
+
             </div>
           )}
 
@@ -4135,91 +3537,6 @@ END:VCALENDAR`;
         )}
 
       </div>
-
-      {/* Session Confirmation Modal */}
-      {showSessionConfirmModal && pendingSessionData && (() => {
-        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const sessionDateTime = new Date(`${pendingSessionData.date}T${pendingSessionData.time}:00`);
-        
-        const formatTimeWithTz = (dt: Date, tz: string): string => {
-          return dt.toLocaleString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
-            timeZone: tz,
-          });
-        };
-        
-        const getGMTOffset = (tz: string): string => {
-          const now = new Date();
-          const formatter = new Intl.DateTimeFormat('en-US', {
-            timeZone: tz,
-            timeZoneName: 'shortOffset'
-          });
-          const parts = formatter.formatToParts(now);
-          const offsetPart = parts.find(p => p.type === 'timeZoneName');
-          return offsetPart?.value || '';
-        };
-        
-        const startTimeFormatted = `${formatTimeWithTz(sessionDateTime, userTimezone)} (${getGMTOffset(userTimezone)})`;
-        const endDateTime = new Date(sessionDateTime.getTime() + pendingSessionData.duration * 60000);
-        const endTimeFormatted = `${formatTimeWithTz(endDateTime, userTimezone)} (${getGMTOffset(userTimezone)})`;
-        
-        return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-surface-container border border-outline-variant rounded-xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-black font-headline text-on-surface">Confirm Session</h3>
-              <button onClick={() => { setShowSessionConfirmModal(false); setPendingSessionData(null); }} className="text-slate-500 hover:text-on-surface text-xl">×</button>
-            </div>
-            <div className="space-y-4">
-              <div className="bg-surface-container-high p-4 rounded-lg">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Topic</p>
-                <p className="text-sm font-bold text-on-surface">{pendingSessionData.topic}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-surface-container-high p-4 rounded-lg">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Date</p>
-                  <p className="text-sm font-bold text-on-surface">{pendingSessionData.date}</p>
-                </div>
-                <div className="bg-surface-container-high p-4 rounded-lg">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Duration</p>
-                  <p className="text-sm font-bold text-on-surface">{pendingSessionData.duration} min</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-surface-container-high p-4 rounded-lg">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Start Time</p>
-                  <p className="text-sm font-bold text-green-400">{startTimeFormatted}</p>
-                </div>
-                <div className="bg-surface-container-high p-4 rounded-lg">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">End Time</p>
-                  <p className="text-sm font-bold text-green-400">{endTimeFormatted}</p>
-                </div>
-              </div>
-              <div className="bg-surface-container-high p-4 rounded-lg">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Platform</p>
-                <p className="text-sm font-bold text-on-surface">{pendingSessionData.platform}</p>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => { setShowSessionConfirmModal(false); setPendingSessionData(null); }}
-                className="flex-1 py-3 text-xs font-black uppercase tracking-widest border border-outline-variant text-slate-400 hover:text-on-surface hover:border-slate-400 transition-all">
-                Cancel
-              </button>
-              <button onClick={async () => {
-                setShowSessionConfirmModal(false);
-                await handleAddSession(pendingSessionData);
-                setPendingSessionData(null);
-              }}
-                className="flex-1 py-3 text-xs font-black uppercase tracking-widest bg-primary text-on-primary neon-glow-primary transition-all">
-                Confirm & Schedule
-              </button>
-            </div>
-          </div>
-        </div>
-        );
-      })()}
     </ThemeProvider>
   );
 };
