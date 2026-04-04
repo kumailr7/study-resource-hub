@@ -683,6 +683,23 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const [challengeParticipants, setChallengeParticipants] = useState<Record<string, number>>({});
   const [joinedChallenges, setJoinedChallenges] = useState<Record<string, boolean>>({});
   const [selectedChallenge, setSelectedChallenge] = useState<string | null>(null);
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
+  const [bannerFading, setBannerFading] = useState(false);
+
+  // Auto-cycle banner when on challenges section
+  useEffect(() => {
+    const liveChallenges = CHALLENGES.filter(c => getChallengeStatus(c).live);
+    if (currentSection !== 'challenges' || liveChallenges.length <= 1) return;
+    const timer = setInterval(() => {
+      setBannerFading(true);
+      setTimeout(() => {
+        setActiveBannerIdx(i => (i + 1) % liveChallenges.length);
+        setBannerFading(false);
+      }, 350);
+    }, 4000);
+    (window as any).__bannerTimer = timer;
+    return () => clearInterval(timer);
+  }, [currentSection]); // eslint-disable-line react-hooks/exhaustive-deps
   const handleJoinChallenge = async (id: string) => {
     if (joinedChallenges[id]) return;
     const current = challengeParticipants[id] || 0;
@@ -2024,7 +2041,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
 
           {/* ── Section: Challenges ── */}
           {currentSection === 'challenges' && (() => {
-            const liveChallenge = CHALLENGES.find(c => getChallengeStatus(c).live && c.weekly);
             return (
               <div className="p-12 space-y-10">
                 <style>{`
@@ -2034,38 +2050,104 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                   .signal-ring { animation: signalRing 1.4s ease-out infinite; }
                 `}</style>
 
-                {/* Live Weekly Featured Banner */}
-                {liveChallenge && (() => {
-                  const st = getChallengeStatus(liveChallenge);
-                  const slots = challengeParticipants[liveChallenge.id] || 0;
+                {/* Live Challenges Auto-Scrolling Banner */}
+                {(() => {
+                  const liveChallenges = CHALLENGES.filter(c => getChallengeStatus(c).live);
+                  if (liveChallenges.length === 0) return null;
+                  const safeIdx = activeBannerIdx % liveChallenges.length;
+                  const c = liveChallenges[safeIdx];
+                  const st = getChallengeStatus(c);
+                  const slots = challengeParticipants[c.id] || 0;
                   const isFull = slots >= CHALLENGE_MAX_SLOTS;
-                  const isJoined = !!joinedChallenges[liveChallenge.id];
+                  const isJoined = !!joinedChallenges[c.id];
+
+                  const goTo = (idx: number) => {
+                    if (bannerFading) return;
+                    setBannerFading(true);
+                    setTimeout(() => {
+                      setActiveBannerIdx(idx);
+                      setBannerFading(false);
+                    }, 350);
+                  };
+
                   return (
-                    <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #6b21a8 0%, #a21caf 35%, #db2777 70%, #f472b6 100%)', minHeight: '120px' }}>
-                      {/* Subtle noise/depth overlay */}
-                      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 100%)' }} />
-                      {/* Pulsing signal dot top-left */}
+                    <div
+                      className="relative overflow-hidden"
+                      style={{ minHeight: '120px' }}
+                      onMouseEnter={() => clearInterval((window as any).__bannerTimer)}
+                      onMouseLeave={() => {
+                        (window as any).__bannerTimer = setInterval(() => {
+                          setBannerFading(true);
+                          setTimeout(() => {
+                            setActiveBannerIdx(i => (i + 1) % liveChallenges.length);
+                            setBannerFading(false);
+                          }, 350);
+                        }, 4000);
+                      }}
+                    >
+                      {/* Gradient background that transitions with the challenge colour */}
+                      <div
+                        className="absolute inset-0 transition-all duration-700"
+                        style={{ background: `linear-gradient(135deg, ${c.color}cc 0%, ${c.color}88 30%, #db2777 70%, #f472b6 100%)` }}
+                      />
+                      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0) 100%)' }} />
+
+                      {/* Pulsing signal dot */}
                       <div className="absolute top-5 left-5 flex items-center justify-center">
                         <span className="signal-ring absolute w-5 h-5 rounded-full border-2 border-white/60" />
                         <span className="live-dot w-2.5 h-2.5 rounded-full bg-white" style={{ boxShadow: '0 0 8px rgba(255,255,255,0.8)' }} />
                       </div>
-                      <div className="relative z-10 flex items-center justify-between gap-6 px-8 py-7 pl-14">
-                        <div>
-                          <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/70 mb-1">This Week's Featured</p>
-                          <h3 className="text-2xl font-black text-white leading-tight">{liveChallenge.title}</h3>
-                          <p className="text-xs text-white/70 mt-1.5 max-w-lg">{liveChallenge.desc}</p>
+
+                      {/* Content — key forces BlurText to re-mount and re-animate on each slide */}
+                      <div
+                        key={`banner-${c.id}`}
+                        className="relative z-10 flex items-center justify-between gap-6 px-8 py-7 pl-14 transition-opacity duration-350"
+                        style={{ opacity: bannerFading ? 0 : 1 }}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/70 mb-1">
+                            Live Now · {liveChallenges.length > 1 ? `${safeIdx + 1} of ${liveChallenges.length}` : 'This Week\'s Challenge'}
+                          </p>
+                          <h3 className="text-2xl font-black text-white leading-tight">
+                            <BlurText text={c.title} delay={300} animateBy="words" key={`title-${c.id}`} />
+                          </h3>
+                          <p className="text-xs text-white/70 mt-1.5 max-w-lg">
+                            <BlurText text={c.desc} delay={200} animateBy="words" direction="bottom" key={`desc-${c.id}`} />
+                          </p>
                           <p className="text-[10px] text-white/50 mt-2 font-bold uppercase tracking-widest">{st.label} · {slots}/{CHALLENGE_MAX_SLOTS} joined</p>
                         </div>
-                        <button
-                          disabled={isFull || isJoined}
-                          onClick={() => handleJoinChallenge(liveChallenge.id)}
-                          className="flex-shrink-0 text-xs font-black uppercase tracking-widest px-8 py-4 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                          style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.35)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
-                          onMouseEnter={e => { if (!isFull && !isJoined) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.30)'; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.18)'; }}>
-                          {isJoined ? '✓ Joined' : isFull ? 'Full' : 'Join Now'}
-                        </button>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <button
+                            disabled={isFull || isJoined}
+                            onClick={() => handleJoinChallenge(c.id)}
+                            className="text-xs font-black uppercase tracking-widest px-8 py-4 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                            style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.35)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+                            onMouseEnter={e => { if (!isFull && !isJoined) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.30)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.18)'; }}
+                          >
+                            {isJoined ? '✓ Joined' : isFull ? 'Full' : 'Join Now'}
+                          </button>
+                        </div>
                       </div>
+
+                      {/* Dot indicators + arrows (only when >1 live challenge) */}
+                      {liveChallenges.length > 1 && (
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
+                          {liveChallenges.map((_, i) => (
+                            <button
+                              key={i}
+                              onClick={() => goTo(i)}
+                              className="transition-all duration-300"
+                              style={{
+                                width: i === safeIdx ? '20px' : '6px',
+                                height: '6px',
+                                borderRadius: '3px',
+                                background: i === safeIdx ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.35)',
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
