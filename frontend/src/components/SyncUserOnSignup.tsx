@@ -11,12 +11,12 @@ const SyncUserOnSignup: React.FC = () => {
   const [status, setStatus] = useState<'syncing' | 'done' | 'error'>('syncing');
 
   useEffect(() => {
+    // Show alert to debug
+    window.alert(`useEffect: isLoaded=${isLoaded}, user exists=${!!user}`);
     console.log('SyncSignup component loaded');
     console.log('isLoaded:', isLoaded);
     console.log('user:', user);
-    console.log('user.username:', user?.username);
-    console.log('user.firstName:', user?.firstName);
-    console.log('user.externalId:', user?.externalId);
+    console.log('user?.username:', user?.username);
     
     // Try to get username from different Clerk properties
     if (user) {
@@ -26,6 +26,7 @@ const SyncUserOnSignup: React.FC = () => {
     
     const syncUser = async () => {
       if (!isLoaded || !user) {
+        window.alert(`Skipping: isLoaded=${isLoaded}, user=${user}`);
         console.log('Skipping sync - not loaded or no user');
         return;
       }
@@ -38,6 +39,7 @@ const SyncUserOnSignup: React.FC = () => {
         const userUsername = user.username || '';
         const fallbackUsername = user.firstName ? user.firstName.toLowerCase().replace(/\s+/g, '') : '';
         
+        window.alert(`Sending to backend - username: ${userUsername || fallbackUsername}`);
         console.log('Sending to backend:', {
           clerkId: user.id,
           email: user.primaryEmailAddress?.emailAddress || email,
@@ -55,11 +57,13 @@ const SyncUserOnSignup: React.FC = () => {
         });
 
         console.log('Backend response:', syncRes.data);
+        window.alert(`Backend response: ${JSON.stringify(syncRes.data)}`);
 
         setStatus('done');
         setTimeout(() => {
           const username = syncRes.data?.username || user.username || user.firstName?.toLowerCase().replace(/\s+/g, '') || '';
           console.log('Redirecting to:', username);
+          window.alert(`Redirecting to: /${username}`);
           if (username) {
             navigate(`/${username}`, { replace: true });
           } else {
@@ -68,6 +72,7 @@ const SyncUserOnSignup: React.FC = () => {
         }, 500);
       } catch (err) {
         console.error('Sync error:', err);
+        window.alert(`Error: ${err}`);
         setStatus('error');
         setTimeout(() => {
           navigate('/user', { replace: true });
