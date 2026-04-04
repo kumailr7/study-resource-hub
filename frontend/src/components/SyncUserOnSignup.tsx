@@ -19,6 +19,11 @@ const SyncUserOnSignup: React.FC = () => {
       try {
         const token = searchParams.get('token');
         const email = searchParams.get('email');
+        
+        console.log('Clerk user object:', user);
+        console.log('Clerk username:', user.username);
+        console.log('Clerk firstName:', user.firstName);
+        console.log('Clerk lastName:', user.lastName);
 
         const syncRes = await axios.post<{ username: string }>(`${API_BASE_URL}/users/sync`, {
           clerkId: user.id,
@@ -27,6 +32,8 @@ const SyncUserOnSignup: React.FC = () => {
           lastName: user.lastName,
           username: user.username || ''
         });
+
+        console.log('Sync response:', syncRes.data);
 
         setStatus('done');
         setTimeout(() => {
