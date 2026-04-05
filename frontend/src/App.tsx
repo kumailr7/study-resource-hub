@@ -241,7 +241,7 @@ interface AuthState {
   isAdmin: boolean;
 }
 
-type Section = 'dashboard' | 'challenges' | 'schedule' | 'analytics' | 'resources' | 'studygroups';
+type Section = 'dashboard' | 'challenges' | 'schedule' | 'analytics' | 'resources' | 'studygroups' | 'suggestions';
 
 const CHART_COLORS = ['#ff86c2', '#bf81ff', '#4ade80', '#facc15', '#38bdf8', '#fb923c', '#f472b6', '#a78bfa'];
 const GRADIENT_PAIRS: [string, string][] = [
