@@ -1528,6 +1528,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
             {navItem('studygroups', Users, 'Study Groups')}
             {userIsAdmin && navItem('analytics', LineChart, 'Analytics')}
             {navItem('resources', Package, 'Resources')}
+            {navItem('suggestions', Lightbulb, 'Suggestions')}
 
             {/* WhatsApp Community Button */}
             <div className="pt-4">
@@ -1970,69 +1971,47 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                 </ResponsiveContainer>
               </section>
 
-              {/* ── Suggestions ── */}
-              <section className="space-y-6">
-                <div className="flex justify-between items-end">
-                  <div>
-                    <h3 className="text-2xl font-black font-headline text-on-surface">Suggestions</h3>
-                    <p className="text-sm text-slate-500">Community ideas & feature requests</p>
-                  </div>
-                </div>
-
-                {/* Add suggestion form */}
-                <div className="bg-surface-container p-8">
-                  <h4 className="text-sm font-bold font-headline text-on-surface mb-6 flex items-center gap-2">
-                    <Lightbulb size={16} className="text-primary" /> Submit a Suggestion
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Your Name</label>
-                      <input type="text" placeholder="e.g. Alex Rivera" value={suggAuthor} onChange={e => setSuggAuthor(e.target.value)}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Type</label>
-                      <select value={suggType} onChange={e => setSuggType(e.target.value)}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface outline-none transition-colors">
-                        <option>Resource</option>
-                        <option>Feature</option>
-                        <option>Challenge</option>
-                        <option>Session Topic</option>
-                        <option>Other</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Suggestion</label>
-                      <input type="text" placeholder="e.g. Add Terraform module examples" value={suggText} onChange={e => setSuggText(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleAddSuggestion()}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
+              {/* ── Quick Suggestion Widget ── */}
+              <section className="bg-surface-container p-7">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb size={16} className="text-primary" />
+                    <div>
+                      <h3 className="text-sm font-black text-on-surface">Submit a Suggestion</h3>
+                      <p className="text-[10px] text-slate-500">Community ideas &amp; feature requests</p>
                     </div>
                   </div>
-                  <button onClick={handleAddSuggestion}
-                    className="mt-6 bg-primary text-on-primary px-8 py-4 text-xs font-black uppercase tracking-[0.2em] neon-glow-primary transition-all">
-                    Submit
+                  <button
+                    onClick={() => setCurrentSection('suggestions')}
+                    className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline"
+                  >
+                    View all →
                   </button>
                 </div>
-
-                {/* Suggestion cards */}
-                {suggestions.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {suggestions.map(s => (
-                      <div key={s.id} className="bg-surface-container-high p-6 flex flex-col gap-3 group">
-                        <div className="flex items-start justify-between">
-                          <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1"
-                            style={{ color: CHART_COLORS[['Resource','Feature','Challenge','Session Topic','Other'].indexOf(s.type) % CHART_COLORS.length],
-                                     background: CHART_COLORS[['Resource','Feature','Challenge','Session Topic','Other'].indexOf(s.type) % CHART_COLORS.length] + '20' }}>
-                            {s.type}
-                          </span>
-                          <button onClick={() => handleDeleteSuggestion(s.id)} className="text-slate-600 hover:text-red-400 transition-colors">×</button>
-                        </div>
-                        <p className="text-sm text-on-surface leading-relaxed flex-1">"{s.suggestion}"</p>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">— {s.author}</p>
-                      </div>
-                    ))}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Your Name</label>
+                    <input type="text" placeholder="e.g. Alex Rivera" value={suggAuthor} onChange={e => setSuggAuthor(e.target.value)}
+                      className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
                   </div>
-                )}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Type</label>
+                    <select value={suggType} onChange={e => setSuggType(e.target.value)}
+                      className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
+                      <option>Resource</option><option>Feature</option><option>Challenge</option><option>Session Topic</option><option>Other</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Suggestion</label>
+                    <input type="text" placeholder="e.g. Add Terraform module examples" value={suggText} onChange={e => setSuggText(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleAddSuggestion()}
+                      className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
+                  </div>
+                </div>
+                <button onClick={handleAddSuggestion}
+                  className="mt-5 bg-primary text-on-primary px-8 py-3 text-xs font-black uppercase tracking-[0.2em] neon-glow-primary transition-all">
+                  Submit
+                </button>
               </section>
 
             </div>
@@ -4086,6 +4065,94 @@ END:VCALENDAR`;
                 </div>
               )}
 
+            </div>
+          )}
+
+          {/* ── Section: Suggestions ── */}
+          {currentSection === 'suggestions' && (
+            <div className="p-12 space-y-10">
+              <div>
+                <h2 className="text-4xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.02em' }}>
+                  <SplitText text="Suggestions" delay={60} />
+                </h2>
+                <p className="text-slate-500 mt-2">Community ideas &amp; feature requests</p>
+              </div>
+
+              {/* Submit form */}
+              <div className="bg-surface-container p-8" style={{ borderLeft: '4px solid #ff86c2' }}>
+                <h4 className="text-sm font-bold font-headline text-on-surface mb-6 flex items-center gap-2">
+                  <Lightbulb size={16} className="text-primary" /> Submit a Suggestion
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Your Name</label>
+                    <input type="text" placeholder="e.g. Alex Rivera" value={suggAuthor} onChange={e => setSuggAuthor(e.target.value)}
+                      className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Type</label>
+                    <select value={suggType} onChange={e => setSuggType(e.target.value)}
+                      className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface outline-none transition-colors">
+                      <option>Resource</option><option>Feature</option><option>Challenge</option><option>Session Topic</option><option>Other</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Suggestion</label>
+                    <input type="text" placeholder="e.g. Add Terraform module examples" value={suggText} onChange={e => setSuggText(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleAddSuggestion()}
+                      className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
+                  </div>
+                </div>
+                <button onClick={handleAddSuggestion}
+                  className="mt-6 bg-primary text-on-primary px-8 py-4 text-xs font-black uppercase tracking-[0.2em] neon-glow-primary transition-all">
+                  Submit
+                </button>
+              </div>
+
+              {/* All suggestions — admin sees delete button, everyone sees the cards */}
+              {suggestions.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                      {suggestions.length} Submission{suggestions.length !== 1 ? 's' : ''}
+                    </p>
+                    {userIsAdmin && (
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Admin View — Delete enabled</p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {suggestions.map(s => {
+                      const typeColors: Record<string, string> = {
+                        Resource: '#ff86c2', Feature: '#bf81ff', Challenge: '#f97316',
+                        'Session Topic': '#38bdf8', Other: '#94a3b8',
+                      };
+                      const color = typeColors[s.type] || '#94a3b8';
+                      return (
+                        <div key={s.id} className="bg-surface-container p-6 flex flex-col gap-3 group"
+                          style={{ borderLeft: `3px solid ${color}` }}>
+                          <div className="flex items-start justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1"
+                              style={{ color, background: color + '20' }}>
+                              {s.type}
+                            </span>
+                            {userIsAdmin && (
+                              <button onClick={() => handleDeleteSuggestion(s.id)}
+                                className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                            )}
+                          </div>
+                          <p className="text-sm text-on-surface leading-relaxed flex-1">"{s.suggestion}"</p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">— {s.author}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-surface-container p-12 text-center">
+                  <Lightbulb size={32} className="text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-500 text-sm">No suggestions yet. Be the first!</p>
+                </div>
+              )}
             </div>
           )}
 
