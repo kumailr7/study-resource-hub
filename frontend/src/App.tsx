@@ -1971,48 +1971,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                 </ResponsiveContainer>
               </section>
 
-              {/* ── Quick Suggestion Widget ── */}
-              <section className="bg-surface-container p-7">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-2">
-                    <Lightbulb size={16} className="text-primary" />
-                    <div>
-                      <h3 className="text-sm font-black text-on-surface">Submit a Suggestion</h3>
-                      <p className="text-[10px] text-slate-500">Community ideas &amp; feature requests</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setCurrentSection('suggestions')}
-                    className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline"
-                  >
-                    View all →
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Your Name</label>
-                    <input type="text" placeholder="e.g. Alex Rivera" value={suggAuthor} onChange={e => setSuggAuthor(e.target.value)}
-                      className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Type</label>
-                    <select value={suggType} onChange={e => setSuggType(e.target.value)}
-                      className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
-                      <option>Resource</option><option>Feature</option><option>Challenge</option><option>Session Topic</option><option>Other</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Suggestion</label>
-                    <input type="text" placeholder="e.g. Add Terraform module examples" value={suggText} onChange={e => setSuggText(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleAddSuggestion()}
-                      className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" />
-                  </div>
-                </div>
-                <button onClick={handleAddSuggestion}
-                  className="mt-5 bg-primary text-on-primary px-8 py-3 text-xs font-black uppercase tracking-[0.2em] neon-glow-primary transition-all">
-                  Submit
-                </button>
-              </section>
 
             </div>
             );
