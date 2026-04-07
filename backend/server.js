@@ -171,6 +171,21 @@ const challengeParticipantSchema = new mongoose.Schema({
 }, { timestamps: true });
 challengeParticipantSchema.index({ challengeId: 1, userId: 1 }, { unique: true });
 
+const userChallengeSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  tagline: { type: String, default: '' },
+  description: { type: String, required: true },
+  githubRepo: { type: String, default: '' },
+  documentationLinks: { type: [String], default: [] },
+  difficulty: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'intermediate' },
+  durationDays: { type: Number, default: 7 },
+  tag: { type: String, default: 'COMMUNITY' },
+  color: { type: String, default: '#ff86c2' },
+  createdBy: { type: String, required: true },
+  creatorName: { type: String, default: '' },
+}, { timestamps: true });
+userChallengeSchema.index({ createdBy: 1 });
+
 const downloadRequestSchema = new mongoose.Schema({
   sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', required: true },
   userId: { type: String, required: true },
@@ -213,6 +228,7 @@ userManagementSchema.index({ clerkInvitationId: 1 });
 const SessionModel = mongoose.model('Session', sessionSchema);
 const StudyGroup = mongoose.model('StudyGroup', studyGroupSchema);
 const ChallengeParticipant = mongoose.model('ChallengeParticipant', challengeParticipantSchema);
+const UserChallenge = mongoose.model('UserChallenge', userChallengeSchema);
 const DownloadRequest = mongoose.model('DownloadRequest', downloadRequestSchema);
 const UserManagement = mongoose.model('UserManagement', userManagementSchema);
 
@@ -873,6 +889,47 @@ app.post('/api/challenge-participants', asyncHandler(async (req, res) => {
     if (e.code === 11000) return res.status(409).json({ error: 'Already joined' });
     throw e;
   }
+}));
+
+// ── User Challenges routes ──
+app.get('/api/challenges', asyncHandler(async (req, res) => {
+  const challenges = await UserChallenge.find().sort({ createdAt: -1 });
+  res.json(challenges);
+}));
+
+app.post('/api/challenges', asyncHandler(async (req, res) => {
+  const { title, tagline, description, githubRepo, documentationLinks, difficulty, durationDays, tag, color, createdBy, creatorName } = req.body;
+  if (!title || !description || !createdBy) {
+    return res.status(400).json({ error: 'Title, description, and user ID are required' });
+  }
+  const challenge = await UserChallenge.create({
+    title,
+    tagline: tagline || '',
+    description,
+    githubRepo: githubRepo || '',
+    documentationLinks: documentationLinks || [],
+    difficulty: difficulty || 'intermediate',
+    durationDays: durationDays || 7,
+    tag: tag || 'COMMUNITY',
+    color: color || '#ff86c2',
+    createdBy,
+    creatorName: creatorName || ''
+  });
+  res.status(201).json(challenge);
+}));
+
+app.delete('/api/challenges/:id', asyncHandler(async (req, res) => {
+  const { 'x-clerk-id': clerkId, 'x-clerk-role': role } = req.headers;
+  const challenge = await UserChallenge.findById(req.params.id);
+  if (!challenge) return res.status(404).json({ error: 'Challenge not found' });
+  // Allow delete if user is creator or admin/super_admin
+  if (challenge.createdBy !== clerkId && !['admin', 'super_admin'].includes(role)) {
+    return res.status(403).json({ error: 'Not authorized to delete this challenge' });
+  }
+  await UserChallenge.findByIdAndDelete(req.params.id);
+  // Also remove all participants for this challenge
+  await ChallengeParticipant.deleteMany({ challengeId: req.params.id });
+  res.json({ message: 'Challenge deleted' });
 }));
 
 // ── Define schemas and models ──
