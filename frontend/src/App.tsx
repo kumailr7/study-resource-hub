@@ -481,6 +481,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const { signOut } = useClerk();
   const { user } = useUser();
   const { isDarkTheme, toggleTheme } = useTheme();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState<Section>('dashboard');
   const [showCommunityModal, setShowCommunityModal] = useState(false);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -1496,7 +1497,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
 
   const navItem = (section: Section, Icon: React.FC<any>, label: string) => (
     <button
-      onClick={() => setCurrentSection(section)}
+      onClick={() => { setCurrentSection(section); setSidebarOpen(false); }}
       className={`w-full flex items-center gap-4 px-4 py-3 transition-all duration-200 text-left ${
         currentSection === section
           ? 'bg-surface-container-highest text-primary'
@@ -1514,8 +1515,16 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
       <div className="min-h-screen bg-background text-on-background font-body" data-theme={isDarkTheme ? 'dark' : 'light'}>
 
 
+        {/* ── Mobile sidebar backdrop ── */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* ── Sidebar ── */}
-        <aside className="fixed left-0 top-0 h-screen w-64 bg-surface-container-low flex flex-col py-8 z-50">
+        <aside className={`fixed left-0 top-0 h-screen w-64 bg-surface-container-low flex flex-col py-8 z-50 transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="px-8 mb-12">
             <span className="text-xl font-bold text-primary uppercase tracking-widest font-headline">Devops Dojo</span>
             <p className="text-[10px] text-slate-500 tracking-[0.2em] mt-1 uppercase">Hub</p>
@@ -1613,14 +1622,28 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
         </aside>
 
         {/* ── Main ── */}
-        <main className="ml-64 min-h-screen relative z-10">
+        <main className="lg:ml-64 min-h-screen relative z-10">
 
           {/* Header */}
-          <header className="flex justify-between items-center w-full px-12 h-20 bg-surface-container-low sticky top-0 z-40">
-            <h1 className="text-2xl font-black tracking-tighter text-primary font-headline">
-              <SplitText text="Devops Dojo Hub" delay={55} />
-            </h1>
-            <div className="flex items-center gap-6">
+          <header className="flex justify-between items-center w-full px-4 lg:px-12 h-16 lg:h-20 bg-surface-container-low sticky top-0 z-40">
+            <div className="flex items-center gap-3">
+              {/* Hamburger — mobile only */}
+              <button
+                className="lg:hidden p-2 text-slate-500 hover:text-primary transition-colors"
+                onClick={() => setSidebarOpen(v => !v)}
+                aria-label="Toggle menu"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="3" y1="6" x2="21" y2="6"/>
+                  <line x1="3" y1="12" x2="21" y2="12"/>
+                  <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+              </button>
+              <h1 className="text-lg lg:text-2xl font-black tracking-tighter text-primary font-headline">
+                <SplitText text="Devops Dojo Hub" delay={55} />
+              </h1>
+            </div>
+            <div className="flex items-center gap-3 lg:gap-6">
               <button
                 onClick={() => setShowSearchOverlay(true)}
                 className="hidden lg:flex items-center gap-2 px-3 py-2 bg-surface-container text-slate-400 hover:text-primary hover:bg-surface-container-high transition-colors text-sm"
@@ -1711,7 +1734,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
             const tooltipStyle = { background: 'var(--surface-container)', border: '1px solid var(--outline-variant)', color: 'var(--on-surface)', fontSize: '11px' };
 
             return (
-            <div className="p-12 space-y-10">
+            <div className="p-4 lg:p-12 space-y-10">
 
               {/* ── Co-host Invitation Banner ── */}
               {pendingCohostInvites.length > 0 && (
@@ -1979,7 +2002,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
           {/* ── Section: Challenges ── */}
           {currentSection === 'challenges' && (() => {
             return (
-              <div className="p-12 space-y-10">
+              <div className="p-4 lg:p-12 space-y-10">
                 <style>{`
                   @keyframes livePulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(1.4); } }
                   @keyframes signalRing { 0% { transform:scale(1); opacity:0.7; } 100% { transform:scale(2.2); opacity:0; } }
@@ -2405,7 +2428,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
             };
 
             return (
-              <div className="p-12 space-y-10">
+              <div className="p-4 lg:p-12 space-y-10">
                 <div>
                   <h2 className="text-4xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.02em' }}><SplitText text="Study Groups" delay={60} /></h2>
                   <p className="text-slate-500 mt-2">Create a group, share the link — collaborate anywhere</p>
@@ -2495,7 +2518,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
 
           {/* ── Section: Schedule ── */}
           {currentSection === 'schedule' && (
-            <div className="p-12 space-y-8">
+            <div className="p-4 lg:p-12 space-y-8">
               <div className="flex items-end justify-between">
                 <div>
                   <h2 className="text-4xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.02em' }}><SplitText text="Schedule" delay={60} /></h2>
@@ -3451,7 +3474,7 @@ END:VCALENDAR`;
             ];
 
             return (
-              <div className="p-12 space-y-10">
+              <div className="p-4 lg:p-12 space-y-10">
                 {/* Header */}
                 <div className="flex items-end justify-between">
                   <div>
@@ -3722,7 +3745,7 @@ END:VCALENDAR`;
 
           {/* ── Section: Resources ── */}
           {currentSection === 'resources' && (
-            <div className="p-12 space-y-12">
+            <div className="p-4 lg:p-12 space-y-12">
               <div>
                 <h2 className="text-4xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.02em' }}><SplitText text="Resources" delay={60} /></h2>
                 <p className="text-slate-500 mt-2">Contribute and browse community materials</p>
@@ -4028,7 +4051,7 @@ END:VCALENDAR`;
 
           {/* ── Section: Suggestions ── */}
           {currentSection === 'suggestions' && (
-            <div className="p-12 space-y-10">
+            <div className="p-4 lg:p-12 space-y-10">
               <div>
                 <h2 className="text-4xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.02em' }}>
                   <SplitText text="Suggestions" delay={60} />
@@ -4106,7 +4129,7 @@ END:VCALENDAR`;
                   </div>
                 </div>
               ) : (
-                <div className="bg-surface-container p-12 text-center">
+                <div className="bg-surface-container p-8 lg:p-12 text-center">
                   <Lightbulb size={32} className="text-slate-600 mx-auto mb-3" />
                   <p className="text-slate-500 text-sm">No suggestions yet. Be the first!</p>
                 </div>

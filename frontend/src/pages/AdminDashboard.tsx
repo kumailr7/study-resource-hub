@@ -49,6 +49,7 @@ const AdminDashboard: React.FC = () => {
   const [adminTab, setAdminTab] = useState<AdminTab>('overview');
   const [slackWebhook, setSlackWebhook] = useState(localStorage.getItem('dojo_slack_webhook') || '');
   const [slackStatus, setSlackStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [adminSidebarOpen, setAdminSidebarOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -262,7 +263,7 @@ const AdminDashboard: React.FC = () => {
 
   const navItem = (key: AdminTab, Icon: React.FC<any>, label: string) => (
     <button
-      onClick={() => setAdminTab(key)}
+      onClick={() => { setAdminTab(key); setAdminSidebarOpen(false); }}
       className={`w-full flex items-center gap-4 px-4 py-3 text-left text-sm font-medium tracking-wide transition-all ${
         adminTab === key ? 'bg-surface-container-highest text-primary' : 'text-slate-500 hover:text-on-surface hover:bg-surface-container-high'
       }`}
@@ -275,24 +276,40 @@ const AdminDashboard: React.FC = () => {
     <div className="min-h-screen bg-surface text-on-surface" style={{ fontFamily: 'Manrope, sans-serif' }}>
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-20 bg-surface-container-low border-b border-outline-variant flex items-center justify-between px-10">
-        <div className="flex items-center gap-4">
-          <span className="text-xl font-black text-[#ff86c2] uppercase tracking-widest" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Devops Dojo</span>
-          <span className="text-[10px] text-slate-600 uppercase tracking-[0.25em]">Admin Console</span>
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 lg:h-20 bg-surface-container-low border-b border-outline-variant flex items-center justify-between px-4 lg:px-10">
+        <div className="flex items-center gap-3">
+          <button
+            className="lg:hidden p-2 text-slate-500 hover:text-primary transition-colors"
+            onClick={() => setAdminSidebarOpen(v => !v)}
+            aria-label="Toggle menu"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <span className="text-lg font-black text-[#ff86c2] uppercase tracking-widest" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Devops Dojo</span>
+          <span className="hidden sm:inline text-[10px] text-slate-600 uppercase tracking-[0.25em]">Admin Console</span>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 lg:gap-6">
           <Link to="/user" className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-primary transition-colors uppercase tracking-widest">
-            <ExternalLink size={13} /> User View
+            <ExternalLink size={13} /> <span className="hidden sm:inline">User View</span>
           </Link>
           <button onClick={() => signOut({ redirectUrl: '/login' })} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-red-400 transition-colors uppercase tracking-widest">
-            <LogOut size={13} /> Sign Out
+            <LogOut size={13} /> <span className="hidden sm:inline">Sign Out</span>
           </button>
         </div>
       </header>
 
-      <div className="flex pt-20">
+      {/* Mobile sidebar backdrop */}
+      {adminSidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setAdminSidebarOpen(false)} />
+      )}
+
+      <div className="flex pt-16 lg:pt-20">
         {/* Sidebar */}
-        <aside className="fixed left-0 top-20 h-[calc(100vh-5rem)] w-64 bg-surface-container-low flex flex-col py-8 z-40">
+        <aside className={`fixed left-0 top-16 lg:top-20 h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] w-64 bg-surface-container-low flex flex-col py-8 z-50 transition-transform duration-300 lg:translate-x-0 ${adminSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="px-8 mb-10">
             <h1 className="text-lg font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
               <SplitText text="Admin Panel" delay={45} />
@@ -317,7 +334,7 @@ const AdminDashboard: React.FC = () => {
         </aside>
 
         {/* Main */}
-        <main className="ml-64 flex-1 p-10 space-y-8 min-h-[calc(100vh-5rem)]">
+        <main className="lg:ml-64 flex-1 p-4 lg:p-10 space-y-8 min-h-[calc(100vh-4rem)] lg:min-h-[calc(100vh-5rem)] w-full overflow-x-auto">
 
           {/* ── OVERVIEW ── */}
           {adminTab === 'overview' && (
