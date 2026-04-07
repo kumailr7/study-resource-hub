@@ -86,12 +86,55 @@
         --scrollbar-track:         #0e0e13;
         --scrollbar-thumb:         #25252c;
         --glass:                   rgba(37,37,44,0.4);
+        --modal-inner-bg:          #111116;
+        --modal-inner-border:      #1e1e28;
+        --card-sunken-bg:          #0d0d0f;
+        --card-sunken-border:      #1a1a24;
+        --progress-track:          #1e1e28;
+        --btn-ghost-border:        rgba(255,255,255,0.08);
+        --btn-ghost-color:         #94a3b8;
+        --avatar-bg:               #2a2a35;
+        --user-chip-bg:            rgba(255,255,255,0.04);
+        --user-chip-border:        rgba(255,255,255,0.06);
       }
 
+      /* ── Light theme ── */
+      [data-theme="light"] {
+        --bg:                      #f5f5fa;
+        --surface:                 #f5f5fa;
+        --surface-dim:             #e5e4ef;
+        --surface-bright:          #ffffff;
+        --surface-container-lowest:#ffffff;
+        --surface-container-low:   #eeedf7;
+        --surface-container:       #e8e7f2;
+        --surface-container-high:  #e2e1ec;
+        --surface-container-highest:#dcdbe6;
+        --surface-variant:         #e2e1ec;
+        --on-surface:              #1c1b1f;
+        --on-surface-variant:      #49474f;
+        --on-background:           #1c1b1f;
+        --outline:                 #7a7780;
+        --outline-variant:         #cac8d1;
+        --scrollbar-track:         #eeedf7;
+        --scrollbar-thumb:         #bdbac6;
+        --glass:                   rgba(255,255,255,0.7);
+        --modal-inner-bg:          #f0eff8;
+        --modal-inner-border:      #d4d2e0;
+        --card-sunken-bg:          #e8e7f2;
+        --card-sunken-border:      #cac8d1;
+        --progress-track:          #dcdbe6;
+        --btn-ghost-border:        rgba(0,0,0,0.12);
+        --btn-ghost-color:         #49474f;
+        --avatar-bg:               #dcdbe6;
+        --user-chip-bg:            rgba(0,0,0,0.04);
+        --user-chip-border:        rgba(0,0,0,0.08);
+      }
 
       body { background: var(--bg); color: var(--on-surface); transition: background 0.2s, color 0.2s; }
 
       /* Apply CSS vars to Tailwind surface tokens */
+      .bg-background               { background-color: var(--surface) !important; }
+      .text-on-background          { color: var(--on-background) !important; }
       .bg-surface                  { background-color: var(--surface) !important; }
       .bg-surface-dim              { background-color: var(--surface-dim) !important; }
       .bg-surface-bright           { background-color: var(--surface-bright) !important; }
@@ -106,6 +149,19 @@
       .border-outline-variant      { border-color: var(--outline-variant) !important; }
       .border-outline              { border-color: var(--outline) !important; }
       .glass-panel                 { background: var(--glass) !important; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+
+      /* Light theme text adjustments */
+      [data-theme="light"] .text-slate-300 { color: #374151 !important; }
+      [data-theme="light"] .text-slate-400 { color: #4b5563 !important; }
+      [data-theme="light"] .text-slate-500 { color: #6b7280 !important; }
+      [data-theme="light"] .text-slate-600 { color: #6b7280 !important; }
+      [data-theme="light"] .bg-slate-700\/50 { background-color: var(--surface-container-high) !important; }
+      [data-theme="light"] .bg-slate-800 { background-color: var(--surface-container-high) !important; }
+      [data-theme="light"] .border-slate-700 { border-color: var(--outline-variant) !important; }
+      [data-theme="light"] .bg-white\/5 { background-color: rgba(0,0,0,0.04) !important; }
+      [data-theme="light"] .border-white\/5 { border-color: var(--outline-variant) !important; }
+      [data-theme="light"] .border-white\/10 { border-color: var(--outline-variant) !important; }
+      [data-theme="light"] .hover\:bg-surface-container-highest:hover { background-color: var(--surface-container-highest) !important; }
 
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: var(--scrollbar-track); }

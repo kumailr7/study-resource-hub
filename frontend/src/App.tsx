@@ -7,7 +7,7 @@ import logo from "./assets/logo-2.png";
 import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from './components/ProtectedRoute';
-import { LayoutGrid, Trophy, Calendar, LineChart, Package, HelpCircle, LogOut, Bell, Settings, Sun, Moon, Pin, Search, Video, Users, Lightbulb, X } from 'lucide-react';
+import { LayoutGrid, Trophy, Calendar, LineChart, Package, HelpCircle, LogOut, Bell, Settings, Sun, Moon, Pin, Search, Video, Users, Lightbulb } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts';
 import BlurText from './components/BlurText';
 import SplitText from './components/SplitText';
@@ -24,7 +24,7 @@ import { API_BASE_URL } from './config';
 // Redirect component: redirects to user page if already signed in
 const RedirectIfSignedIn: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoaded } = useAuth();
-  if (!isLoaded) return <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center"><p className="text-slate-500 text-sm animate-pulse">Loading…</p></div>;
+  if (!isLoaded) return <div className="min-h-screen bg-surface flex items-center justify-center"><p className="text-slate-500 text-sm animate-pulse">Loading…</p></div>;
   if (isAuthenticated) return <Navigate to="/user" replace />;
   return <>{children}</>;
 };
@@ -32,7 +32,7 @@ const RedirectIfSignedIn: React.FC<{ children: React.ReactNode }> = ({ children 
 // Guard component: requires Clerk sign-in
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoaded } = useAuth();
-  if (!isLoaded) return <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center"><p className="text-slate-500 text-sm animate-pulse">Loading…</p></div>;
+  if (!isLoaded) return <div className="min-h-screen bg-surface flex items-center justify-center"><p className="text-slate-500 text-sm animate-pulse">Loading…</p></div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
@@ -295,7 +295,7 @@ const ResourceRow: React.FC<{
       }}
     >
       <td className="py-4 px-6">
-        <p className="text-sm font-bold" style={{ color: hovered ? '#fff' : undefined, transition: 'color 0.2s' }}>{resource.name}</p>
+        <p className="text-sm font-bold" style={{ color: hovered ? 'var(--on-surface)' : undefined, transition: 'color 0.2s' }}>{resource.name}</p>
         <p className="text-xs transition-colors duration-200" style={{ color: hovered ? accentColor : '#64748b' }}>{resource.tags?.join(', ')}</p>
       </td>
       <td className="py-4 px-6">
@@ -385,14 +385,14 @@ const SearchResultRow: React.FC<{
         }}
       />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-on-surface truncate" style={{ color: hovered ? '#fff' : undefined }}>{item.label}</p>
+        <p className="text-sm font-semibold text-on-surface truncate" style={{ color: hovered ? 'var(--on-surface)' : undefined }}>{item.label}</p>
         {item.sub && (
           <p className="text-xs truncate mt-0.5 transition-colors duration-200" style={{ color: hovered ? accentColor : '#64748b' }}>{item.sub}</p>
         )}
       </div>
       <span
         className="text-[10px] uppercase tracking-widest shrink-0 mt-1 transition-colors duration-200 font-bold"
-        style={{ color: hovered ? accentColor : '#374151' }}
+        style={{ color: hovered ? accentColor : 'var(--on-surface-variant)' }}
       >{sec}</span>
     </button>
   );
@@ -441,7 +441,7 @@ const SyncSignup: React.FC = () => {
   }, [user, done, navigate]);
 
   return (
-    <div className="min-h-screen bg-[#0e0e13] flex items-center justify-center">
+    <div className="min-h-screen bg-surface flex items-center justify-center">
       <p className="text-slate-400 text-sm animate-pulse">Setting up your account…</p>
     </div>
   );
@@ -459,13 +459,6 @@ const App: React.FC = () => {
             <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} />} />
             <Route path="/user" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/:username" element={<RequireAuth><ResourceTable /></RequireAuth>} />
-            <Route path="/:username/dashboard" element={<RequireAuth><ResourceTable /></RequireAuth>} />
-            <Route path="/:username/challenges" element={<RequireAuth><ResourceTable /></RequireAuth>} />
-            <Route path="/:username/schedule" element={<RequireAuth><ResourceTable /></RequireAuth>} />
-            <Route path="/:username/studygroups" element={<RequireAuth><ResourceTable /></RequireAuth>} />
-            <Route path="/:username/analytics" element={<RequireAuth><ResourceTable /></RequireAuth>} />
-            <Route path="/:username/resources" element={<RequireAuth><ResourceTable /></RequireAuth>} />
-            <Route path="/:username/suggestions" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/" element={<Navigate to="/login" />} />
@@ -488,7 +481,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const { signOut } = useClerk();
   const { user } = useUser();
   const { isDarkTheme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
   const [currentSection, setCurrentSection] = useState<Section>('dashboard');
   const [showCommunityModal, setShowCommunityModal] = useState(false);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -694,17 +686,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const [activeBannerIdx, setActiveBannerIdx] = useState(0);
   const [bannerFading, setBannerFading] = useState(false);
 
-  // User-created challenges state
-  const [userChallenges, setUserChallenges] = useState<any[]>([]);
-  const [showCreateChallengeModal, setShowCreateChallengeModal] = useState(false);
-  const [newChallengeTitle, setNewChallengeTitle] = useState('');
-  const [newChallengeTagline, setNewChallengeTagline] = useState('');
-  const [newChallengeDescription, setNewChallengeDescription] = useState('');
-  const [newChallengeGithub, setNewChallengeGithub] = useState('');
-  const [newChallengeDocs, setNewChallengeDocs] = useState('');
-  const [newChallengeDifficulty, setNewChallengeDifficulty] = useState('intermediate');
-  const [newChallengeDuration, setNewChallengeDuration] = useState(7);
-
   // Auto-cycle banner when on challenges section
   useEffect(() => {
     const liveChallenges = CHALLENGES.filter(c => getChallengeStatus(c).live);
@@ -731,53 +712,9 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
       setJoinedChallenges(prev => ({ ...prev, [id]: true }));
     } catch (err: any) {
       if (err?.response?.status === 409) {
+        // Already joined — just update local state
         setJoinedChallenges(prev => ({ ...prev, [id]: true }));
       }
-    }
-  };
-
-  const handleCreateChallenge = async () => {
-    if (!newChallengeTitle.trim() || !newChallengeDescription.trim()) {
-      alert('Title and Description are required');
-      return;
-    }
-    if (!user?.id) return;
-    try {
-      const docs = newChallengeDocs.split('\n').filter((d: string) => d.trim());
-      const res = await axios.post<any>(`${API_BASE_URL}/challenges`, {
-        title: newChallengeTitle,
-        tagline: newChallengeTagline,
-        description: newChallengeDescription,
-        githubRepo: newChallengeGithub,
-        documentationLinks: docs,
-        difficulty: newChallengeDifficulty,
-        durationDays: newChallengeDuration,
-        createdBy: user.id,
-        creatorName: user.fullName || user.username || 'Anonymous',
-      });
-      setUserChallenges(prev => [{ ...res.data, id: res.data._id }, ...prev]);
-      setShowCreateChallengeModal(false);
-      setNewChallengeTitle('');
-      setNewChallengeTagline('');
-      setNewChallengeDescription('');
-      setNewChallengeGithub('');
-      setNewChallengeDocs('');
-      setNewChallengeDifficulty('intermediate');
-      setNewChallengeDuration(7);
-    } catch (err) {
-      console.error('Error creating challenge:', err);
-      alert('Failed to create challenge');
-    }
-  };
-
-  const handleDeleteUserChallenge = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this challenge?')) return;
-    try {
-      await axios.delete(`${API_BASE_URL}/challenges/${id}`);
-      setUserChallenges(prev => prev.filter(c => c._id !== id));
-    } catch (err) {
-      console.error('Error deleting challenge:', err);
-      alert('Failed to delete challenge');
     }
   };
   const getChallengeStatus = (c: typeof CHALLENGES[0]) => {
@@ -919,32 +856,19 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
     fetchRequests();
   }, [resourcePage, requestPage]);
 
-  // Set section based on URL path
-  useEffect(() => {
-    const path = window.location.pathname.split('/').filter(Boolean);
-    if (path.length >= 2) {
-      const section = path[1];
-      if (['dashboard', 'challenges', 'schedule', 'studygroups', 'analytics', 'resources', 'suggestions'].includes(section)) {
-        setCurrentSection(section as Section);
-      }
-    }
-  }, []);
-
   // Fetch sessions, study groups, challenge participants from MongoDB
   useEffect(() => {
     const fetchShared = async () => {
       try {
-        const [sessRes, sgRes, cpRes, ucRes] = await Promise.all([
+        const [sessRes, sgRes, cpRes] = await Promise.all([
           axios.get<any[]>(`${API_BASE_URL}/sessions`),
           axios.get<any[]>(`${API_BASE_URL}/study-groups`),
           axios.get<{ counts: Record<string, number>; joined: Record<string, boolean> }>(`${API_BASE_URL}/challenge-participants${user?.id ? `?userId=${user.id}` : ''}`),
-          axios.get<any[]>(`${API_BASE_URL}/challenges`),
         ]);
         setSessions(sessRes.data.map((s: any) => ({ ...s, id: s._id })));
         setStudyGroups(sgRes.data.map((g: any) => ({ ...g, id: g._id })));
         setChallengeParticipants(cpRes.data.counts || {});
         setJoinedChallenges(cpRes.data.joined || {});
-        setUserChallenges(ucRes.data.map((c: any) => ({ ...c, id: c._id })));
         // Rebuild my registered sessions from returned data
         const myReg: Record<string, boolean> = {};
         const myGrp: Record<string, boolean> = {};
@@ -1572,14 +1496,11 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
 
   const navItem = (section: Section, Icon: React.FC<any>, label: string) => (
     <button
-      onClick={() => {
-        setCurrentSection(section);
-        navigate(`/${userUsername}/${section}`);
-      }}
+      onClick={() => setCurrentSection(section)}
       className={`w-full flex items-center gap-4 px-4 py-3 transition-all duration-200 text-left ${
         currentSection === section
           ? 'bg-surface-container-highest text-primary'
-          : 'text-slate-500 hover:text-secondary hover:bg-[#1c1c24]'
+          : 'text-slate-500 hover:text-secondary hover:bg-surface-container-high'
       }`}
     >
       <Icon size={18} />
@@ -1662,8 +1583,8 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
           )}
 
           {/* User profile block */}
-          <div className="px-4 mx-4 mb-4 p-3 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ background: '#2a2a35' }}>
+          <div className="px-4 mx-4 mb-4 p-3 flex items-center gap-3" style={{ background: 'var(--user-chip-bg)', border: '1px solid var(--user-chip-border)' }}>
+            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'var(--avatar-bg)' }}>
               {user?.imageUrl
                 ? <img src={user.imageUrl} alt="avatar" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-primary">
@@ -1672,7 +1593,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
               }
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">
+              <p className="text-xs font-bold text-on-surface truncate">
                 {user?.fullName || user?.firstName || 'User'}
               </p>
               <p className="text-[10px] text-slate-500 truncate">
@@ -1682,10 +1603,10 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
           </div>
 
           <div className="px-4 pt-2 space-y-1">
-            <button className="w-full flex items-center gap-4 px-4 py-2 text-slate-500 hover:text-secondary hover:bg-[#1c1c24] text-sm">
+            <button className="w-full flex items-center gap-4 px-4 py-2 text-slate-500 hover:text-secondary hover:bg-surface-container-high text-sm">
               <HelpCircle size={16} /><span>Help</span>
             </button>
-            <button onClick={() => signOut({ redirectUrl: '/login' })} className="w-full flex items-center gap-4 px-4 py-2 text-slate-500 hover:text-secondary hover:bg-[#1c1c24] text-sm">
+            <button onClick={() => signOut({ redirectUrl: '/login' })} className="w-full flex items-center gap-4 px-4 py-2 text-slate-500 hover:text-secondary hover:bg-surface-container-high text-sm">
               <LogOut size={16} /><span>Sign Out</span>
             </button>
           </div>
@@ -1721,7 +1642,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                     )}
                   </button>
                   {showNotifPanel && (
-                    <div className="absolute right-0 top-11 w-80 bg-[#19191f] border border-outline-variant shadow-2xl z-50">
+                    <div className="absolute right-0 top-11 w-80 bg-surface-container border border-outline-variant shadow-2xl z-50">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-4 pt-3 pb-2">
                         Co-host Invitations {pendingCohostInvites.length > 0 ? `(${pendingCohostInvites.length})` : ''}
                       </p>
@@ -1758,7 +1679,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                 <button onClick={() => toggleTheme()} className="hover:bg-surface-container-highest p-2 transition-colors">
                   {isDarkTheme ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
-                <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ background: '#2a2a35' }}>
+                <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'var(--avatar-bg)' }}>
                   {user?.imageUrl
                     ? <img src={user.imageUrl} alt="avatar" className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-primary">
@@ -1787,7 +1708,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
               .map(([name, value]) => ({ name, value }));
             const byReqType = Object.entries(requests.reduce((a, r) => { a[r.resourceType || 'Unknown'] = (a[r.resourceType || 'Unknown'] || 0) + 1; return a; }, {} as Record<string,number>))
               .map(([name, value]) => ({ name, value }));
-            const tooltipStyle = { background: '#19191f', border: 'none', color: '#f8f5fd', fontSize: '11px' };
+            const tooltipStyle = { background: 'var(--surface-container)', border: '1px solid var(--outline-variant)', color: 'var(--on-surface)', fontSize: '11px' };
 
             return (
             <div className="p-12 space-y-10">
@@ -2165,103 +2086,12 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         </div>
                       )}
                     </div>
-            );
-          })()}
+                  );
+                })()}
 
-          {/* ── Create Challenge Modal ── */}
-          {showCreateChallengeModal && (
-            <div
-              className="fixed inset-0 z-[200] flex items-start justify-center px-4 py-10 overflow-y-auto"
-              style={{ background: 'rgba(7,7,10,0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
-              onClick={e => { if (e.target === e.currentTarget) setShowCreateChallengeModal(false); }}>
-              <div className="w-full max-w-xl relative" style={{ background: '#111116', border: '1px solid #1e1e28' }}>
-                <div className="p-6 border-b border-[#1e1e28] flex items-center justify-between">
-                  <h3 className="text-xl font-black text-white">Create Challenge</h3>
-                  <button onClick={() => setShowCreateChallengeModal(false)} className="text-slate-500 hover:text-white">
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="p-6 space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Title *</label>
-                    <input type="text" value={newChallengeTitle} onChange={e => setNewChallengeTitle(e.target.value)}
-                      className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-3 text-sm text-white placeholder-slate-600 outline-none focus:border-[#ff86c2]"
-                      placeholder="e.g., Docker Mastery Week" />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Tagline</label>
-                    <input type="text" value={newChallengeTagline} onChange={e => setNewChallengeTagline(e.target.value)}
-                      className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-3 text-sm text-white placeholder-slate-600 outline-none focus:border-[#ff86c2]"
-                      placeholder="e.g., Master containers in 7 days" />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Description *</label>
-                    <textarea value={newChallengeDescription} onChange={e => setNewChallengeDescription(e.target.value)}
-                      className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-3 text-sm text-white placeholder-slate-600 outline-none focus:border-[#ff86c2] h-32 resize-none"
-                      placeholder="Describe what participants will learn and build..." />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">GitHub Repository URL</label>
-                    <input type="url" value={newChallengeGithub} onChange={e => setNewChallengeGithub(e.target.value)}
-                      className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-3 text-sm text-white placeholder-slate-600 outline-none focus:border-[#ff86c2]"
-                      placeholder="https://github.com/username/repo" />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Documentation Links (one per line)</label>
-                    <textarea value={newChallengeDocs} onChange={e => setNewChallengeDocs(e.target.value)}
-                      className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-3 text-sm text-white placeholder-slate-600 outline-none focus:border-[#ff86c2] h-20 resize-none"
-                      placeholder="https://docs.example.com&#10;https://tutorial.example.com" />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Difficulty</label>
-                      <select value={newChallengeDifficulty} onChange={e => setNewChallengeDifficulty(e.target.value)}
-                        className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-3 text-sm text-white outline-none focus:border-[#ff86c2]">
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Duration (days)</label>
-                      <input type="number" value={newChallengeDuration} onChange={e => setNewChallengeDuration(parseInt(e.target.value) || 7)}
-                        className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-3 text-sm text-white outline-none focus:border-[#ff86c2]"
-                        min="1" max="30" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 border-t border-[#1e1e28] flex gap-3">
-                  <button onClick={() => setShowCreateChallengeModal(false)}
-                    className="flex-1 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
-                    Cancel
-                  </button>
-                  <button onClick={handleCreateChallenge}
-                    className="flex-1 py-3 text-xs font-black uppercase tracking-widest transition-all"
-                    style={{ background: '#ff86c2', color: '#0e0e13' }}>
-                    Create Challenge
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-                <div className="flex items-end justify-between">
-                  <div>
-                    <h2 className="text-4xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.02em' }}><SplitText text="Challenges" delay={60} /></h2>
-                    <p className="text-slate-500 mt-2">Weekly & community learning sprints · max {CHALLENGE_MAX_SLOTS} participants each</p>
-                  </div>
-                  <button onClick={() => setShowCreateChallengeModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all"
-                    style={{ background: '#ff86c2', color: '#0e0e13' }}>
-                    <span>+</span> Create Challenge
-                  </button>
+                <div>
+                  <h2 className="text-4xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.02em' }}><SplitText text="Challenges" delay={60} /></h2>
+                  <p className="text-slate-500 mt-2">Weekly & community learning sprints · max {CHALLENGE_MAX_SLOTS} participants each</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -2273,7 +2103,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                     const isJoined = !!joinedChallenges[c.id];
                     return (
                       <div key={c.id} className="flex flex-col gap-4 group transition-all duration-300 relative overflow-hidden"
-                        style={{ borderLeft: `4px solid ${st.live ? c.color : '#48474d'}`, background: `linear-gradient(135deg, ${c.color}${st.live ? '18' : '08'} 0%, #19191f 100%)` }}>
+                        style={{ borderLeft: `4px solid ${st.live ? c.color : '#48474d'}`, background: `linear-gradient(135deg, ${c.color}${st.live ? '18' : '08'} 0%, var(--surface-container) 100%)` }}>
                         <div className="absolute top-0 right-0 w-32 h-32 blur-[60px] opacity-15 group-hover:opacity-30 transition-opacity pointer-events-none" style={{ background: c.color }} />
 
                         <div className="p-6 pb-0 relative z-10">
@@ -2292,7 +2122,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5 bg-white/5 rounded">{c.days}d</span>
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.days}d</span>
                             )}
                           </div>
                           <h3 className="text-lg font-black font-headline text-on-surface mb-2">{c.title}</h3>
@@ -2315,9 +2145,9 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                           <button
                             onClick={() => setSelectedChallenge(c.id)}
                             className="flex-1 text-xs font-bold uppercase tracking-widest py-3 transition-all"
-                            style={{ background: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.08)' }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#fff'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}>
+                            style={{ background: 'transparent', color: 'var(--btn-ghost-color)', border: '1px solid var(--btn-ghost-border)' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--on-surface)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--outline)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--btn-ghost-color)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--btn-ghost-border)'; }}>
                             View Details
                           </button>
                           <button
@@ -2340,96 +2170,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
 
           {/* ── Challenge Detail Modal ── */}
           {selectedChallenge && (() => {
-            const isUserChallenge = selectedChallenge.startsWith('user-');
-            const userChallenge = isUserChallenge ? userChallenges.find(c => c._id === selectedChallenge.replace('user-', '')) : null;
-            const c = isUserChallenge ? null : CHALLENGES.find(ch => ch.id === selectedChallenge);
-            
-            if (isUserChallenge && userChallenge) {
-              const slots = challengeParticipants[userChallenge._id] || 0;
-              const isFull = slots >= CHALLENGE_MAX_SLOTS;
-              const isJoined = !!joinedChallenges[userChallenge._id];
-              const isCreator = user?.id === userChallenge.createdBy;
-              return (
-                <div
-                  className="fixed inset-0 z-[200] flex items-start justify-center px-4 py-10 overflow-y-auto"
-                  style={{ background: 'rgba(7,7,10,0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
-                  onClick={e => { if (e.target === e.currentTarget) setSelectedChallenge(null); }}>
-                  <div className="w-full max-w-2xl relative" style={{ background: '#111116', border: '1px solid #1e1e28' }}>
-                    <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: userChallenge.color || '#ff86c2' }} />
-                    
-                    <div className="p-6 pb-4 border-b border-[#1e1e28] flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: userChallenge.color || '#ff86c2' }}>{userChallenge.tag || 'COMMUNITY'}</span>
-                          <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 ${userChallenge.difficulty === 'beginner' ? 'text-green-400 bg-green-400/10' : userChallenge.difficulty === 'intermediate' ? 'text-yellow-400 bg-yellow-400/10' : 'text-red-400 bg-red-400/10'}`}>{userChallenge.difficulty}</span>
-                        </div>
-                        <h3 className="text-2xl font-black text-white">{userChallenge.title}</h3>
-                        {userChallenge.tagline && <p className="text-sm text-slate-400 mt-1">{userChallenge.tagline}</p>}
-                      </div>
-                      <button onClick={() => setSelectedChallenge(null)} className="text-slate-500 hover:text-white">
-                        <X size={20} />
-                      </button>
-                    </div>
-
-                    <div className="p-6 space-y-6">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-2">Description</p>
-                        <p className="text-sm text-slate-300 leading-relaxed">{userChallenge.description}</p>
-                      </div>
-
-                      {userChallenge.githubRepo && (
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-2">GitHub Repository</p>
-                          <a href={userChallenge.githubRepo} target="_blank" rel="noreferrer" 
-                            className="text-sm text-[#ff86c2] hover:underline">{userChallenge.githubRepo}</a>
-                        </div>
-                      )}
-
-                      {userChallenge.documentationLinks && userChallenge.documentationLinks.length > 0 && (
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-2">Documentation & Resources</p>
-                          <div className="space-y-2">
-                            {userChallenge.documentationLinks.map((link: string, i: number) => (
-                              <a key={i} href={link} target="_blank" rel="noreferrer" 
-                                className="text-sm text-[#ff86c2] hover:underline block">{link}</a>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between text-sm text-slate-500">
-                        <span>Created by {userChallenge.creatorName || 'Anonymous'}</span>
-                        <span>{userChallenge.durationDays} days</span>
-                      </div>
-                    </div>
-
-                    <div className="p-6 border-t border-[#1e1e28] flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div>
-                          <span className="text-[10px] text-slate-500 uppercase tracking-widest">Participants</span>
-                          <p className="text-lg font-black" style={{ color: userChallenge.color || '#ff86c2' }}>{slots} / {CHALLENGE_MAX_SLOTS}</p>
-                        </div>
-                        {isCreator && (
-                          <button onClick={() => { handleDeleteUserChallenge(userChallenge._id); setSelectedChallenge(null); }}
-                            className="text-[10px] font-bold uppercase px-2 py-1 text-red-400 border border-red-900/40 hover:border-red-400 hover:bg-red-400/10 transition-all">
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                      <button
-                        disabled={isFull && !isJoined}
-                        onClick={() => handleJoinChallenge(userChallenge._id)}
-                        className="px-8 py-3 text-xs font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        style={{ background: isJoined ? `${userChallenge.color || '#ff86c2'}25` : userChallenge.color || '#ff86c2', color: isJoined ? userChallenge.color || '#ff86c2' : '#0d0d0f', border: isJoined ? `1px solid ${userChallenge.color || '#ff86c2'}50` : 'none' }}>
-                        {isJoined ? '✓ Already Joined' : isFull ? 'Challenge Full' : 'Join Challenge'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-            
-            if (!c) return null;
+            const c = CHALLENGES.find(ch => ch.id === selectedChallenge)!;
             const st = getChallengeStatus(c);
             const slots = challengeParticipants[c.id] || 0;
             const isFull = slots >= CHALLENGE_MAX_SLOTS;
@@ -2439,23 +2180,23 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                 className="fixed inset-0 z-[200] flex items-start justify-center px-4 py-10 overflow-y-auto"
                 style={{ background: 'rgba(7,7,10,0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
                 onClick={e => { if (e.target === e.currentTarget) setSelectedChallenge(null); }}>
-                <div className="w-full max-w-2xl relative" style={{ background: '#111116', border: '1px solid #1e1e28' }}>
+                <div className="w-full max-w-2xl relative" style={{ background: 'var(--modal-inner-bg)', border: '1px solid var(--modal-inner-border)' }}>
                   {/* Accent bar */}
                   <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: c.color }} />
 
                   {/* Modal header */}
-                  <div className="px-8 py-7 border-b border-[#1a1a24] relative">
+                  <div className="px-8 py-7 border-b border-outline-variant relative">
                     <button
                       onClick={() => setSelectedChallenge(null)}
-                      className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-slate-500 hover:text-white transition-colors"
-                      style={{ background: 'transparent', border: '1px solid #2e2e3e' }}>
+                      className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-slate-500 hover:text-on-surface transition-colors"
+                      style={{ background: 'transparent', border: '1px solid var(--outline-variant)' }}>
                       ×
                     </button>
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: c.color }}>{c.tag}</span>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.days} DAYS</span>
                     </div>
-                    <h2 className="text-2xl font-black text-white mb-1" style={{ letterSpacing: '-0.02em' }}>{c.title}</h2>
+                    <h2 className="text-2xl font-black text-on-surface mb-1" style={{ letterSpacing: '-0.02em' }}>{c.title}</h2>
                     <p className="text-sm italic" style={{ color: c.color }}>{c.tagline}</p>
                     {st.live && (
                       <div className="flex items-center gap-2 mt-3">
@@ -2476,15 +2217,15 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                   <div className="px-8 py-7 space-y-7">
                     {/* Info grid */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="p-4" style={{ background: '#0d0d0f', border: '1px solid #1a1a24' }}>
+                      <div className="p-4" style={{ background: 'var(--card-sunken-bg)', border: '1px solid var(--card-sunken-border)' }}>
                         <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-1.5">Difficulty</p>
                         <p className="text-sm font-bold" style={{ color: c.difficultyColor }}>{c.difficulty}</p>
                       </div>
-                      <div className="p-4" style={{ background: '#0d0d0f', border: '1px solid #1a1a24' }}>
+                      <div className="p-4" style={{ background: 'var(--card-sunken-bg)', border: '1px solid var(--card-sunken-border)' }}>
                         <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-1.5">Duration</p>
-                        <p className="text-sm font-bold text-white">{c.days} Days</p>
+                        <p className="text-sm font-bold text-on-surface">{c.days} Days</p>
                       </div>
-                      <div className="col-span-2 p-4" style={{ background: '#0d0d0f', border: '1px solid #1a1a24' }}>
+                      <div className="col-span-2 p-4" style={{ background: 'var(--card-sunken-bg)', border: '1px solid var(--card-sunken-border)' }}>
                         <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-1.5">What You'll Build</p>
                         <p className="text-xs text-slate-400 leading-relaxed">{c.whatYouBuild}</p>
                       </div>
@@ -2495,14 +2236,14 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                       <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-3">Prerequisites</p>
                       <div className="space-y-1.5">
                         {c.prerequisites.map((p, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs text-slate-400 py-2" style={{ borderBottom: '1px solid #1a1a24' }}>
+                          <div key={i} className="flex items-center gap-2 text-xs text-slate-400 py-2" style={{ borderBottom: '1px solid var(--card-sunken-border)' }}>
                             <span style={{ color: c.color }}>—</span> {p}
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div style={{ borderTop: '1px solid #1a1a24' }} />
+                    <div style={{ borderTop: '1px solid var(--card-sunken-border)' }} />
 
                     {/* Timeline */}
                     <div>
@@ -2511,8 +2252,8 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         {c.topics.map((t, i) => (
                           <div key={i} className="flex gap-4">
                             <span className="text-[10px] text-slate-600 w-16 flex-shrink-0 pt-0.5 font-mono">{t.day}</span>
-                            <div style={{ borderLeft: '1px solid #1e1e28', paddingLeft: '16px', flex: 1 }}>
-                              <p className="text-xs font-bold text-white mb-0.5">{t.title}</p>
+                            <div style={{ borderLeft: '1px solid var(--modal-inner-border)', paddingLeft: '16px', flex: 1 }}>
+                              <p className="text-xs font-bold text-on-surface mb-0.5">{t.title}</p>
                               <p className="text-xs text-slate-500 leading-relaxed">{t.desc}</p>
                             </div>
                           </div>
@@ -2520,14 +2261,14 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                       </div>
                     </div>
 
-                    <div style={{ borderTop: '1px solid #1a1a24' }} />
+                    <div style={{ borderTop: '1px solid var(--card-sunken-border)' }} />
 
                     {/* Skills */}
                     <div>
                       <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-3">Skills You'll Gain</p>
                       <div className="flex flex-wrap gap-1.5">
                         {c.skills.map((s, i) => (
-                          <span key={i} className="text-[10px] text-slate-400 px-2.5 py-1" style={{ border: '1px solid #1e1e28' }}>{s}</span>
+                          <span key={i} className="text-[10px] text-slate-400 px-2.5 py-1" style={{ border: '1px solid var(--modal-inner-border)' }}>{s}</span>
                         ))}
                       </div>
                     </div>
@@ -2535,7 +2276,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                     {/* Outcome */}
                     <div className="p-4" style={{ background: `${c.color}0d`, border: `1px solid ${c.color}33` }}>
                       <p className="text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold" style={{ color: c.color }}>Outcome</p>
-                      <p className="text-xs text-slate-300 leading-relaxed">{c.outcome}</p>
+                      <p className="text-xs text-slate-500 leading-relaxed">{c.outcome}</p>
                     </div>
 
                     {/* Slot bar */}
@@ -2544,7 +2285,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         <span className="font-bold uppercase tracking-widest text-slate-500">Participants</span>
                         <span className="font-bold" style={{ color: c.color }}>{slots} / {CHALLENGE_MAX_SLOTS}</span>
                       </div>
-                      <div className="h-1.5 w-full" style={{ background: '#1e1e28' }}>
+                      <div className="h-1.5 w-full" style={{ background: 'var(--progress-track)' }}>
                         <div className="h-1.5 transition-all duration-500"
                           style={{ width: `${(slots / CHALLENGE_MAX_SLOTS) * 100}%`, background: isFull ? '#ff6e84' : c.color, boxShadow: st.live ? `0 0 8px ${c.color}80` : 'none' }} />
                       </div>
@@ -2627,7 +2368,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         style={isJoined
                           ? { color: '#f87171', background: '#f8717120', border: '1px solid #f8717130' }
                           : isFull
-                            ? { color: '#64748b', background: '#1e293b', border: '1px solid #334155' }
+                            ? { color: 'var(--on-surface-variant)', background: 'var(--surface-container-high)', border: '1px solid var(--outline-variant)' }
                             : { color: '#4ade80', background: '#4ade8015', border: '1px solid #4ade8030' }}>
                         {isJoined ? '✕ Leave' : isFull ? 'Full' : '+ Join'}
                       </button>
@@ -2692,16 +2433,16 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Scheduled Date & Time</label>
                       <div className="flex gap-2">
                         <input type="datetime-local" value={sgScheduledAt} onChange={e => setSgScheduledAt(e.target.value)}
-                          className="flex-1 bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
+                          className="flex-1 bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:auto]" />
                         {sgScheduledAt && (
                           <select value={sgScheduledTimezone} onChange={e => setSgScheduledTimezone(e.target.value)}
                             className="bg-surface-container-low border-b border-outline-variant focus:border-primary px-2 py-2.5 text-sm text-on-surface outline-none transition-colors">
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>UTC</option>
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/New_York</option>
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/London</option>
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Dubai</option>
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Kolkata</option>
-                            <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Singapore</option>
+                            <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>UTC</option>
+                            <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>America/New_York</option>
+                            <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Europe/London</option>
+                            <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Asia/Dubai</option>
+                            <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Asia/Kolkata</option>
+                            <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Asia/Singapore</option>
                           </select>
                         )}
                       </div>
@@ -2849,31 +2590,31 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Date</label>
                       <input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
+                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:auto]" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Time</label>
                       <input type="time" value={sessionTime} onChange={e => setSessionTime(e.target.value)}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:dark]" />
+                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:auto]" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Timezone</label>
                       <select value={sessionTimezone} onChange={e => setSessionTimezone(e.target.value)}
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>UTC</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/New_York</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/Chicago</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/Denver</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>America/Los_Angeles</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/London</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/Paris</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Europe/Berlin</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Dubai</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Kolkata</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Singapore</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Asia/Tokyo</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Australia/Sydney</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Pacific/Auckland</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>UTC</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>America/New_York</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>America/Chicago</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>America/Denver</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>America/Los_Angeles</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Europe/London</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Europe/Paris</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Europe/Berlin</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Asia/Dubai</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Asia/Kolkata</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Asia/Singapore</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Asia/Tokyo</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Australia/Sydney</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Pacific/Auckland</option>
                       </select>
                     </div>
                     <div className="space-y-1">
@@ -2887,10 +2628,10 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         <PlatformIcon platform={sessionPlatform} size={16} />
                         <select value={sessionPlatform} onChange={e => setSessionPlatform(e.target.value as Session['platform'])}
                           className="flex-1 bg-transparent py-2.5 text-sm text-on-surface outline-none transition-colors">
-                          <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Google Meet</option>
-                          <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Zoom</option>
-                          <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Teams</option>
-                          <option style={{ background: '#1e1e2e', color: '#e2e8f0' }}>Other</option>
+                          <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Google Meet</option>
+                          <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Zoom</option>
+                          <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Teams</option>
+                          <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }}>Other</option>
                         </select>
                       </div>
                     </div>
@@ -2961,9 +2702,9 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Difficulty Level</label>
                       <select value={sessionDifficulty} onChange={e => setSessionDifficulty(e.target.value as 'beginner' | 'medium' | 'advanced')}
                         className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors">
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }} value="beginner">Beginner</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }} value="medium">Medium</option>
-                        <option style={{ background: '#1e1e2e', color: '#e2e8f0' }} value="advanced">Advanced</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }} value="beginner">Beginner</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }} value="medium">Medium</option>
+                        <option style={{ background: 'var(--surface-container)', color: 'var(--on-surface)' }} value="advanced">Advanced</option>
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -3299,7 +3040,7 @@ END:VCALENDAR`;
                                   navigator.clipboard.writeText(selectedSession.whiteboardLink || '');
                                   alert('Whiteboard link copied to clipboard!');
                                 }}
-                                className="flex items-center justify-center gap-2 w-full py-2 text-[10px] font-bold uppercase tracking-widest bg-surface-container-high text-slate-400 hover:text-white transition-colors"
+                                className="flex items-center justify-center gap-2 w-full py-2 text-[10px] font-bold uppercase tracking-widest bg-surface-container-high text-slate-400 hover:text-on-surface transition-colors"
                               >
                                 📋 Copy Whiteboard Link
                               </button>
@@ -3780,7 +3521,7 @@ END:VCALENDAR`;
                           </linearGradient>
                         </defs>
                         <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ background: '#19191f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 0, fontSize: 11 }} cursor={{ stroke: 'rgba(255,255,255,0.1)' }} />
+                        <Tooltip contentStyle={{ background: 'var(--surface-container)', border: '1px solid var(--outline-variant)', borderRadius: 0, fontSize: 11 }} cursor={{ stroke: 'var(--outline-variant)' }} />
                         <Area type="monotone" dataKey="value" stroke="#ff86c2" strokeWidth={2} fill="url(#typeGrad)" dot={{ fill: '#ff86c2', r: 3 }} />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -3797,7 +3538,7 @@ END:VCALENDAR`;
                             <Pie data={reqStatusData} dataKey="value" innerRadius={40} outerRadius={65} paddingAngle={3}>
                               {reqStatusData.map((d, i) => <Cell key={i} fill={d.color} />)}
                             </Pie>
-                            <Tooltip contentStyle={{ background: '#19191f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 0, fontSize: 12 }} />
+                            <Tooltip contentStyle={{ background: 'var(--surface-container)', border: '1px solid var(--outline-variant)', borderRadius: 0, fontSize: 12 }} />
                           </PieChart>
                         </ResponsiveContainer>
                         <div className="flex flex-col gap-2 mt-2">
@@ -3823,7 +3564,7 @@ END:VCALENDAR`;
                       <BarChart data={byCategory} layout="vertical" barSize={14}>
                         <XAxis type="number" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                         <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ background: '#19191f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 0, fontSize: 12 }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                        <Tooltip contentStyle={{ background: 'var(--surface-container)', border: '1px solid var(--outline-variant)', borderRadius: 0, fontSize: 12 }} cursor={{ fill: 'var(--user-chip-bg)' }} />
                         <Bar dataKey="value" name="Resources" radius={0}>
                           {byCategory.map((entry, i) => <Cell key={i} fill={getTagColor(entry.name)} />)}
                         </Bar>
@@ -3839,7 +3580,7 @@ END:VCALENDAR`;
                       <BarChart data={reqsOverTime} barSize={22}>
                         <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                        <Tooltip contentStyle={{ background: '#19191f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 0, fontSize: 12 }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                        <Tooltip contentStyle={{ background: 'var(--surface-container)', border: '1px solid var(--outline-variant)', borderRadius: 0, fontSize: 12 }} cursor={{ fill: 'var(--user-chip-bg)' }} />
                         <Bar dataKey="count" name="Requests" fill="#ff86c2" radius={0} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -3934,7 +3675,7 @@ END:VCALENDAR`;
                         <BarChart data={byPlatform} barSize={36}>
                           <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                          <Tooltip contentStyle={{ background: '#19191f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 0, fontSize: 12 }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                          <Tooltip contentStyle={{ background: 'var(--surface-container)', border: '1px solid var(--outline-variant)', borderRadius: 0, fontSize: 12 }} cursor={{ fill: 'var(--user-chip-bg)' }} />
                           <Bar dataKey="value" name="Sessions" radius={0}>
                             {byPlatform.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                           </Bar>
@@ -4100,85 +3841,11 @@ END:VCALENDAR`;
                           <button className="bg-surface-container-highest p-2 text-primary hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 ml-3">
                             <Pin size={16} />
                           </button>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* User-created challenges */}
-                {userChallenges.length > 0 && (
-                  <div className="mt-10">
-                    <h3 className="text-2xl font-black font-headline text-on-surface mb-6">Community Challenges</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {userChallenges.map((c) => {
-                        const slots = challengeParticipants[c._id] || 0;
-                        const pct = (slots / CHALLENGE_MAX_SLOTS) * 100;
-                        const isFull = slots >= CHALLENGE_MAX_SLOTS;
-                        const isJoined = !!joinedChallenges[c._id];
-                        const isCreator = user?.id === c.createdBy;
-                        return (
-                          <div key={c._id} className="flex flex-col gap-4 group transition-all duration-300 relative overflow-hidden"
-                            style={{ borderLeft: `4px solid ${c.color || '#ff86c2'}`, background: `linear-gradient(135deg, ${c.color || '#ff86c2'}18 0%, #19191f 100%)` }}>
-                            <div className="absolute top-0 right-0 w-32 h-32 blur-[60px] opacity-15 group-hover:opacity-30 transition-opacity pointer-events-none" style={{ background: c.color || '#ff86c2' }} />
-
-                            <div className="p-6 pb-0 relative z-10">
-                              <div className="flex justify-between items-center mb-3">
-                                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: c.color || '#ff86c2' }}>{c.tag || 'COMMUNITY'}</span>
-                                <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5 bg-white/5">{c.durationDays}d</span>
-                              </div>
-                              <h3 className="text-lg font-black font-headline text-on-surface mb-2">{c.title}</h3>
-                              {c.tagline && <p className="text-xs text-slate-400 leading-relaxed mb-2">{c.tagline}</p>}
-                              <p className="text-xs text-slate-500 leading-relaxed">{c.description?.substring(0, 100)}...</p>
-                              <div className="mt-2 flex items-center gap-2">
-                                <span className="text-[9px] text-slate-600">by {c.creatorName || 'Anonymous'}</span>
-                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 ${c.difficulty === 'beginner' ? 'text-green-400 bg-green-400/10' : c.difficulty === 'intermediate' ? 'text-yellow-400 bg-yellow-400/10' : 'text-red-400 bg-red-400/10'}`}>{c.difficulty}</span>
-                              </div>
-                            </div>
-
-                            <div className="px-6 relative z-10 space-y-3">
-                              <div className="flex items-center justify-between text-[10px]">
-                                <span className="font-bold uppercase tracking-widest" style={{ color: c.color || '#ff86c2' }}>Available</span>
-                                <span className="font-bold text-slate-400">{slots} / {CHALLENGE_MAX_SLOTS} joined</span>
-                              </div>
-                              <div className="h-1.5 bg-surface-container-high w-full">
-                                <div className="h-1.5 transition-all duration-500"
-                                  style={{ width: `${pct}%`, background: isFull ? '#ff6e84' : c.color || '#ff86c2', boxShadow: `0 0 8px ${c.color || '#ff86c2'}80` }} />
-                              </div>
-                              {isFull && <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest">Challenge full</p>}
-                            </div>
-
-                            <div className="px-6 pb-6 relative z-10 flex gap-2">
-                              <button
-                                onClick={() => setSelectedChallenge(`user-${c._id}`)}
-                                className="flex-1 text-xs font-bold uppercase tracking-widest py-3 transition-all"
-                                style={{ background: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.08)' }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#fff'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}>
-                                View Details
-                              </button>
-                              <button
-                                disabled={isFull && !isJoined}
-                                onClick={() => handleJoinChallenge(c._id)}
-                                className="flex-1 text-xs font-bold uppercase tracking-widest py-3 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                style={{ background: isJoined ? `${c.color || '#ff86c2'}30` : `${c.color || '#ff86c2'}18`, color: c.color || '#ff86c2', border: `1px solid ${c.color || '#ff86c2'}40` }}
-                                onMouseEnter={e => { if (!isJoined && !isFull) { (e.currentTarget as HTMLButtonElement).style.background = c.color || '#ff86c2'; (e.currentTarget as HTMLButtonElement).style.color = '#0e0e13'; } }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isJoined ? `${c.color || '#ff86c2'}30` : `${c.color || '#ff86c2'}18`; (e.currentTarget as HTMLButtonElement).style.color = c.color || '#ff86c2'; }}>
-                                {isJoined ? '✓ Joined' : isFull ? 'Full' : 'Join →'}
-                              </button>
-                              {isCreator && (
-                                <button onClick={() => handleDeleteUserChallenge(c._id)}
-                                  className="text-[9px] font-bold uppercase px-2 py-1 text-red-400 border border-red-900/40 hover:border-red-400 hover:bg-red-400/10 transition-all">
-                                  ✕
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                        </div>
                         );
                       })}
                     </div>
                   </div>
-                )}
-              </div>
                 );
               })()}
 
@@ -4199,7 +3866,6 @@ END:VCALENDAR`;
                       className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface outline-none transition-colors">
                       <option value="">Select Category</option>
                       <option value="DevOps">DevOps</option>
-                      <option value="Kubernetes">Kubernetes</option>
                       <option value="Cloud">Cloud</option>
                       <option value="Programming">Programming</option>
                       <option value="Security">Security</option>
@@ -4458,7 +4124,7 @@ END:VCALENDAR`;
             style={{ background: 'rgba(14,14,19,0.88)', backdropFilter: 'blur(20px)' }}
             onClick={e => { if (e.target === e.currentTarget) { setCohostRejectModal(null); setCohostRejectReason(''); } }}
           >
-            <div className="w-full max-w-md bg-[#19191f] border border-outline-variant p-6">
+            <div className="w-full max-w-md bg-surface-container border border-outline-variant p-6">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Reject Co-host Invitation</p>
               <p className="text-base font-bold text-on-surface mb-4">{cohostRejectModal.topic}</p>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
@@ -4600,7 +4266,7 @@ END:VCALENDAR`;
             style={{ background: 'rgba(14,14,19,0.8)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' }}
             onClick={e => { if (e.target === e.currentTarget) setShowRequestModal(false); }}
           >
-            <div className="w-full max-w-md bg-[#19191f] border border-[rgba(255,134,194,0.2)]" style={{ boxShadow: '0 0 60px rgba(255,134,194,0.08)' }}>
+            <div className="w-full max-w-md bg-surface-container border border-[rgba(255,134,194,0.2)]" style={{ boxShadow: '0 0 60px rgba(255,134,194,0.08)' }}>
               <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.06)]">
                 <div>
                   <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-0.5">Community</p>
@@ -4616,7 +4282,7 @@ END:VCALENDAR`;
                     placeholder="e.g. Kumail"
                     value={newRequestUserName}
                     onChange={e => setNewRequestUserName(e.target.value)}
-                    className="w-full bg-[#0e0e13] border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors"
+                    className="w-full bg-surface border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors"
                   />
                 </div>
                 <div className="space-y-1">
@@ -4626,7 +4292,7 @@ END:VCALENDAR`;
                     placeholder="e.g. Kubernetes Deep Dive"
                     value={newRequestResourceName}
                     onChange={e => setNewRequestResourceName(e.target.value)}
-                    className="w-full bg-[#0e0e13] border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors"
+                    className="w-full bg-surface border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors"
                   />
                 </div>
                 <div className="space-y-1">
@@ -4634,7 +4300,7 @@ END:VCALENDAR`;
                   <select
                     value={newRequestResourceType}
                     onChange={e => setNewRequestResourceType(e.target.value)}
-                    className="w-full bg-[#0e0e13] border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface outline-none transition-colors"
+                    className="w-full bg-surface border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface outline-none transition-colors"
                   >
                     <option value="">Select type…</option>
                     {['Video', 'Documentation', 'Course', 'Blog', 'Tool', 'Other'].map(t => (
@@ -4649,7 +4315,7 @@ END:VCALENDAR`;
                     value={newRequestNotes}
                     onChange={e => setNewRequestNotes(e.target.value)}
                     rows={3}
-                    className="w-full bg-[#0e0e13] border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors resize-none"
+                    className="w-full bg-surface border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors resize-none"
                   />
                 </div>
               </div>
@@ -4678,7 +4344,7 @@ END:VCALENDAR`;
           >
             {/* Search box */}
             <div className="w-full max-w-2xl" style={{ filter: 'drop-shadow(0 0 40px rgba(255,134,194,0.15))' }}>
-              <div className="flex items-center bg-[#19191f] border border-[rgba(255,134,194,0.25)] px-5 py-4 gap-3">
+              <div className="flex items-center bg-surface-container border border-[rgba(255,134,194,0.25)] px-5 py-4 gap-3">
                 <Search size={18} className="text-primary shrink-0" />
                 <input
                   ref={searchInputRef}
@@ -4696,7 +4362,7 @@ END:VCALENDAR`;
 
               {/* Results */}
               {globalQuery.trim() && (
-                <div className="bg-[#14141a] border border-[rgba(255,255,255,0.06)] border-t-0 max-h-[55vh] overflow-y-auto">
+                <div className="bg-surface border border-outline-variant border-t-0 max-h-[55vh] overflow-y-auto">
                   {!globalResults || globalResults.length === 0 ? (
                     <p className="text-slate-500 text-sm text-center py-10">No results for "<span className="text-on-surface">{globalQuery}</span>"</p>
                   ) : (
@@ -4741,7 +4407,7 @@ END:VCALENDAR`;
 
               {/* Hint */}
               {!globalQuery.trim() && (
-                <div className="bg-[#14141a] border border-[rgba(255,255,255,0.06)] border-t-0 px-5 py-4 flex gap-6 text-xs text-slate-600">
+                <div className="bg-surface border border-outline-variant border-t-0 px-5 py-4 flex gap-6 text-xs text-slate-600">
                   <span><kbd className="border border-slate-700 px-1 py-0.5 text-slate-500">↵</kbd> navigate</span>
                   <span><kbd className="border border-slate-700 px-1 py-0.5 text-slate-500">Esc</kbd> close</span>
                   <span className="ml-auto">Search across Resources · Sessions · Study Groups · Challenges</span>

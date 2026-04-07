@@ -218,16 +218,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const deleteRequest = async (id: string) => {
-    if (!confirm('Are you sure you want to permanently delete this request?')) return;
-    try {
-      await axios.delete(`${API_BASE_URL}/requests/${id}`);
-      setAllRequests(prev => prev.filter(r => r._id !== id));
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const getDaysPending = (r: FullRequest) => {
     const d = new Date(r.createdAt || r.requestDate);
     if (isNaN(d.getTime())) return 0;
@@ -274,7 +264,7 @@ const AdminDashboard: React.FC = () => {
     <button
       onClick={() => setAdminTab(key)}
       className={`w-full flex items-center gap-4 px-4 py-3 text-left text-sm font-medium tracking-wide transition-all ${
-        adminTab === key ? 'bg-[#25252c] text-[#ff86c2]' : 'text-slate-500 hover:text-slate-300 hover:bg-[#1c1c24]'
+        adminTab === key ? 'bg-surface-container-highest text-primary' : 'text-slate-500 hover:text-on-surface hover:bg-surface-container-high'
       }`}
     >
       <Icon size={16} />{label}
@@ -282,16 +272,16 @@ const AdminDashboard: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#0e0e13] text-[#f8f5fd]" style={{ fontFamily: 'Manrope, sans-serif' }}>
+    <div className="min-h-screen bg-surface text-on-surface" style={{ fontFamily: 'Manrope, sans-serif' }}>
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-20 bg-[#131318] border-b border-white/5 flex items-center justify-between px-10">
+      <header className="fixed top-0 left-0 right-0 z-50 h-20 bg-surface-container-low border-b border-outline-variant flex items-center justify-between px-10">
         <div className="flex items-center gap-4">
           <span className="text-xl font-black text-[#ff86c2] uppercase tracking-widest" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Devops Dojo</span>
           <span className="text-[10px] text-slate-600 uppercase tracking-[0.25em]">Admin Console</span>
         </div>
         <div className="flex items-center gap-6">
-          <Link to="/user" className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#ff86c2] transition-colors uppercase tracking-widest">
+          <Link to="/user" className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-primary transition-colors uppercase tracking-widest">
             <ExternalLink size={13} /> User View
           </Link>
           <button onClick={() => signOut({ redirectUrl: '/login' })} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-red-400 transition-colors uppercase tracking-widest">
@@ -302,9 +292,9 @@ const AdminDashboard: React.FC = () => {
 
       <div className="flex pt-20">
         {/* Sidebar */}
-        <aside className="fixed left-0 top-20 h-[calc(100vh-5rem)] w-64 bg-[#131318] flex flex-col py-8 z-40">
+        <aside className="fixed left-0 top-20 h-[calc(100vh-5rem)] w-64 bg-surface-container-low flex flex-col py-8 z-40">
           <div className="px-8 mb-10">
-            <h1 className="text-lg font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+            <h1 className="text-lg font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
               <SplitText text="Admin Panel" delay={45} />
             </h1>
             <p className="text-[9px] text-slate-600 uppercase tracking-[0.2em] mt-1">Devops Dojo Hub</p>
@@ -333,7 +323,7 @@ const AdminDashboard: React.FC = () => {
           {adminTab === 'overview' && (
             <>
               <div>
-                <h2 className="text-3xl font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                <h2 className="text-3xl font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                   <SplitText text="Overview" delay={55} />
                 </h2>
                 <p className="text-slate-500 mt-1 text-sm">Platform health at a glance</p>
@@ -347,7 +337,7 @@ const AdminDashboard: React.FC = () => {
                   { label: 'Pending Requests', value: pending.length, accent: '#facc15' },
                   { label: 'Pending Removals', value: pendingRemovals.length, accent: pendingRemovals.length > 0 ? '#ff6e84' : '#4ade80' },
                 ].map(c => (
-                  <div key={c.label} className="bg-[#131318] p-6 flex flex-col gap-2 relative overflow-hidden" style={{ borderLeft: `3px solid ${c.accent}` }}>
+                  <div key={c.label} className="bg-surface-container-low p-6 flex flex-col gap-2 relative overflow-hidden" style={{ borderLeft: `3px solid ${c.accent}` }}>
                     <div className="absolute top-0 right-0 w-20 h-20 blur-[40px] opacity-20 pointer-events-none" style={{ background: c.accent }}></div>
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.label}</span>
                     <span className="text-4xl font-black leading-none" style={{ color: c.accent, fontFamily: 'Space Grotesk, sans-serif' }}>{c.value}</span>
@@ -363,7 +353,7 @@ const AdminDashboard: React.FC = () => {
                     { label: 'Pending Requests', value: pending.length, accent: '#facc15' },
                     { label: 'Stale (7+ days)', value: stale.length, accent: stale.length > 0 ? '#ff6e84' : '#4ade80' },
                   ].map(c => (
-                    <div key={c.label} className="bg-[#131318] p-6 flex flex-col gap-2 relative overflow-hidden" style={{ borderLeft: `3px solid ${c.accent}` }}>
+                    <div key={c.label} className="bg-surface-container-low p-6 flex flex-col gap-2 relative overflow-hidden" style={{ borderLeft: `3px solid ${c.accent}` }}>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.label}</span>
                       <span className="text-4xl font-black leading-none" style={{ color: c.accent }}>{c.value}</span>
                     </div>
@@ -378,7 +368,7 @@ const AdminDashboard: React.FC = () => {
             <>
               <div className="flex items-end justify-between">
                 <div>
-                  <h2 className="text-3xl font-black text-[#f8f5fd]">User Management</h2>
+                  <h2 className="text-3xl font-black text-on-surface">User Management</h2>
                   <p className="text-slate-500 mt-1 text-sm">Manage users, roles, and permissions</p>
                 </div>
                 <button onClick={() => setShowInviteModal(true)} className="flex items-center gap-2 px-4 py-2 bg-[#ff86c2] text-[#0e0e13] text-xs font-black uppercase tracking-widest hover:opacity-90">
@@ -389,20 +379,20 @@ const AdminDashboard: React.FC = () => {
               {/* Invite Modal */}
               {showInviteModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                  <div className="bg-[#131318] p-6 rounded-xl w-96 space-y-4 border border-white/10">
-                    <h3 className="text-lg font-black text-[#f8f5fd]">Invite User</h3>
+                  <div className="bg-surface-container-low p-6 rounded-xl w-96 space-y-4 border border-outline-variant">
+                    <h3 className="text-lg font-black text-on-surface">Invite User</h3>
                     <input type="email" placeholder="Enter email address" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-                      className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-2 text-sm text-[#f8f5fd] placeholder-slate-600 outline-none focus:border-[#ff86c2]" />
+                      className="w-full bg-surface border border-outline-variant px-4 py-2 text-sm text-on-surface placeholder-slate-600 outline-none focus:border-primary" />
                     <div className="flex gap-3">
                       <button onClick={handleInviteUser} className="flex-1 py-2 bg-[#ff86c2] text-[#0e0e13] text-xs font-black uppercase hover:opacity-90">Send Invite</button>
-                      <button onClick={() => setShowInviteModal(false)} className="px-4 py-2 border border-[#48474d] text-slate-400 text-xs font-bold uppercase hover:text-[#f8f5fd]">Cancel</button>
+                      <button onClick={() => setShowInviteModal(false)} className="px-4 py-2 border border-outline-variant text-slate-400 text-xs font-bold uppercase hover:text-on-surface">Cancel</button>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Users Table */}
-              <div className="bg-[#131318] overflow-x-auto">
+              <div className="bg-surface-container-low overflow-x-auto">
                 {managedUsers.length === 0 ? (
                   <div className="p-8 text-center text-slate-500">
                     No users found. Click "Invite User" to add users.
@@ -410,7 +400,7 @@ const AdminDashboard: React.FC = () => {
                 ) : (
                 <table className="w-full text-sm min-w-[800px]">
                   <thead>
-                    <tr className="bg-[#1f1f26]">
+                    <tr className="bg-surface-container-high">
                       {['User', 'Email', 'Role', 'Status', 'Actions'].map(h => (
                         <th key={h} className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest px-5 py-3">{h}</th>
                       ))}
@@ -418,13 +408,13 @@ const AdminDashboard: React.FC = () => {
                   </thead>
                   <tbody>
                     {managedUsers.filter(u => u.status !== 'removed').map(u => (
-                      <tr key={u._id} className="border-t border-white/5 hover:bg-[#1a1a21] transition-colors">
+                      <tr key={u._id} className="border-t border-outline-variant hover:bg-surface-container-high transition-colors">
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-[#ff86c2]/20 flex items-center justify-center text-[10px] font-bold text-[#ff86c2]">
                               {(u.name || u.email)[0].toUpperCase()}
                             </div>
-                            <span className="font-bold text-[#f8f5fd]">{u.name || '—'}</span>
+                            <span className="font-bold text-on-surface">{u.name || '—'}</span>
                           </div>
                         </td>
                         <td className="px-5 py-3 text-slate-400">{u.email}</td>
@@ -457,7 +447,7 @@ const AdminDashboard: React.FC = () => {
                               </button>
                             )}
                             {u.role === 'admin' && u.clerkId !== clerkUser?.id && (
-                              <button onClick={() => handleDemoteToUser(u.clerkId)} className="text-[9px] font-bold uppercase px-2 py-1 text-slate-400 border border-slate-600 hover:text-[#f8f5fd]">
+                              <button onClick={() => handleDemoteToUser(u.clerkId)} className="text-[9px] font-bold uppercase px-2 py-1 text-slate-400 border border-slate-600 hover:text-on-surface">
                                 Demote
                               </button>
                             )}
@@ -478,14 +468,14 @@ const AdminDashboard: React.FC = () => {
               {/* Remove User Modal */}
               {showRemoveModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                  <div className="bg-[#131318] p-6 rounded-xl w-96 space-y-4 border border-red-500/30">
+                  <div className="bg-surface-container-low p-6 rounded-xl w-96 space-y-4 border border-red-500/30">
                     <h3 className="text-lg font-black text-red-400">Request User Removal</h3>
                     <p className="text-xs text-slate-400">This request will be reviewed by a Super Admin.</p>
                     <textarea placeholder="Reason for removal (required)" value={removeReason} onChange={e => setRemoveReason(e.target.value)}
-                      className="w-full bg-[#0e0e13] border border-[#48474d] px-4 py-2 text-sm text-[#f8f5fd] placeholder-slate-600 outline-none focus:border-red-400 h-24 resize-none" />
+                      className="w-full bg-surface border border-outline-variant px-4 py-2 text-sm text-on-surface placeholder-slate-600 outline-none focus:border-red-400 h-24 resize-none" />
                     <div className="flex gap-3">
                       <button onClick={handleRequestRemoval} disabled={!removeReason.trim()} className="flex-1 py-2 bg-red-500 text-white text-xs font-black uppercase hover:bg-red-600 disabled:opacity-50">Submit Request</button>
-                      <button onClick={() => { setShowRemoveModal(false); setRemoveReason(''); setRemoveUserId(null); }} className="px-4 py-2 border border-[#48474d] text-slate-400 text-xs font-bold uppercase">Cancel</button>
+                      <button onClick={() => { setShowRemoveModal(false); setRemoveReason(''); setRemoveUserId(null); }} className="px-4 py-2 border border-outline-variant text-slate-400 text-xs font-bold uppercase">Cancel</button>
                     </div>
                   </div>
                 </div>
@@ -497,18 +487,18 @@ const AdminDashboard: React.FC = () => {
           {adminTab === 'removals' && userIsSuperAdmin && (
             <>
               <div>
-                <h2 className="text-3xl font-black text-[#f8f5fd]">Removal Requests</h2>
+                <h2 className="text-3xl font-black text-on-surface">Removal Requests</h2>
                 <p className="text-slate-500 mt-1 text-sm">Review and approve user removal requests</p>
               </div>
 
               {pendingRemovals.length === 0 ? (
-                <div className="bg-[#131318] p-12 text-center">
+                <div className="bg-surface-container-low p-12 text-center">
                   <p className="text-slate-500">No pending removal requests</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {pendingRemovals.map(u => (
-                    <div key={u._id} className="bg-[#131318] p-6 border border-yellow-500/30">
+                    <div key={u._id} className="bg-surface-container-low p-6 border border-yellow-500/30">
                       <div className="flex items-start justify-between">
                         <div className="space-y-2">
                           <div className="flex items-center gap-3">
@@ -516,12 +506,12 @@ const AdminDashboard: React.FC = () => {
                               {(u.name || u.email)[0].toUpperCase()}
                             </div>
                             <div>
-                              <p className="font-bold text-[#f8f5fd]">{u.name || '—'}</p>
+                              <p className="font-bold text-on-surface">{u.name || '—'}</p>
                               <p className="text-xs text-slate-500">{u.email}</p>
                             </div>
                             {getRoleBadge(u.role)}
                           </div>
-                          <div className="mt-3 p-3 bg-[#0e0e13]">
+                          <div className="mt-3 p-3 bg-surface">
                             <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Reason for removal:</p>
                             <p className="text-sm text-slate-300">{u.removalRequest?.reason}</p>
                           </div>
@@ -548,7 +538,7 @@ const AdminDashboard: React.FC = () => {
             <>
               <div className="flex items-end justify-between">
                 <div>
-                  <h2 className="text-3xl font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <h2 className="text-3xl font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                     <SplitText text="Requested Resources" delay={35} />
                   </h2>
                   <p className="text-slate-500 mt-1 text-sm">Review, action, and track all resource requests</p>
@@ -574,10 +564,10 @@ const AdminDashboard: React.FC = () => {
                 </div>
               )}
 
-              <div className="bg-[#131318] overflow-x-auto">
+              <div className="bg-surface-container-low overflow-x-auto">
                 <table className="w-full text-sm min-w-[920px]">
                   <thead>
-                    <tr className="bg-[#1f1f26]">
+                    <tr className="bg-surface-container-high">
                       {['Resource Name', 'Requested By', 'Type', 'Date', 'Days', 'Status', 'Actions'].map(h => (
                         <th key={h} className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest px-5 py-3 whitespace-nowrap">{h}</th>
                       ))}
@@ -593,10 +583,10 @@ const AdminDashboard: React.FC = () => {
                       const isStaleRow = r.status === 'pending' && days >= 7;
                       const isFulfilled = r.status === 'fulfilled' || r.status === 'done';
                       return (
-                        <tr key={r._id} className={`border-t border-white/5 hover:bg-[#1a1a21] transition-colors ${isStaleRow ? 'bg-red-950/10' : ''}`}>
+                        <tr key={r._id} className={`border-t border-outline-variant hover:bg-surface-container-high transition-colors ${isStaleRow ? 'bg-red-950/10' : ''}`}>
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`font-bold ${isFulfilled ? 'text-slate-500 line-through' : 'text-[#f8f5fd]'}`}>{r.resourceName}</span>
+                              <span className={`font-bold ${isFulfilled ? 'text-slate-500 line-through' : 'text-on-surface'}`}>{r.resourceName}</span>
                               {dup && <span className="text-[9px] font-black uppercase px-1.5 py-0.5 text-[#ff86c2] bg-[#ff86c2]/10">⚠ Dup</span>}
                               {isStaleRow && <span className="text-[9px] font-black uppercase px-1.5 py-0.5 text-red-400 bg-red-400/10">Overdue</span>}
                             </div>
@@ -624,15 +614,7 @@ const AdminDashboard: React.FC = () => {
                           </td>
                           <td className="px-5 py-3">
                             {isFulfilled
-                              ? (
-                                <div className="flex gap-2 items-center">
-                                  <span className="text-[10px] text-green-500 flex items-center gap-1"><CheckCircle2 size={11} /> Done</span>
-                                  <button onClick={() => deleteRequest(r._id)}
-                                    className="text-[9px] font-black uppercase px-2.5 py-1.5 text-slate-500 border border-slate-700 hover:border-red-500 hover:text-red-500 transition-all">
-                                    <Trash2 size={10} />
-                                  </button>
-                                </div>
-                              )
+                              ? <span className="text-[10px] text-green-500 flex items-center gap-1"><CheckCircle2 size={11} /> Done</span>
                               : (
                                 <div className="flex gap-2">
                                   <button onClick={() => markRequestStatus(r._id, 'fulfilled')}
@@ -642,10 +624,6 @@ const AdminDashboard: React.FC = () => {
                                   <button onClick={() => markRequestStatus(r._id, 'rejected')}
                                     className="text-[9px] font-black uppercase px-2.5 py-1.5 text-red-500 border border-red-900/40 hover:border-red-400 transition-all">
                                     Reject
-                                  </button>
-                                  <button onClick={() => deleteRequest(r._id)}
-                                    className="text-[9px] font-black uppercase px-2.5 py-1.5 text-slate-500 border border-slate-700 hover:border-red-500 hover:text-red-500 transition-all">
-                                    <Trash2 size={10} />
                                   </button>
                                 </div>
                               )
@@ -665,12 +643,12 @@ const AdminDashboard: React.FC = () => {
             <>
               <div className="flex items-end justify-between">
                 <div>
-                  <h2 className="text-3xl font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <h2 className="text-3xl font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                     <SplitText text="Download Requests" delay={35} />
                   </h2>
                   <p className="text-slate-500 mt-1 text-sm">Review and approve session recording download requests</p>
                 </div>
-                <button onClick={fetchAll} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#f8f5fd] transition-colors">
+                <button onClick={fetchAll} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-on-surface transition-colors">
                   <RefreshCw size={12} /> Refresh
                 </button>
               </div>
@@ -682,15 +660,15 @@ const AdminDashboard: React.FC = () => {
                 const rejectedDl = downloadRequests.filter(r => r.status === 'rejected');
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-[#131318] p-5 flex flex-col gap-2" style={{ borderLeft: '3px solid #facc15' }}>
+                    <div className="bg-surface-container-low p-5 flex flex-col gap-2" style={{ borderLeft: '3px solid #facc15' }}>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pending</span>
                       <span className="text-3xl font-black" style={{ color: '#facc15', fontFamily: 'Space Grotesk, sans-serif' }}>{pendingDl.length}</span>
                     </div>
-                    <div className="bg-[#131318] p-5 flex flex-col gap-2" style={{ borderLeft: '3px solid #4ade80' }}>
+                    <div className="bg-surface-container-low p-5 flex flex-col gap-2" style={{ borderLeft: '3px solid #4ade80' }}>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Approved (24h)</span>
                       <span className="text-3xl font-black" style={{ color: '#4ade80', fontFamily: 'Space Grotesk, sans-serif' }}>{approvedDl.length}</span>
                     </div>
-                    <div className="bg-[#131318] p-5 flex flex-col gap-2" style={{ borderLeft: '3px solid #f87171' }}>
+                    <div className="bg-surface-container-low p-5 flex flex-col gap-2" style={{ borderLeft: '3px solid #f87171' }}>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rejected</span>
                       <span className="text-3xl font-black" style={{ color: '#f87171', fontFamily: 'Space Grotesk, sans-serif' }}>{rejectedDl.length}</span>
                     </div>
@@ -698,10 +676,10 @@ const AdminDashboard: React.FC = () => {
                 );
               })()}
 
-              <div className="bg-[#131318] overflow-x-auto">
+              <div className="bg-surface-container-low overflow-x-auto">
                 <table className="w-full text-sm min-w-[900px]">
                   <thead>
-                    <tr className="bg-[#1f1f26]">
+                    <tr className="bg-surface-container-high">
                       {['Session', 'User', 'Email', 'Status', 'Requested', 'Expires', 'Actions'].map(h => (
                         <th key={h} className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest px-5 py-3 whitespace-nowrap">{h}</th>
                       ))}
@@ -715,10 +693,10 @@ const AdminDashboard: React.FC = () => {
                       const session = r.sessionId || {};
                       const isExpired = r.expiresAt && new Date(r.expiresAt) < new Date();
                       return (
-                        <tr key={r._id} className="border-t border-white/5 hover:bg-[#1a1a21] transition-colors">
+                        <tr key={r._id} className="border-t border-outline-variant hover:bg-surface-container-high transition-colors">
                           <td className="px-5 py-3">
                             <div>
-                              <span className="font-bold text-[#f8f5fd]">{session.topic || '—'}</span>
+                              <span className="font-bold text-on-surface">{session.topic || '—'}</span>
                               {session.date && <span className="text-xs text-slate-500 ml-2">{session.date}</span>}
                             </div>
                           </td>
@@ -773,7 +751,7 @@ const AdminDashboard: React.FC = () => {
           {adminTab === 'slack' && (
             <>
               <div>
-                <h2 className="text-3xl font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                <h2 className="text-3xl font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                   <SplitText text="Slack Alerts" delay={55} />
                 </h2>
                 <p className="text-slate-500 mt-1 text-sm">Send weekly stale resource alerts to your Slack workspace</p>
@@ -786,7 +764,7 @@ const AdminDashboard: React.FC = () => {
                   { label: 'Stale (7+ days)', value: stale.length, accent: stale.length > 0 ? '#ff6e84' : '#4ade80' },
                   { label: 'Fulfilled Total', value: fulfilled.length, accent: '#4ade80' },
                 ].map(c => (
-                  <div key={c.label} className="bg-[#131318] p-5 flex flex-col gap-2" style={{ borderLeft: `3px solid ${c.accent}` }}>
+                  <div key={c.label} className="bg-surface-container-low p-5 flex flex-col gap-2" style={{ borderLeft: `3px solid ${c.accent}` }}>
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.label}</span>
                     <span className="text-3xl font-black" style={{ color: c.accent, fontFamily: 'Space Grotesk, sans-serif' }}>{c.value}</span>
                   </div>
@@ -794,8 +772,8 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Webhook config */}
-              <div className="bg-[#131318] p-8 space-y-6">
-                <h3 className="text-base font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Slack Webhook Configuration</h3>
+              <div className="bg-surface-container-low p-8 space-y-6">
+                <h3 className="text-base font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Slack Webhook Configuration</h3>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Incoming Webhook URL</label>
                   <input
@@ -803,7 +781,7 @@ const AdminDashboard: React.FC = () => {
                     placeholder="https://hooks.slack.com/services/..."
                     value={slackWebhook}
                     onChange={e => { setSlackWebhook(e.target.value); localStorage.setItem('dojo_slack_webhook', e.target.value); }}
-                    className="w-full bg-[#0e0e13] border-b border-[#48474d] focus:border-[#ff86c2] px-0 py-2.5 text-sm text-[#f8f5fd] placeholder-slate-700 outline-none transition-colors"
+                    className="w-full bg-surface border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface placeholder-slate-700 outline-none transition-colors"
                   />
                   <p className="text-[10px] text-slate-600 mt-1">Create at api.slack.com → Your Apps → Incoming Webhooks</p>
                 </div>
@@ -818,28 +796,28 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Alert preview */}
-              <div className="bg-[#131318] p-8 space-y-4">
-                <h3 className="text-base font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Alert Preview</h3>
-                <pre className="bg-[#0e0e13] p-5 text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-mono overflow-x-auto">
+              <div className="bg-surface-container-low p-8 space-y-4">
+                <h3 className="text-base font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Alert Preview</h3>
+                <pre className="bg-surface p-5 text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-mono overflow-x-auto">
                   {alertText}
                 </pre>
                 <button
                   onClick={() => navigator.clipboard.writeText(alertText)}
-                  className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#f8f5fd] transition-colors">
+                  className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-on-surface transition-colors">
                   <Copy size={13} /> Copy Alert Text
                 </button>
               </div>
 
               {/* Stale requests detail */}
               {stale.length > 0 && (
-                <div className="bg-[#131318] overflow-hidden">
+                <div className="bg-surface-container-low overflow-hidden">
                   <div className="px-6 py-4 border-b border-red-900/30 flex items-center gap-2">
                     <AlertTriangle size={14} className="text-red-400" />
-                    <h3 className="text-base font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Stale Requests</h3>
+                    <h3 className="text-base font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Stale Requests</h3>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-[#1f1f26]">
+                      <tr className="bg-surface-container-high">
                         {['Resource', 'Requested By', 'Days Pending', 'Action'].map(h => (
                           <th key={h} className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest px-6 py-3">{h}</th>
                         ))}
@@ -848,7 +826,7 @@ const AdminDashboard: React.FC = () => {
                     <tbody>
                       {stale.map(r => (
                         <tr key={r._id} className="border-t border-red-900/20 bg-red-950/10 hover:bg-red-950/20 transition-colors">
-                          <td className="px-6 py-3 font-bold text-[#f8f5fd]">{r.resourceName}</td>
+                          <td className="px-6 py-3 font-bold text-on-surface">{r.resourceName}</td>
                           <td className="px-6 py-3 text-slate-400">{r.userName}</td>
                           <td className="px-6 py-3 text-red-400 font-bold">{getDaysPending(r)}d</td>
                           <td className="px-6 py-3">
@@ -870,19 +848,19 @@ const AdminDashboard: React.FC = () => {
           {adminTab === 'roles' && (
             <>
               <div>
-                <h2 className="text-3xl font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                <h2 className="text-3xl font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                   <SplitText text="Role Management" delay={40} />
                 </h2>
                 <p className="text-slate-500 mt-1 text-sm">Manage user roles via Clerk — assign admin or standard user access</p>
               </div>
 
               {/* Current admin info */}
-              <div className="bg-[#131318] p-6 border-l-4 border-[#bf81ff] space-y-3">
+              <div className="bg-surface-container-low p-6 border-l-4 border-[#bf81ff] space-y-3">
                 <p className="text-[10px] font-bold text-[#bf81ff] uppercase tracking-widest">Currently Signed In</p>
                 <div className="flex items-center gap-4">
                   {clerkUser?.imageUrl && <img src={clerkUser.imageUrl} alt="avatar" className="w-10 h-10 rounded-full" />}
                   <div>
-                    <p className="text-sm font-black text-[#f8f5fd]">{clerkUser?.fullName || clerkUser?.username || '—'}</p>
+                    <p className="text-sm font-black text-on-surface">{clerkUser?.fullName || clerkUser?.username || '—'}</p>
                     <p className="text-xs text-slate-500">{clerkUser?.primaryEmailAddress?.emailAddress}</p>
                   </div>
                   <span className={`ml-auto text-[10px] font-black uppercase px-2 py-1 ${userIsSuperAdmin ? 'text-[#a78bfa] bg-[#a78bfa]/10' : 'text-[#ff86c2] bg-[#ff86c2]/10'}`}>
@@ -892,14 +870,14 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* How roles work */}
-              <div className="bg-[#131318] p-8 space-y-5">
-                <h3 className="text-base font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>How Roles Work</h3>
+              <div className="bg-surface-container-low p-8 space-y-5">
+                <h3 className="text-base font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>How Roles Work</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
                     { role: 'admin', color: '#ff86c2', desc: 'Full access: Admin Console, all resources, user management, Slack alerts' },
                     { role: 'user', color: '#4ade80', desc: 'Standard access: view resources, book sessions, join study groups' },
                   ].map(r => (
-                    <div key={r.role} className="bg-[#0e0e13] p-5 space-y-2" style={{ borderLeft: `3px solid ${r.color}` }}>
+                    <div key={r.role} className="bg-surface p-5 space-y-2" style={{ borderLeft: `3px solid ${r.color}` }}>
                       <span className="text-[10px] font-black uppercase px-2 py-0.5" style={{ color: r.color, background: r.color + '20' }}>{r.role}</span>
                       <p className="text-xs text-slate-400 leading-relaxed">{r.desc}</p>
                     </div>
@@ -908,13 +886,13 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Clerk Dashboard instructions */}
-              <div className="bg-[#131318] p-8 space-y-5">
+              <div className="bg-surface-container-low p-8 space-y-5">
                 <div className="flex items-center gap-3">
                   <Shield size={16} className="text-[#bf81ff]" />
-                  <h3 className="text-base font-black text-[#f8f5fd]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Set Roles via Clerk Dashboard</h3>
+                  <h3 className="text-base font-black text-on-surface" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Set Roles via Clerk Dashboard</h3>
                 </div>
                 <p className="text-sm text-slate-400 leading-relaxed">
-                  Roles are stored in Clerk's <code className="bg-[#0e0e13] px-1.5 py-0.5 text-[#bf81ff] text-xs font-mono">publicMetadata.role</code> field.
+                  Roles are stored in Clerk's <code className="bg-surface px-1.5 py-0.5 text-[#bf81ff] text-xs font-mono">publicMetadata.role</code> field.
                   To assign a role to a user, follow these steps:
                 </p>
                 <ol className="space-y-3">
