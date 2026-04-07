@@ -3888,6 +3888,7 @@ END:VCALENDAR`;
                       className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-3 text-sm text-on-surface outline-none transition-colors">
                       <option value="">Select Category</option>
                       <option value="DevOps">DevOps</option>
+                      <option value="Kubernetes">Kubernetes</option>
                       <option value="Cloud">Cloud</option>
                       <option value="Programming">Programming</option>
                       <option value="Security">Security</option>
