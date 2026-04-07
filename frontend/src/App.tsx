@@ -2292,7 +2292,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.days}d</span>
+                              <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5 bg-white/5 rounded">{c.days}d</span>
                             )}
                           </div>
                           <h3 className="text-lg font-black font-headline text-on-surface mb-2">{c.title}</h3>
