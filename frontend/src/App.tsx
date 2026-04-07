@@ -459,6 +459,13 @@ const App: React.FC = () => {
             <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} />} />
             <Route path="/user" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/:username" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/dashboard" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/challenges" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/schedule" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/studygroups" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/analytics" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/resources" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/suggestions" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/" element={<Navigate to="/login" />} />
@@ -481,6 +488,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const { signOut } = useClerk();
   const { user } = useUser();
   const { isDarkTheme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
   const [currentSection, setCurrentSection] = useState<Section>('dashboard');
   const [showCommunityModal, setShowCommunityModal] = useState(false);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -855,6 +863,17 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
     fetchResources();
     fetchRequests();
   }, [resourcePage, requestPage]);
+
+  // Set section based on URL path
+  useEffect(() => {
+    const path = window.location.pathname.split('/').filter(Boolean);
+    if (path.length >= 2) {
+      const section = path[1];
+      if (['dashboard', 'challenges', 'schedule', 'studygroups', 'analytics', 'resources', 'suggestions'].includes(section)) {
+        setCurrentSection(section as Section);
+      }
+    }
+  }, []);
 
   // Fetch sessions, study groups, challenge participants from MongoDB
   useEffect(() => {
@@ -1496,7 +1515,10 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
 
   const navItem = (section: Section, Icon: React.FC<any>, label: string) => (
     <button
-      onClick={() => setCurrentSection(section)}
+      onClick={() => {
+        setCurrentSection(section);
+        navigate(`/${userUsername}/${section}`);
+      }}
       className={`w-full flex items-center gap-4 px-4 py-3 transition-all duration-200 text-left ${
         currentSection === section
           ? 'bg-surface-container-highest text-primary'
