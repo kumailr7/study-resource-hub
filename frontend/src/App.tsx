@@ -4124,7 +4124,7 @@ END:VCALENDAR`;
                             <div className="p-6 pb-0 relative z-10">
                               <div className="flex justify-between items-center mb-3">
                                 <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: c.color || '#ff86c2' }}>{c.tag || 'COMMUNITY'}</span>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.durationDays}d</span>
+                                <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5 bg-white/5">{c.durationDays}d</span>
                               </div>
                               <h3 className="text-lg font-black font-headline text-on-surface mb-2">{c.title}</h3>
                               {c.tagline && <p className="text-xs text-slate-400 leading-relaxed mb-2">{c.tagline}</p>}
