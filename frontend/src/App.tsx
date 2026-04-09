@@ -7,7 +7,7 @@ import logo from "./assets/logo-2.png";
 import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from './components/ProtectedRoute';
-import { LayoutGrid, Trophy, Calendar, LineChart, Package, HelpCircle, LogOut, Bell, Settings, Sun, Moon, Pin, Search, Video, Users, Lightbulb } from 'lucide-react';
+import { LayoutGrid, Trophy, Calendar, LineChart, Package, HelpCircle, LogOut, Bell, Settings, Sun, Moon, Pin, Search, Video, Users, Lightbulb, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts';
 import BlurText from './components/BlurText';
 import SplitText from './components/SplitText';
@@ -459,6 +459,13 @@ const App: React.FC = () => {
             <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} />} />
             <Route path="/user" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/:username" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/dashboard" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/challenges" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/schedule" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/studygroups" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/analytics" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/resources" element={<RequireAuth><ResourceTable /></RequireAuth>} />
+            <Route path="/:username/suggestions" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/" element={<Navigate to="/login" />} />
@@ -481,6 +488,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const { signOut } = useClerk();
   const { user } = useUser();
   const { isDarkTheme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState<Section>('dashboard');
   const [showCommunityModal, setShowCommunityModal] = useState(false);
@@ -687,6 +695,17 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const [activeBannerIdx, setActiveBannerIdx] = useState(0);
   const [bannerFading, setBannerFading] = useState(false);
 
+  // User-created challenges state
+  const [userChallenges, setUserChallenges] = useState<any[]>([]);
+  const [showCreateChallengeModal, setShowCreateChallengeModal] = useState(false);
+  const [newChallengeTitle, setNewChallengeTitle] = useState('');
+  const [newChallengeTagline, setNewChallengeTagline] = useState('');
+  const [newChallengeDescription, setNewChallengeDescription] = useState('');
+  const [newChallengeGithub, setNewChallengeGithub] = useState('');
+  const [newChallengeDocs, setNewChallengeDocs] = useState('');
+  const [newChallengeDifficulty, setNewChallengeDifficulty] = useState('intermediate');
+  const [newChallengeDuration, setNewChallengeDuration] = useState(7);
+
   // Auto-cycle banner when on challenges section
   useEffect(() => {
     const liveChallenges = CHALLENGES.filter(c => getChallengeStatus(c).live);
@@ -718,6 +737,52 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
       }
     }
   };
+
+  const handleCreateChallenge = async () => {
+    if (!newChallengeTitle.trim() || !newChallengeDescription.trim()) {
+      alert('Title and Description are required');
+      return;
+    }
+    if (!user?.id) return;
+    try {
+      const docs = newChallengeDocs.split('\n').filter((d: string) => d.trim());
+      const res = await axios.post<any>(`${API_BASE_URL}/challenges`, {
+        title: newChallengeTitle,
+        tagline: newChallengeTagline,
+        description: newChallengeDescription,
+        githubRepo: newChallengeGithub,
+        documentationLinks: docs,
+        difficulty: newChallengeDifficulty,
+        durationDays: newChallengeDuration,
+        createdBy: user.id,
+        creatorName: user.fullName || user.username || 'Anonymous',
+      });
+      setUserChallenges(prev => [{ ...res.data, id: res.data._id }, ...prev]);
+      setShowCreateChallengeModal(false);
+      setNewChallengeTitle('');
+      setNewChallengeTagline('');
+      setNewChallengeDescription('');
+      setNewChallengeGithub('');
+      setNewChallengeDocs('');
+      setNewChallengeDifficulty('intermediate');
+      setNewChallengeDuration(7);
+    } catch (err) {
+      console.error('Error creating challenge:', err);
+      alert('Failed to create challenge');
+    }
+  };
+
+  const handleDeleteUserChallenge = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this challenge?')) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/challenges/${id}`);
+      setUserChallenges(prev => prev.filter(c => c._id !== id));
+    } catch (err) {
+      console.error('Error deleting challenge:', err);
+      alert('Failed to delete challenge');
+    }
+  };
+
   const getChallengeStatus = (c: typeof CHALLENGES[0]) => {
     const now = Date.now();
     const dayMs = 86400000;
@@ -850,6 +915,17 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
     setDeleteRecordingReason('');
   }, [selectedSession?.id]);
 
+  // Set section based on URL path
+  useEffect(() => {
+    const path = window.location.pathname.split('/').filter(Boolean);
+    if (path.length >= 2) {
+      const section = path[1];
+      if (['dashboard', 'challenges', 'schedule', 'studygroups', 'analytics', 'resources', 'suggestions'].includes(section)) {
+        setCurrentSection(section as Section);
+      }
+    }
+  }, []);
+
   // Fetch resources and requests
   useEffect(() => {
     document.title = "Devops Dojo Hub";
@@ -861,15 +937,17 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   useEffect(() => {
     const fetchShared = async () => {
       try {
-        const [sessRes, sgRes, cpRes] = await Promise.all([
+        const [sessRes, sgRes, cpRes, ucRes] = await Promise.all([
           axios.get<any[]>(`${API_BASE_URL}/sessions`),
           axios.get<any[]>(`${API_BASE_URL}/study-groups`),
           axios.get<{ counts: Record<string, number>; joined: Record<string, boolean> }>(`${API_BASE_URL}/challenge-participants${user?.id ? `?userId=${user.id}` : ''}`),
+          axios.get<any[]>(`${API_BASE_URL}/challenges`),
         ]);
         setSessions(sessRes.data.map((s: any) => ({ ...s, id: s._id })));
         setStudyGroups(sgRes.data.map((g: any) => ({ ...g, id: g._id })));
         setChallengeParticipants(cpRes.data.counts || {});
         setJoinedChallenges(cpRes.data.joined || {});
+        setUserChallenges(ucRes.data.map((c: any) => ({ ...c, id: c._id })));
         // Rebuild my registered sessions from returned data
         const myReg: Record<string, boolean> = {};
         const myGrp: Record<string, boolean> = {};
@@ -1497,7 +1575,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
 
   const navItem = (section: Section, Icon: React.FC<any>, label: string) => (
     <button
-      onClick={() => { setCurrentSection(section); setSidebarOpen(false); }}
+      onClick={() => { setCurrentSection(section); setSidebarOpen(false); navigate(`/${userUsername}/${section}`); }}
       className={`w-full flex items-center gap-4 px-4 py-3 transition-all duration-200 text-left ${
         currentSection === section
           ? 'bg-surface-container-highest text-primary'
@@ -2112,9 +2190,16 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                   );
                 })()}
 
-                <div>
-                  <h2 className="text-4xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.02em' }}><SplitText text="Challenges" delay={60} /></h2>
-                  <p className="text-slate-500 mt-2">Weekly & community learning sprints · max {CHALLENGE_MAX_SLOTS} participants each</p>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <h2 className="text-4xl font-black font-headline text-on-surface" style={{ letterSpacing: '-0.02em' }}><SplitText text="Challenges" delay={60} /></h2>
+                    <p className="text-slate-500 mt-2">Weekly & community learning sprints · max {CHALLENGE_MAX_SLOTS} participants each</p>
+                  </div>
+                  <button onClick={() => setShowCreateChallengeModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all"
+                    style={{ background: '#ff86c2', color: '#0e0e13' }}>
+                    <span>+</span> Create Challenge
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -2187,13 +2272,244 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                     );
                   })}
                 </div>
+
+                {/* User-created challenges */}
+                {userChallenges.length > 0 && (
+                  <div className="mt-10">
+                    <h3 className="text-2xl font-black font-headline text-on-surface mb-6">Community Challenges</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {userChallenges.map((c) => {
+                        const slots = challengeParticipants[c._id] || 0;
+                        const pct = (slots / CHALLENGE_MAX_SLOTS) * 100;
+                        const isFull = slots >= CHALLENGE_MAX_SLOTS;
+                        const isJoined = !!joinedChallenges[c._id];
+                        const isCreator = user?.id === c.createdBy;
+                        return (
+                          <div key={c._id} className="flex flex-col gap-4 group transition-all duration-300 relative overflow-hidden"
+                            style={{ borderLeft: `4px solid ${c.color || '#ff86c2'}`, background: `linear-gradient(135deg, ${c.color || '#ff86c2'}18 0%, var(--surface-container) 100%)` }}>
+                            <div className="absolute top-0 right-0 w-32 h-32 blur-[60px] opacity-15 group-hover:opacity-30 transition-opacity pointer-events-none" style={{ background: c.color || '#ff86c2' }} />
+                            <div className="p-6 pb-0 relative z-10">
+                              <div className="flex justify-between items-center mb-3">
+                                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: c.color || '#ff86c2' }}>{c.tag || 'COMMUNITY'}</span>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.durationDays}d</span>
+                              </div>
+                              <h3 className="text-lg font-black font-headline text-on-surface mb-2">{c.title}</h3>
+                              {c.tagline && <p className="text-xs text-slate-400 leading-relaxed mb-2">{c.tagline}</p>}
+                              <p className="text-xs text-slate-500 leading-relaxed">{c.description?.substring(0, 100)}...</p>
+                              <div className="mt-2 flex items-center gap-2">
+                                <span className="text-[9px] text-slate-600">by {c.creatorName || 'Anonymous'}</span>
+                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 ${c.difficulty === 'beginner' ? 'text-green-400 bg-green-400/10' : c.difficulty === 'intermediate' ? 'text-yellow-400 bg-yellow-400/10' : 'text-red-400 bg-red-400/10'}`}>{c.difficulty}</span>
+                              </div>
+                            </div>
+                            <div className="px-6 relative z-10 space-y-3">
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="font-bold uppercase tracking-widest" style={{ color: c.color || '#ff86c2' }}>Available</span>
+                                <span className="font-bold text-slate-400">{slots} / {CHALLENGE_MAX_SLOTS} joined</span>
+                              </div>
+                              <div className="h-1.5 bg-surface-container-high w-full">
+                                <div className="h-1.5 transition-all duration-500"
+                                  style={{ width: `${pct}%`, background: isFull ? '#ff6e84' : c.color || '#ff86c2', boxShadow: `0 0 8px ${c.color || '#ff86c2'}80` }} />
+                              </div>
+                              {isFull && <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest">Challenge full</p>}
+                            </div>
+                            <div className="px-6 pb-6 relative z-10 flex gap-2">
+                              <button
+                                onClick={() => setSelectedChallenge(`user-${c._id}`)}
+                                className="flex-1 text-xs font-bold uppercase tracking-widest py-3 transition-all"
+                                style={{ background: 'transparent', color: 'var(--btn-ghost-color)', border: '1px solid var(--btn-ghost-border)' }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--on-surface)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--outline)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--btn-ghost-color)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--btn-ghost-border)'; }}>
+                                View Details
+                              </button>
+                              <button
+                                disabled={isFull && !isJoined}
+                                onClick={() => handleJoinChallenge(c._id)}
+                                className="flex-1 text-xs font-bold uppercase tracking-widest py-3 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{ background: isJoined ? `${c.color || '#ff86c2'}30` : `${c.color || '#ff86c2'}18`, color: c.color || '#ff86c2', border: `1px solid ${c.color || '#ff86c2'}40` }}
+                                onMouseEnter={e => { if (!isJoined && !isFull) { (e.currentTarget as HTMLButtonElement).style.background = c.color || '#ff86c2'; (e.currentTarget as HTMLButtonElement).style.color = '#0e0e13'; } }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isJoined ? `${c.color || '#ff86c2'}30` : `${c.color || '#ff86c2'}18`; (e.currentTarget as HTMLButtonElement).style.color = c.color || '#ff86c2'; }}>
+                                {isJoined ? '✓ Joined' : isFull ? 'Full' : 'Join →'}
+                              </button>
+                              {isCreator && (
+                                <button onClick={() => handleDeleteUserChallenge(c._id)}
+                                  className="text-[9px] font-bold uppercase px-2 py-1 text-red-400 border border-red-900/40 hover:border-red-400 hover:bg-red-400/10 transition-all">
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
 
+          {/* ── Create Challenge Modal ── */}
+          {showCreateChallengeModal && (
+            <div
+              className="fixed inset-0 z-[200] flex items-start justify-center px-4 py-10 overflow-y-auto"
+              style={{ background: 'rgba(7,7,10,0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+              onClick={e => { if (e.target === e.currentTarget) setShowCreateChallengeModal(false); }}>
+              <div className="w-full max-w-xl relative" style={{ background: 'var(--modal-inner-bg)', border: '1px solid var(--modal-inner-border)' }}>
+                <div className="p-6 border-b border-outline-variant flex items-center justify-between">
+                  <h3 className="text-xl font-black text-on-surface">Create Challenge</h3>
+                  <button onClick={() => setShowCreateChallengeModal(false)} className="text-slate-500 hover:text-on-surface">
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Title *</label>
+                    <input type="text" value={newChallengeTitle} onChange={e => setNewChallengeTitle(e.target.value)}
+                      className="w-full bg-surface-container-low border border-outline-variant px-4 py-3 text-sm text-on-surface placeholder-slate-600 outline-none focus:border-primary"
+                      placeholder="e.g., Docker Mastery Week" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Tagline</label>
+                    <input type="text" value={newChallengeTagline} onChange={e => setNewChallengeTagline(e.target.value)}
+                      className="w-full bg-surface-container-low border border-outline-variant px-4 py-3 text-sm text-on-surface placeholder-slate-600 outline-none focus:border-primary"
+                      placeholder="e.g., Master containers in 7 days" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Description *</label>
+                    <textarea value={newChallengeDescription} onChange={e => setNewChallengeDescription(e.target.value)}
+                      className="w-full bg-surface-container-low border border-outline-variant px-4 py-3 text-sm text-on-surface placeholder-slate-600 outline-none focus:border-primary h-32 resize-none"
+                      placeholder="Describe what participants will learn and build..." />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">GitHub Repository URL</label>
+                    <input type="url" value={newChallengeGithub} onChange={e => setNewChallengeGithub(e.target.value)}
+                      className="w-full bg-surface-container-low border border-outline-variant px-4 py-3 text-sm text-on-surface placeholder-slate-600 outline-none focus:border-primary"
+                      placeholder="https://github.com/username/repo" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Documentation Links (one per line)</label>
+                    <textarea value={newChallengeDocs} onChange={e => setNewChallengeDocs(e.target.value)}
+                      className="w-full bg-surface-container-low border border-outline-variant px-4 py-3 text-sm text-on-surface placeholder-slate-600 outline-none focus:border-primary h-20 resize-none"
+                      placeholder="https://docs.example.com&#10;https://tutorial.example.com" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Difficulty</label>
+                      <select value={newChallengeDifficulty} onChange={e => setNewChallengeDifficulty(e.target.value)}
+                        className="w-full bg-surface-container-low border border-outline-variant px-4 py-3 text-sm text-on-surface outline-none focus:border-primary">
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Duration (days)</label>
+                      <input type="number" value={newChallengeDuration} onChange={e => setNewChallengeDuration(parseInt(e.target.value) || 7)}
+                        className="w-full bg-surface-container-low border border-outline-variant px-4 py-3 text-sm text-on-surface outline-none focus:border-primary"
+                        min="1" max="30" />
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6 border-t border-outline-variant flex gap-3">
+                  <button onClick={() => setShowCreateChallengeModal(false)}
+                    className="flex-1 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-on-surface transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={handleCreateChallenge}
+                    className="flex-1 py-3 text-xs font-black uppercase tracking-widest transition-all"
+                    style={{ background: '#ff86c2', color: '#0e0e13' }}>
+                    Create Challenge
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── Challenge Detail Modal ── */}
           {selectedChallenge && (() => {
-            const c = CHALLENGES.find(ch => ch.id === selectedChallenge)!;
+            const isUserChallenge = selectedChallenge.startsWith('user-');
+            const userChallenge = isUserChallenge ? userChallenges.find(c => c._id === selectedChallenge.replace('user-', '')) : null;
+            const c = isUserChallenge ? null : CHALLENGES.find(ch => ch.id === selectedChallenge);
+
+            if (isUserChallenge && userChallenge) {
+              const slots = challengeParticipants[userChallenge._id] || 0;
+              const isFull = slots >= CHALLENGE_MAX_SLOTS;
+              const isJoined = !!joinedChallenges[userChallenge._id];
+              const isCreator = user?.id === userChallenge.createdBy;
+              return (
+                <div
+                  className="fixed inset-0 z-[200] flex items-start justify-center px-4 py-10 overflow-y-auto"
+                  style={{ background: 'rgba(7,7,10,0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+                  onClick={e => { if (e.target === e.currentTarget) setSelectedChallenge(null); }}>
+                  <div className="w-full max-w-2xl relative" style={{ background: 'var(--modal-inner-bg)', border: '1px solid var(--modal-inner-border)' }}>
+                    <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: userChallenge.color || '#ff86c2' }} />
+                    <div className="p-6 pb-4 border-b border-outline-variant flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: userChallenge.color || '#ff86c2' }}>{userChallenge.tag || 'COMMUNITY'}</span>
+                          <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 ${userChallenge.difficulty === 'beginner' ? 'text-green-400 bg-green-400/10' : userChallenge.difficulty === 'intermediate' ? 'text-yellow-400 bg-yellow-400/10' : 'text-red-400 bg-red-400/10'}`}>{userChallenge.difficulty}</span>
+                        </div>
+                        <h3 className="text-2xl font-black text-on-surface">{userChallenge.title}</h3>
+                        {userChallenge.tagline && <p className="text-sm text-slate-400 mt-1">{userChallenge.tagline}</p>}
+                      </div>
+                      <button onClick={() => setSelectedChallenge(null)} className="text-slate-500 hover:text-on-surface">
+                        <X size={20} />
+                      </button>
+                    </div>
+                    <div className="p-6 space-y-6">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-2">Description</p>
+                        <p className="text-sm text-slate-300 leading-relaxed">{userChallenge.description}</p>
+                      </div>
+                      {userChallenge.githubRepo && (
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-2">GitHub Repository</p>
+                          <a href={userChallenge.githubRepo} target="_blank" rel="noreferrer"
+                            className="text-sm text-primary hover:underline">{userChallenge.githubRepo}</a>
+                        </div>
+                      )}
+                      {userChallenge.documentationLinks && userChallenge.documentationLinks.length > 0 && (
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.15em] text-slate-600 mb-2">Documentation & Resources</p>
+                          <div className="space-y-2">
+                            {userChallenge.documentationLinks.map((link: string, i: number) => (
+                              <a key={i} href={link} target="_blank" rel="noreferrer"
+                                className="text-sm text-primary hover:underline block">{link}</a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-sm text-slate-500">
+                        <span>Created by {userChallenge.creatorName || 'Anonymous'}</span>
+                        <span>{userChallenge.durationDays} days</span>
+                      </div>
+                    </div>
+                    <div className="p-6 border-t border-outline-variant flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <span className="text-[10px] text-slate-500 uppercase tracking-widest">Participants</span>
+                          <p className="text-lg font-black" style={{ color: userChallenge.color || '#ff86c2' }}>{slots} / {CHALLENGE_MAX_SLOTS}</p>
+                        </div>
+                        {isCreator && (
+                          <button onClick={() => { handleDeleteUserChallenge(userChallenge._id); setSelectedChallenge(null); }}
+                            className="text-[10px] font-bold uppercase px-2 py-1 text-red-400 border border-red-900/40 hover:border-red-400 hover:bg-red-400/10 transition-all">
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        disabled={isFull && !isJoined}
+                        onClick={() => handleJoinChallenge(userChallenge._id)}
+                        className="px-8 py-3 text-xs font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{ background: isJoined ? `${userChallenge.color || '#ff86c2'}25` : userChallenge.color || '#ff86c2', color: isJoined ? userChallenge.color || '#ff86c2' : '#0d0d0f', border: isJoined ? `1px solid ${userChallenge.color || '#ff86c2'}50` : 'none' }}>
+                        {isJoined ? '✓ Already Joined' : isFull ? 'Challenge Full' : 'Join Challenge'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            if (!c) return null;
             const st = getChallengeStatus(c);
             const slots = challengeParticipants[c.id] || 0;
             const isFull = slots >= CHALLENGE_MAX_SLOTS;
@@ -3893,6 +4209,7 @@ END:VCALENDAR`;
                       <option value="Programming">Programming</option>
                       <option value="Security">Security</option>
                       <option value="Networking">Networking</option>
+                      <option value="Kubernetes">Kubernetes</option>
                     </select>
                   </div>
                   <div className="space-y-1">

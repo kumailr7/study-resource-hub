@@ -219,6 +219,16 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const deleteRequest = async (id: string) => {
+    if (!confirm('Are you sure you want to permanently delete this request?')) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/requests/${id}`);
+      setAllRequests(prev => prev.filter(r => r._id !== id));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const getDaysPending = (r: FullRequest) => {
     const d = new Date(r.createdAt || r.requestDate);
     if (isNaN(d.getTime())) return 0;
@@ -631,7 +641,15 @@ const AdminDashboard: React.FC = () => {
                           </td>
                           <td className="px-5 py-3">
                             {isFulfilled
-                              ? <span className="text-[10px] text-green-500 flex items-center gap-1"><CheckCircle2 size={11} /> Done</span>
+                              ? (
+                                <div className="flex gap-2 items-center">
+                                  <span className="text-[10px] text-green-500 flex items-center gap-1"><CheckCircle2 size={11} /> Done</span>
+                                  <button onClick={() => deleteRequest(r._id)}
+                                    className="text-[9px] font-black uppercase px-2.5 py-1.5 text-slate-500 border border-slate-700 hover:border-red-500 hover:text-red-500 transition-all">
+                                    <Trash2 size={10} />
+                                  </button>
+                                </div>
+                              )
                               : (
                                 <div className="flex gap-2">
                                   <button onClick={() => markRequestStatus(r._id, 'fulfilled')}
@@ -641,6 +659,10 @@ const AdminDashboard: React.FC = () => {
                                   <button onClick={() => markRequestStatus(r._id, 'rejected')}
                                     className="text-[9px] font-black uppercase px-2.5 py-1.5 text-red-500 border border-red-900/40 hover:border-red-400 transition-all">
                                     Reject
+                                  </button>
+                                  <button onClick={() => deleteRequest(r._id)}
+                                    className="text-[9px] font-black uppercase px-2.5 py-1.5 text-slate-500 border border-slate-700 hover:border-red-500 hover:text-red-500 transition-all">
+                                    <Trash2 size={10} />
                                   </button>
                                 </div>
                               )
