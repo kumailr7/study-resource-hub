@@ -1,48 +1,127 @@
+version: '3.8'
 
 services:
-  frontend:
-    build:
-      context: ./frontend
-    container_name: frontend_resource
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/usr/src/app
-      - /usr/src/app/node_modules
-    depends_on:
-      - backend
-    networks:
-      - app-network
-
-  backend:
-    build:
-      context: ./backend
-    container_name: backend_resource
-    ports:
-      - "5001:5000"
-    env_file:
-      - ./backend/.env
-    networks:
-      - app-network
-
-  nginx:
-    container_name: nginx
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
     restart: unless-stopped
-    image: nginx:alpine
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./nginx/certs:/etc/nginx/certs
-    depends_on:
-      - frontend
-      - backend
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/certs:/etc/traefik/certs:ro
     networks:
-      - app-network
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_SERVER_ROOT_URL=https://monitoring.devops-dojo.ninja
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`monitoring.devops-dojo.ninja`)"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+      - loki
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`monitoring.devops-dojo.ninja`) && PathPrefix(`/prometheus`)"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+    networks:
+      - monitoring
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/loki/local-config.yaml'
+    volumes:
+      - loki_data:/etc/loki
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.loki.rule=Host(`monitoring.devops-dojo.ninja`) && PathPrefix(`/loki`)"
+      - "traefik.http.routers.loki.tls=true"
+      - "traefik.http.services.loki.loadbalancer.server.port=3100"
+    networks:
+      - monitoring
+
+  influxdb:
+    image: influxdb:2
+    container_name: influxdb
+    restart: unless-stopped
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD:-admin}
+      - DOCKER_INFLUXDB_INIT_ORG=devops-dojo
+      - DOCKER_INFLUXDB_INIT_BUCKET=k6-results
+      - DOCKER_INFLUXDB_INIT_RETENTION=30d
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-admin-token
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    ports:
+      - "8086:8086"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.influxdb.rule=Host(`monitoring.devops-dojo.ninja`) && PathPrefix(`/influxdb`)"
+      - "traefik.http.routers.influxdb.tls=true"
+      - "traefik.http.services.influxdb.loadbalancer.server.port=8086"
+    networks:
+      - monitoring
+
+  k6:
+    image: grafana/k6:latest
+    container_name: k6
+    restart: unless-stopped
+    environment:
+      - K6_INFLUXDB_ORGANIZATION=devops-dojo
+      - K6_INFLUXDB_TOKEN=my-super-secret-admin-token
+      - K6_INFLUXDB_URL=http://influxdb:8086
+      - K6_INFLUXDB_BUCKET=k6-results
+    volumes:
+      - ./k6:/scripts
+    networks:
+      - monitoring
+    depends_on:
+      - influxdb
 
 networks:
-  app-network:
+  monitoring:
     driver: bridge
+
+volumes:
+  grafana_data:
+  prometheus_data:
+  loki_data:
+  influxdb_data:

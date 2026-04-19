@@ -3124,7 +3124,43 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                             <span className="inline-block mt-2 text-[9px] font-black text-orange-400 bg-orange-400/10 px-2 py-0.5 uppercase tracking-widest">⚠ {selectedSession.duration} min session</span>
                           )}
                         </div>
-                        <button onClick={() => setSelectedSession(null)} className="text-slate-500 hover:text-on-surface transition-colors text-xl leading-none">×</button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              const session = selectedSession;
+                              const localTime = getUserLocalTime(session);
+                              const startDt = new Date(`${session.date}T${session.time}:00`).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                              const endDt = new Date(new Date(`${session.date}T${session.time}:00`).getTime() + (session.duration || 30) * 60000).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                              const format = `📅 *${session.topic}*
+
+🕐 Date: ${localTime.showConversion ? localTime.convertedDate : session.date}
+🕐 Time: ${localTime.showConversion ? localTime.converted : session.time} - ${new Date(new Date(`${session.date}T${session.time}:00`).getTime() + (session.duration || 30) * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: localTime.userTimezone })}
+🌍 Timezone: ${localTime.userTimezone}
+
+👤 Host: ${session.author}
+📋 Platform: ${session.platform}
+⏱️ Duration: ${session.duration || 30} minutes
+
+📝 Agenda: ${session.agenda || 'See session details'}
+
+🔗 Join: ${session.meetingLink || 'Link will be shared before session'}
+
+#DevOpsDojo #${session.tag ? session.tag.replace(/[, ]+/g, '#') + ' ' : ''}Session`;
+                              navigator.clipboard.writeText(format);
+                              alert('Session details copied! Share anywhere.');
+                            }}
+                            className="text-slate-500 hover:text-green-400 transition-colors text-sm font-bold uppercase tracking-widest flex items-center gap-1"
+                            title="Copy session details for sharing"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                              <polyline points="16 6 12 2 8 6"/>
+                              <line x1="12" y1="2" x2="12" y2="15"/>
+                            </svg>
+                            Share
+                          </button>
+                          <button onClick={() => setSelectedSession(null)} className="text-slate-500 hover:text-on-surface transition-colors text-xl leading-none">×</button>
+                        </div>
                       </div>
 
                       {/* Meta row */}
