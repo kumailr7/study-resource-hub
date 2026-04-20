@@ -558,7 +558,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const [cohostRejectReason, setCohostRejectReason] = useState('');
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const availableTags = ['DevOps', 'Kubernetes', 'Docker', 'AWS', 'GCP', 'Azure', 'Terraform', 'CI/CD', 'Linux', 'Python', 'Security', 'Networking', 'Git', 'IaC', 'Monitoring', 'Microservices'];
+  const availableTags = ['DevOps', 'Kubernetes', 'Docker', 'AWS', 'GCP', 'Azure', 'Terraform', 'CI/CD', 'Linux', 'Python', 'Security', 'Networking', 'Git', 'IaC', 'Monitoring', 'Microservices', 'AI', 'ML', 'LLM', 'GenAI'];
   const [viewAllResources, setViewAllResources] = useState(false);
   const [newResourceAddedBy, setNewResourceAddedBy] = useState('');
   const [sgScheduledAt, setSgScheduledAt] = useState('');
@@ -4295,6 +4295,7 @@ END:VCALENDAR`;
                       <option value="Security">Security</option>
                       <option value="Networking">Networking</option>
                       <option value="Kubernetes">Kubernetes</option>
+                      <option value="AI">AI</option>
                     </select>
                   </div>
                   <div className="space-y-1">
