@@ -3563,6 +3563,54 @@ END:VCALENDAR`;
                         );
                       })()}
 
+                      {/* Always visible upload for hosts/admins */}
+                      {(selectedSession.authorUsername === userUsername || selectedSession.author === userUsername || userIsAdmin) && (
+                        <div className="bg-surface-container-high p-5 space-y-3 border-t border-white/5">
+                          <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Upload Recording</p>
+                          <div className="space-y-2">
+                            <label className={`flex items-center justify-center gap-2 w-full py-3 border border-dashed cursor-pointer transition-colors text-xs font-bold uppercase tracking-widest
+                              ${uploadStatus === 'uploading' ? 'border-secondary text-secondary cursor-not-allowed' :
+                                uploadStatus === 'done' ? 'border-green-500 text-green-400' :
+                                uploadStatus === 'error' ? 'border-red-500 text-red-400' :
+                                'border-outline-variant text-slate-500 hover:border-primary hover:text-primary'}`}>
+                              <Video size={13} />
+                              {uploadStatus === 'uploading' ? `Uploading… ${uploadProgress}%` :
+                               uploadStatus === 'done' ? 'Uploaded ✓' :
+                               uploadStatus === 'error' ? 'Failed — retry' :
+                               'Choose video file (mp4 / webm / mkv)'}
+                              <input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mkv,.mp4,.webm,.mov,.avi"
+                                className="hidden"
+                                disabled={uploadStatus === 'uploading'}
+                                onChange={e => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleR2Upload(selectedSession.id, selectedSession.topic, file);
+                                }} />
+                            </label>
+                            {uploadStatus === 'uploading' && (
+                              <div className="w-full bg-surface-container-high h-1">
+                                <div className="h-1 bg-primary transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Recording URL (if already hosted)</label>
+                            <input 
+                              type="text" 
+                              placeholder="Paste recording URL here..." 
+                              value={editRecordingLink}
+                              onChange={e => setEditRecordingLink(e.target.value)}
+                              className="w-full bg-surface-container border-b border-outline-variant focus:border-primary px-0 py-2 text-sm text-on-surface placeholder-slate-600 outline-none transition-colors" 
+                            />
+                          </div>
+                          <button
+                            disabled={!editRecordingLink || uploadStatus === 'uploading'}
+                            onClick={() => handleUpdateRecording(selectedSession.id, editRecordingLink, editAiSummary)}
+                            className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-on-primary bg-primary hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">
+                            Save Recording
+                          </button>
+                        </div>
+                      )}
+
                       {userIsAdmin && (
                         <div className="space-y-2">
                           <button onClick={() => {
