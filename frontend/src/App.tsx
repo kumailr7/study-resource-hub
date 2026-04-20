@@ -3379,10 +3379,11 @@ END:VCALENDAR`;
 
                       {/* Meeting link CTA or Whiteboard CTA */}
                       {(() => {
-                        const isPast = new Date(selectedSession.date + 'T' + selectedSession.time) < new Date();
+                        const sessionDateTime = new Date(selectedSession.date + 'T' + selectedSession.time + ':00');
+                        const now = new Date();
+                        const isPast = sessionDateTime < now;
                         const hasWhiteboard = selectedSession.whiteboardLink;
-                        const meetingLink = selectedSession.meetingLink;
-                        const displayLink = hasWhiteboard || meetingLink;
+                        const hasMeetingLink = selectedSession.meetingLink && selectedSession.meetingLink.length > 0;
                         const isCancelled = selectedSession.isCancelled;
                         
                         if (isCancelled) {
@@ -3419,6 +3420,14 @@ END:VCALENDAR`;
                               >
                                 📋 Copy Whiteboard Link
                               </button>
+                            </div>
+                          );
+                        }
+                        
+                        if (!hasMeetingLink) {
+                          return (
+                            <div className="flex items-center justify-center gap-3 w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-slate-700 text-slate-400 cursor-not-allowed">
+                              <Video size={14} /> Link Coming Soon
                             </div>
                           );
                         }
