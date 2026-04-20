@@ -3433,8 +3433,9 @@ END:VCALENDAR`;
                       })()}
 
                       {/* Recording section */}
-                      {selectedSession.willRecord && (() => {
+                      {(selectedSession.willRecord || selectedSession.authorUsername === userUsername || selectedSession.author === userUsername) && (() => {
                         const isPast = new Date(selectedSession.date + 'T' + selectedSession.time) < new Date();
+                        const isHost = selectedSession.authorUsername === userUsername || selectedSession.author === userUsername;
                         return (
                           <div className="bg-surface-container-high p-5 space-y-4">
                             <div className="flex items-center justify-between">
@@ -3501,7 +3502,7 @@ END:VCALENDAR`;
                                 </div>
                               </div>
                             )}
-                            {isPast && !selectedSession.recordingLink && (
+                            {(isPast && !selectedSession.recordingLink) && (selectedSession.willRecord || isHost) && (
                               <div className="space-y-3">
                                 {/* R2 file upload */}
                                 <div className="space-y-2">
