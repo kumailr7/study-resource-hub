@@ -556,6 +556,8 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const [sessionCohostEnabled, setSessionCohostEnabled] = useState(false);
   const [sessionCohostUsername, setSessionCohostUsername] = useState("");
   const [pendingCohostInvites, setPendingCohostInvites] = useState<Session[]>([]);
+  const [upcomingSessionsNotify, setUpcomingSessionsNotify] = useState<Session[]>([]);
+  const [newResourcesNotify, setNewResourcesNotify] = useState<any[]>([]);
   const [cohostRejectModal, setCohostRejectModal] = useState<{ sessionId: string; topic: string } | null>(null);
   const [cohostRejectReason, setCohostRejectReason] = useState('');
   const [showNotifPanel, setShowNotifPanel] = useState(false);
@@ -950,6 +952,16 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
         setChallengeParticipants(cpRes.data.counts || {});
         setJoinedChallenges(cpRes.data.joined || {});
         setUserChallenges(ucRes.data.map((c: any) => ({ ...c, id: c._id })));
+        
+        // Filter upcoming sessions (next 24 hours) for notifications
+        const now = new Date();
+        const upcoming = sessRes.data.filter((s: any) => {
+          const sessionTime = new Date(`${s.date}T${s.time}:00`);
+          const hoursUntil = (sessionTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+          return hoursUntil > 0 && hoursUntil <= 24;
+        });
+        setUpcomingSessionsNotify(upcoming.map((s: any) => ({ ...s, id: s._id })));
+        
         // Rebuild my registered sessions from returned data
         const myReg: Record<string, boolean> = {};
         const myGrp: Record<string, boolean> = {};
@@ -1740,17 +1752,63 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                     className="hover:bg-surface-container-highest p-2 transition-colors relative"
                   >
                     <Bell size={18} />
-                    {pendingCohostInvites.length > 0 && (
+                    {(pendingCohostInvites.length > 0 || upcomingSessionsNotify.length > 0) && (
                       <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#ff86c2]" />
                     )}
                   </button>
                   {showNotifPanel && (
-                    <div className="absolute right-0 top-11 w-80 bg-surface-container border border-outline-variant shadow-2xl z-50">
+                    <div className="absolute right-0 top-11 w-80 bg-surface-container border border-outline-variant shadow-2xl z-50 max-h-[400px] overflow-y-auto">
+                      {/* Upcoming Sessions */}
+                      {upcomingSessionsNotify.length > 0 && (
+                        <>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-green-400 px-4 pt-3 pb-2">
+                            Upcoming Sessions ({upcomingSessionsNotify.length})
+                          </p>
+                          {upcomingSessionsNotify.map(s => (
+                            <div key={s.id} className="px-4 py-3 border-t border-outline-variant bg-green-500/5">
+                              <p className="text-sm font-bold text-on-surface">{s.topic}</p>
+                              <p className="text-xs text-slate-400 mt-0.5">
+                                Hosted by <span className="text-green-400">{s.author}</span>
+                              </p>
+                              <p className="text-xs text-green-400 font-bold">{s.date} · {s.time}</p>
+                              <button
+                                onClick={() => { setCurrentSection('schedule'); setSelectedSession(s); setShowNotifPanel(false); }}
+                                className="text-xs font-bold px-3 py-1.5 mt-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors w-full"
+                              >
+                                View Session
+                              </button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      
+                      {/* New Resources */}
+                      {newResourcesNotify.length > 0 && (
+                        <>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 px-4 pt-3 pb-2">
+                            New Resources ({newResourcesNotify.length})
+                          </p>
+                          {newResourcesNotify.slice(0, 3).map((r: any) => (
+                            <div key={r.id} className="px-4 py-3 border-t border-outline-variant bg-blue-500/5">
+                              <p className="text-sm font-bold text-on-surface">{r.name}</p>
+                              <p className="text-xs text-slate-400">{r.category} · {r.type}</p>
+                              <button
+                                onClick={() => { setCurrentSection('resources'); setShowNotifPanel(false); }}
+                                className="text-xs font-bold px-3 py-1.5 mt-2 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors w-full"
+                              >
+                                View Resources
+                              </button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      
+                      {/* Co-host Invitations */}
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-4 pt-3 pb-2">
                         Co-host Invitations {pendingCohostInvites.length > 0 ? `(${pendingCohostInvites.length})` : ''}
                       </p>
-                      {pendingCohostInvites.length === 0 ? (
-                        <p className="text-xs text-slate-500 px-4 pb-4">No pending invitations.</p>
+                      {pendingCohostInvites.length === 0 && upcomingSessionsNotify.length === 0 ? (
+                        <p className="text-xs text-slate-500 px-4 pb-4">No new notifications.</p>
                       ) : (
                         pendingCohostInvites.map(s => (
                           <div key={s.id} className="px-4 py-3 border-t border-outline-variant">
