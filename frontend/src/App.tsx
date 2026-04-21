@@ -1964,14 +1964,26 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         const sessionDate = new Date(s.date + 'T' + s.time);
                         const localTime = getUserLocalTime(s);
                         return (
-                          <div key={s.id} onClick={() => { setCurrentSection('schedule'); setSelectedSession(s); }}
-                            className="bg-surface-container-high p-4 cursor-pointer hover:bg-surface-container-highest transition-colors">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-green-400/20 text-green-400">{s.difficulty || 'beginner'}</span>
-                              {s.sessionType === 'deep-dive' && <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-purple-400/20 text-purple-400">Deep Dive</span>}
+                          <div key={s.id} className="bg-surface-container-high p-4 cursor-pointer hover:bg-surface-container-highest transition-colors">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-green-400/20 text-green-400">{s.difficulty || 'beginner'}</span>
+                                {s.sessionType === 'deep-dive' && <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-purple-400/20 text-purple-400">Deep Dive</span>}
+                              </div>
+                              <button 
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  const fmt = `📅 *${s.topic}*\n\n🕐 ${localTime.convertedDate} · ${localTime.converted}\n👤 Host: ${s.author}\n📋 ${s.platform}\n🔗 ${s.meetingLink || 'Link coming soon'}\n#DevOpsDojo`;
+                                  setSharePreview(fmt);
+                                  setShareModalOpen(true);
+                                }}
+                                className="text-[9px] font-bold uppercase px-2 py-0.5 bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                              >
+                                Share
+                              </button>
                             </div>
-                            <h4 className="text-sm font-bold text-on-surface truncate">{s.topic}</h4>
-                            <p className="text-[10px] text-slate-500 mt-1">{localTime.convertedDate} · {localTime.converted}</p>
+                            <h4 onClick={() => { setCurrentSection('schedule'); setSelectedSession(s); }} className="text-sm font-bold text-on-surface truncate">{s.topic}</h4>
+                            <p onClick={() => { setCurrentSection('schedule'); setSelectedSession(s); }} className="text-[10px] text-slate-500 mt-1">{localTime.convertedDate} · {localTime.converted}</p>
                           </div>
                         );
                       })}
