@@ -3771,6 +3771,32 @@ END:VCALENDAR`;
                               >
                                 {isRegistered ? '✓ Attending' : "I'll Attend"}
                               </button>
+                              <button
+                                onClick={() => {
+                                  const localTime = getUserLocalTime(s);
+                                  const format = `📅 *${s.topic}*
+
+🕐 Date: ${localTime.showConversion ? localTime.convertedDate : s.date}
+🕐 Time: ${localTime.showConversion ? localTime.converted : s.time} - ${new Date(new Date(`${s.date}T${s.time}:00`).getTime() + (s.duration || 30) * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: localTime.userTimezone })}
+🌍 Timezone: ${localTime.userTimezone}
+
+👤 Host: ${s.author}
+📋 Platform: ${s.platform}
+⏱️ Duration: ${s.duration || 30} minutes
+
+📝 Agenda: ${s.agenda || 'See session details'}
+
+🔗 Join: ${s.meetingLink || 'Link will be shared before session'}
+
+#DevOpsDojo #${s.tag ? s.tag.replace(/[, ]+/g, '#') + ' ' : ''}Session`;
+                                  setSharePreview(format);
+                                  setShareModalOpen(true);
+                                }}
+                                className="text-[9px] font-bold uppercase px-2 py-1 whitespace-nowrap bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-all flex-shrink-0"
+                                title="Share this session"
+                              >
+                                Share
+                              </button>
                             </div>
                             );
                           })}
