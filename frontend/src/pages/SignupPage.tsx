@@ -106,7 +106,7 @@ const SignupPage: React.FC = () => {
           </div>
           <div className="relative z-10 p-12">
             <p className="text-white/20 text-[10px] uppercase tracking-widest">
-              © {new Date().getFullYear()} Devops Dojo Hub · Created by <a href="https://kumailrizvi.com" target="_blank" className="text-primary hover:underline">Kumail Rizvi</a>
+              © {new Date().getFullYear()} Devops Dojo Hub · Created by <a href="https://devops-dojo.ninja" target="_blank" className="text-primary hover:underline">Kumail Rizvi</a>
             </p>
           </div>
         </div>
@@ -184,7 +184,7 @@ const SignupPage: React.FC = () => {
 
         <div className="relative z-10 p-12 space-y-3">
           <p className="text-white/20 text-[10px] uppercase tracking-widest pt-4">
-            © {new Date().getFullYear()} Devops Dojo Hub · Created by <a href="https://kumailrizvi.com" target="_blank" className="text-primary hover:underline">Kumail Rizvi</a>
+            © {new Date().getFullYear()} Devops Dojo Hub · Created by <a href="https://devops-dojo.ninja" target="_blank" className="text-primary hover:underline">Kumail Rizvi</a>
           </p>
         </div>
       </div>
