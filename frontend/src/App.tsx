@@ -541,6 +541,8 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
   const [sessionWhiteboardLink, setSessionWhiteboardLink] = useState("");
   const [sessionAgenda, setSessionAgenda] = useState("");
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [sharePreview, setSharePreview] = useState('');
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [sessionWillRecord, setSessionWillRecord] = useState(false);
   const [editRecordingLink, setEditRecordingLink] = useState("");
@@ -3129,8 +3131,6 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                             onClick={() => {
                               const session = selectedSession;
                               const localTime = getUserLocalTime(session);
-                              const startDt = new Date(`${session.date}T${session.time}:00`).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                              const endDt = new Date(new Date(`${session.date}T${session.time}:00`).getTime() + (session.duration || 30) * 60000).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
                               const format = `📅 *${session.topic}*
 
 🕐 Date: ${localTime.showConversion ? localTime.convertedDate : session.date}
@@ -3146,8 +3146,8 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
 🔗 Join: ${session.meetingLink || 'Link will be shared before session'}
 
 #DevOpsDojo #${session.tag ? session.tag.replace(/[, ]+/g, '#') + ' ' : ''}Session`;
-                              navigator.clipboard.writeText(format);
-                              alert('Session details copied! Share anywhere.');
+                              setSharePreview(format);
+                              setShareModalOpen(true);
                             }}
                             className="text-slate-500 hover:text-green-400 transition-colors text-sm font-bold uppercase tracking-widest flex items-center gap-1"
                             title="Copy session details for sharing"
@@ -4938,8 +4938,59 @@ END:VCALENDAR`;
         </div>
         );
       })()}
-    </ThemeProvider>
-  );
+
+        {/* Share Modal */}
+        {shareModalOpen && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+            style={{ background: 'rgba(14,14,19,0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+            onClick={e => { if (e.target === e.currentTarget) setShareModalOpen(false); }}
+          >
+            <div className="w-full max-w-lg bg-surface-container border border-[rgba(34,197,94,0.2)]" style={{ boxShadow: '0 0 60px rgba(34,197,94,0.1)' }}>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.06)]">
+                <div>
+                  <p className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-0.5">Share Session</p>
+                  <h2 className="text-lg font-black text-on-surface font-headline">Copy & Share</h2>
+                </div>
+                <button onClick={() => setShareModalOpen(false)} className="text-slate-600 hover:text-slate-400 text-lg leading-none">✕</button>
+              </div>
+              <div className="px-6 py-6 space-y-5">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Preview</p>
+                  <div className="bg-surface-container-low p-4 text-xs text-on-surface whitespace-pre-line font-mono leading-relaxed" style={{ maxHeight: 280, overflow: 'auto' }}>
+                    {sharePreview}
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(sharePreview);
+                      alert('Copied to clipboard!');
+                    }}
+                    className="flex-1 py-3 text-xs font-black uppercase tracking-widest bg-primary text-on-primary neon-glow-primary transition-all flex items-center justify-center gap-2"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    Copy to Clipboard
+                  </button>
+                  <a 
+                    href={`whatsapp://send?text=${encodeURIComponent(sharePreview)}`}
+                    className="flex-1 py-3 text-xs font-black uppercase tracking-widest bg-green-500 text-white hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                    </svg>
+                    WhatsApp
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </ThemeProvider>
+    );
 };
 
 export default App;
