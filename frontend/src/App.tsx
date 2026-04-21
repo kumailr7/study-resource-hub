@@ -3003,12 +3003,14 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Date</label>
                       <input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:auto]" />
+                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors cursor-pointer" 
+                        style={{ colorScheme: 'dark' }} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Time</label>
                       <input type="time" value={sessionTime} onChange={e => setSessionTime(e.target.value)}
-                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors [color-scheme:auto]" />
+                        className="w-full bg-surface-container-low border-b border-outline-variant focus:border-primary px-0 py-2.5 text-sm text-on-surface outline-none transition-colors cursor-pointer"
+                        style={{ colorScheme: 'dark' }} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Timezone</label>
