@@ -4431,6 +4431,7 @@ END:VCALENDAR`;
                       <option value="Video">Video</option>
                       <option value="Documentation">Documentation</option>
                       <option value="PDF">PDF</option>
+                      <option value="Labs">Labs</option>
                     </select>
                   </div>
                   <div className="space-y-1">
