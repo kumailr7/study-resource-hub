@@ -3202,8 +3202,10 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                         </div>
                         <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               const session = selectedSession;
+                              if (!session) { alert('No session selected'); return; }
                               const localTime = getUserLocalTime(session);
                               const format = `📅 *${session.topic}*
 
@@ -3223,7 +3225,7 @@ const ResourceTable: React.FC<{ username?: string }> = ({ username: _username })
                               setSharePreview(format);
                               setShareModalOpen(true);
                             }}
-                            className="text-slate-500 hover:text-green-400 transition-colors text-sm font-bold uppercase tracking-widest flex items-center gap-1"
+                            className="text-slate-500 hover:text-green-400 transition-colors text-sm font-bold uppercase tracking-widest flex items-center gap-1 z-50 relative cursor-pointer"
                             title="Copy session details for sharing"
                           >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -3772,7 +3774,8 @@ END:VCALENDAR`;
                                 {isRegistered ? '✓ Attending' : "I'll Attend"}
                               </button>
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   const localTime = getUserLocalTime(s);
                                   const format = `📅 *${s.topic}*
 
@@ -3792,7 +3795,7 @@ END:VCALENDAR`;
                                   setSharePreview(format);
                                   setShareModalOpen(true);
                                 }}
-                                className="text-[9px] font-bold uppercase px-2 py-1 whitespace-nowrap bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-all flex-shrink-0"
+                                className="text-[9px] font-bold uppercase px-2 py-1 whitespace-nowrap bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-all flex-shrink-0 cursor-pointer"
                                 title="Share this session"
                               >
                                 Share
