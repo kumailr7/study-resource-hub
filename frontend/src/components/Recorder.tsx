@@ -6,8 +6,8 @@ import { DojoYoshiLogo } from "./Logo";
 import { API_BASE_URL } from "../config";
 import { PasswordGate } from "./PasswordGate";
 
-type RecordingMode = "screen" | "camera" | "screen+camera";
-type RecorderState = "idle" | "recording" | "uploading" | "done";
+type RecordingMode = string;
+type RecorderState = string;
 
 interface RecorderProps {
   password?: string;
@@ -79,7 +79,7 @@ export function Recorder({ password = "" }: RecorderProps) {
     setError("");
     chunksRef.current = [];
     try {
-      let recordStream: MediaStream;
+      let recordStream: MediaStream | undefined;
       if (mode === "screen" || mode === "screen+camera") {
         const screen = await navigator.mediaDevices.getDisplayMedia({
           video: { frameRate: { ideal: 60 }, width: { ideal: 3840 }, height: { ideal: 2160 } },
@@ -109,11 +109,45 @@ export function Recorder({ password = "" }: RecorderProps) {
         recordStream = screenStreamRef.current!;
       } else if (mode === "camera") {
         recordStream = cameraStreamRef.current!;
-      } else {
-        recordStream = screenStreamRef.current!;
+      } else if (mode === "screen+camera" && screenStreamRef.current && cameraStreamRef.current) {
+        // Combine screen and camera
+        const canvas = document.createElement("canvas");
+        canvas.width = 1920;
+        canvas.height = 1080;
+        const ctx = canvas.getContext("2d")!;
+        
+        const screenVideo = document.createElement("video");
+        screenVideo.srcObject = screenStreamRef.current;
+        screenVideo.muted = true;
+        await screenVideo.play();
+        
+        const cameraVideo = document.createElement("video");
+        cameraVideo.srcObject = cameraStreamRef.current;
+        cameraVideo.muted = true;
+        await cameraVideo.play();
+        
+        const drawFrame = () => {
+          if (screenVideo.videoWidth && screenVideo.videoHeight) {
+            ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
+          }
+          if (cameraVideo.videoWidth && cameraVideo.videoHeight) {
+            const cw = 320, ch = 180;
+            ctx.drawImage(cameraVideo, canvas.width - cw - 20, canvas.height - ch - 20, cw, ch);
+          }
+          if (state === "recording") requestAnimationFrame(drawFrame);
+        };
+        drawFrame();
+        
+        const canvasStream = canvas.captureStream(30);
+        recordStream = canvasStream;
       }
       const codecs = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp9", "video/webm;codecs=vp8,opus", "video/webm;codecs=vp8", "video/webm", ""];
       const mimeType = codecs.find((c) => c === "" || MediaRecorder.isTypeSupported(c)) || "";
+      if (!recordStream) {
+        setError("No stream available");
+        setState("idle");
+        return;
+      }
       const mediaRecorder = new MediaRecorder(recordStream, { mimeType, videoBitsPerSecond: mode === "camera" ? 5_000_000 : 10_000_000 });
       mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorder.onstop = () => handleRecordingComplete();
@@ -246,8 +280,17 @@ export function Recorder({ password = "" }: RecorderProps) {
           {state === "idle" && (
             <>
               <div className="flex justify-center"><DojoYoshiLogo size="sm" /></div>
-              {previewStream && (
+              {previewStream && state === "idle" && (
                 <video autoPlay muted playsInline ref={(el) => { if (el) el.srcObject = previewStream; }} className="w-full rounded-xl border shadow-lg aspect-video object-contain" style={{ borderColor: "var(--border)" }} />
+              )}
+              {state !== "idle" && state !== "done" && state !== "uploading" && (
+                <div className="text-center py-4">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: "var(--accent)", opacity: 0.2 }}>
+                    <span className="h-3 w-3 rounded-full animate-pulse" style={{ backgroundColor: "var(--accent)" }} />
+                    <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Recording</span>
+                    <span className="text-sm font-mono" style={{ color: "var(--foreground)" }}>{formatTime(elapsed)}</span>
+                  </div>
+                </div>
               )}
               <div className="grid grid-cols-3 gap-2">
                 {([{ value: "screen", label: "Screen", icon: "🖥️" }, { value: "camera", label: "Camera", icon: "📷" }, { value: "screen+camera", label: "Screen + Cam", icon: "🖥️+📷" }] as const).map((opt) => (
