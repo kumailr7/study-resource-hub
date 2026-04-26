@@ -3531,7 +3531,10 @@ END:VCALENDAR`;
 
                       {/* Recording section */}
                       {(selectedSession.willRecord || selectedSession.authorUsername === userUsername || selectedSession.author === userUsername) && (() => {
-                        const isPast = new Date(selectedSession.date + 'T' + selectedSession.time) < new Date();
+                        const sessionDateTime = new Date(selectedSession.date + 'T' + selectedSession.time + ':00');
+                        const now = new Date();
+                        const isPast = sessionDateTime < now;
+                        const isFuture = sessionDateTime > now;
                         const isHost = selectedSession.authorUsername === userUsername || selectedSession.author === userUsername;
                         return (
                           <div className="bg-surface-container-high p-5 space-y-4">
@@ -3544,6 +3547,19 @@ END:VCALENDAR`;
                                 : <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{isPast ? '○ Pending Upload' : '○ Planned'}</span>
                               }
                             </div>
+
+                            {/* Screen Recording Tool for Future Sessions */}
+                            {isFuture && selectedSession.willRecord && (
+                              <div className="space-y-2">
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Record Your Session</p>
+                                <a href="https://github.com/albertshiney/yoom_public" target="_blank" rel="noreferrer"
+                                  className="flex items-center justify-center gap-2 w-full py-3 text-[10px] font-black uppercase tracking-widest bg-secondary text-on-secondary hover:opacity-90 transition-all">
+                                  <Video size={13} />
+                                  Open Yoom Screen Recorder
+                                </a>
+                                <p className="text-[10px] text-slate-500 text-center">Record your screen. After recording, upload the video below.</p>
+                              </div>
+                            )}
 
                             {/* Recording deleted notice */}
                             {selectedSession.recordingDeleted && !selectedSession.recordingLink && (
