@@ -17,7 +17,8 @@ export function PasswordGate({ onAuthenticated }: PasswordGateProps) {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth", {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://hub.devops-dojo.ninja';
+    const res = await fetch(`${apiUrl}/api/screen-record/auth`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),

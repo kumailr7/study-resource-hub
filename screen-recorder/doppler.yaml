@@ -13,7 +13,7 @@
     "prd": {
       "UPLOAD_PASSWORD": "",
       "NEXT_PUBLIC_APP_URL": "https://hub.devops-dojo.ninja",
-      "NEXT_PUBLIC_API_URL": "https://hub.devops-dojo.ninja/api"
+      "NEXT_PUBLIC_API_URL": "https://hub.devops-dojo.ninja"
     }
   }
 }

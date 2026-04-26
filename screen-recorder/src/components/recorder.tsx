@@ -302,7 +302,7 @@ export function Recorder({ password }: RecorderProps) {
     }
 
     try {
-      const res = await fetch("/api/upload", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/screen-record/upload-url`, {
         method: "POST",
         headers: { "x-upload-password": password },
       });
@@ -330,7 +330,7 @@ export function Recorder({ password }: RecorderProps) {
         xhr.send(blob);
       });
 
-      const appUrl = window.location.origin;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
       setShareUrl(`${appUrl}/watch/${key}`);
       setState("done");
     } catch {

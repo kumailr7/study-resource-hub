@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/screen-recorder/upload-url`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/screen-record/upload-url`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
