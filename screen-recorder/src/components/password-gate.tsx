@@ -17,7 +17,7 @@ export function PasswordGate({ onAuthenticated }: PasswordGateProps) {
     setLoading(true);
     setError("");
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://study-resource-hub-d18p.onrender.com/api';
+    const apiUrl = process.env.REACT_APP_API_BASE_URL || 'https://study-resource-hub-d18p.onrender.com/api';
     const res = await fetch(`${apiUrl}/screen-record/auth`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

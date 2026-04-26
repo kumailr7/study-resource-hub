@@ -14,7 +14,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
   }
 
   // Get video URL from backend
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://study-resource-hub-d18p.onrender.com/api';
+  const apiUrl = process.env.REACT_APP_API_BASE_URL || 'https://study-resource-hub-d18p.onrender.com/api';
   const videoRes = await fetch(`${apiUrl}/screen-record/video/${key}`, {
     next: { revalidate: 300 }
   });
@@ -25,7 +25,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
   
   const { url: videoUrl } = await videoRes.json();
   
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+  const baseUrl = process.env.FRONTEND_URL
     || (process.env.VERCEL_PROJECT_PRODUCTION_URL && `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`)
     || (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`)
     || "https://hub.devops-dojo.ninja";

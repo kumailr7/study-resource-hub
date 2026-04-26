@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://study-resource-hub-d18p.onrender.com/api';
+    const apiBase = process.env.REACT_APP_API_BASE_URL || 'https://study-resource-hub-d18p.onrender.com/api';
     const res = await fetch(`${apiBase}/screen-record/upload-url`, {
       method: 'POST',
       headers: {
