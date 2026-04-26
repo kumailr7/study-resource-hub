@@ -28,7 +28,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL
     || (process.env.VERCEL_PROJECT_PRODUCTION_URL && `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`)
     || (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`)
-    || "https://screen-recorder.devops-dojo.ninja";
+    || "https://hub.devops-dojo.ninja";
   const shareUrl = `${baseUrl}/watch/${key}`;
 
   return (

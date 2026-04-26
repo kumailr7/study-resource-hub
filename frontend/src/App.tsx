@@ -37,6 +37,13 @@ const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+const RedirectToRecorder: React.FC = () => {
+  useEffect(() => {
+    window.open('https://hub.devops-dojo.ninja/recorder', '_blank');
+  }, []);
+  return <div className="min-h-screen bg-surface flex items-center justify-center"><p className="text-slate-500">Opening recorder...</p></div>;
+};
+
 interface Resource {
   _id: string;
   name: string;
@@ -468,6 +475,7 @@ const App: React.FC = () => {
             <Route path="/:username/suggestions" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/recorder" element={<RequireAuth><RedirectToRecorder /></RequireAuth>} />
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
@@ -3552,7 +3560,7 @@ END:VCALENDAR`;
                             {isFuture && selectedSession.willRecord && (
                               <div className="space-y-2">
                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Record Your Session</p>
-                                <a href="https://screen-recorder.devops-dojo.ninja" target="_blank" rel="noreferrer"
+                                <a href="/recorder" target="_blank" rel="noreferrer"
                                   className="flex items-center justify-center gap-2 w-full py-3 text-[10px] font-black uppercase tracking-widest bg-secondary text-on-secondary hover:opacity-90 transition-all">
                                   <Video size={13} />
                                   Open Yoom Screen Recorder
