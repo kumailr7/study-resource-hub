@@ -277,21 +277,21 @@ export function Recorder({ password = "" }: RecorderProps) {
       )}
       <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-8" style={{ backgroundColor: "var(--surface)" }}>
         <div className="w-full max-w-md space-y-6">
-          {state === "idle" && (
+          <div className="flex justify-center"><DojoYoshiLogo size="sm" /></div>
+          {(state as string) === "idle" && previewStream && (
+            <video autoPlay muted playsInline ref={(el) => { if (el) el.srcObject = previewStream; }} className="w-full rounded-xl border shadow-lg aspect-video object-contain" style={{ borderColor: "var(--border)" }} />
+          )}
+          {(state as string) !== "idle" && (state as string) !== "done" && (state as string) !== "uploading" && (
+            <div className="text-center py-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: "var(--accent)", opacity: 0.2 }}>
+                <span className="h-3 w-3 rounded-full animate-pulse" style={{ backgroundColor: "var(--accent)" }} />
+                <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Recording</span>
+                <span className="text-sm font-mono" style={{ color: "var(--foreground)" }}>{formatTime(elapsed)}</span>
+              </div>
+            </div>
+          )}
+          {(state as string) === "idle" && (
             <>
-              <div className="flex justify-center"><DojoYoshiLogo size="sm" /></div>
-              {previewStream && state === "idle" && (
-                <video autoPlay muted playsInline ref={(el) => { if (el) el.srcObject = previewStream; }} className="w-full rounded-xl border shadow-lg aspect-video object-contain" style={{ borderColor: "var(--border)" }} />
-              )}
-              {state !== "idle" && state !== "done" && state !== "uploading" && (
-                <div className="text-center py-4">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: "var(--accent)", opacity: 0.2 }}>
-                    <span className="h-3 w-3 rounded-full animate-pulse" style={{ backgroundColor: "var(--accent)" }} />
-                    <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Recording</span>
-                    <span className="text-sm font-mono" style={{ color: "var(--foreground)" }}>{formatTime(elapsed)}</span>
-                  </div>
-                </div>
-              )}
               <div className="grid grid-cols-3 gap-2">
                 {([{ value: "screen", label: "Screen", icon: "🖥️" }, { value: "camera", label: "Camera", icon: "📷" }, { value: "screen+camera", label: "Screen + Cam", icon: "🖥️+📷" }] as const).map((opt) => (
                   <button key={opt.value} onClick={() => setMode(opt.value)} className="rounded-lg border p-3 text-center transition-all" style={{ backgroundColor: mode === opt.value ? "var(--accent)" : "var(--surface)", borderColor: mode === opt.value ? "var(--accent)" : "var(--border)" }}>
@@ -306,10 +306,10 @@ export function Recorder({ password = "" }: RecorderProps) {
           )}
           {error && <p className="text-sm text-center" style={{ color: "#f87171" }}>{error}</p>}
           <div className="flex items-center justify-center gap-4">
-            {state === "idle" && (
+            {(state as string) === "idle" && (
               <button onClick={startRecording} className="rounded-lg px-8 py-2.5 text-sm font-semibold transition-all shadow-lg" style={{ backgroundColor: "var(--accent)", color: "white" }}>Start Recording</button>
             )}
-            {state === "recording" && (
+            {(state as string) === "recording" && (
               <>
                 <span className="flex items-center gap-2 text-sm font-mono tabular-nums" style={{ color: "var(--muted)" }}>
                   <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: "var(--accent)" }} />{formatTime(elapsed)}
