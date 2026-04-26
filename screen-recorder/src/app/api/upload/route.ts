@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/screen-record/upload-url`, {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://hub.devops-dojo.ninja';
+    const res = await fetch(`${apiBase}/api/screen-record/upload-url`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

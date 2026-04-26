@@ -11,8 +11,8 @@
       "NEXT_PUBLIC_API_URL": ""
     },
     "prd": {
-      "UPLOAD_PASSWORD": "",
-      "NEXT_PUBLIC_APP_URL": "https://hub.devops-dojo.ninja",
+      "UPLOAD_PASSWORD": "devops-dojo-screen-recorder-2026",
+      "NEXT_PUBLIC_APP_URL": "https://screen-recorder.devops-dojo.ninja",
       "NEXT_PUBLIC_API_URL": "https://hub.devops-dojo.ninja"
     }
   }
