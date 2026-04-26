@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { DeviceSelector } from "./DeviceSelector";
 import { RecordingPreview } from "./RecordingPreview";
 import { YoomLogo } from "./Logo";
+import { API_BASE_URL } from "../config";
 
 type RecordingMode = "screen" | "camera" | "screen+camera";
 type RecorderState = "idle" | "recording" | "uploading" | "done";
@@ -300,8 +301,7 @@ export function Recorder({ password }: RecorderProps) {
     }
 
     try {
-      const apiUrl = (window as any).REACT_APP_API_BASE_URL || "https://study-resource-hub-d18p.onrender.com/api";
-      const res = await fetch(`${apiUrl}/screen-record/upload-url`, {
+      const res = await fetch(`${API_BASE_URL}/screen-record/upload-url`, {
         method: "POST",
         headers: { "x-upload-password": password },
       });
@@ -329,7 +329,7 @@ export function Recorder({ password }: RecorderProps) {
         xhr.send(blob);
       });
 
-      const appUrl = (window as any).FRONTEND_URL || window.location.origin;
+      const appUrl = window.location.origin;
       setShareUrl(`${appUrl}/watch/${key}`);
       setState("done");
     } catch {
@@ -447,33 +447,30 @@ export function Recorder({ password }: RecorderProps) {
               <YoomLogo size="sm" />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--muted)", opacity: 0.7 }}>
-                Mode
-              </label>
-              <div className="grid grid-cols-3 gap-1 rounded-lg border p-1" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
-                {([
-                  { value: "screen", label: "Screen" },
-                  { value: "camera", label: "Camera" },
-                  { value: "screen+camera", label: "Screen + Cam" },
-                ] as const).map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setMode(opt.value)}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
-                      mode === opt.value
-                        ? ""
-                        : ""
-                    }`}
-                    style={{
-                      backgroundColor: mode === opt.value ? "var(--accent)" : "transparent",
-                      color: mode === opt.value ? "white" : "var(--muted)",
-                    }}
-                  >
+            {/* Preview thumbnails */}
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: "screen", label: "Screen", icon: "🖥️" },
+                { value: "camera", label: "Camera", icon: "📷" },
+                { value: "screen+camera", label: "Screen + Cam", icon: "🖥️+📷" },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setMode(opt.value)}
+                  className={`rounded-lg border p-3 text-center transition-all ${
+                    mode === opt.value ? "ring-2 ring-offset-2" : ""
+                  }`}
+                  style={{
+                    backgroundColor: mode === opt.value ? "var(--accent)" : "var(--surface)",
+                    borderColor: mode === opt.value ? "var(--accent)" : "var(--border)",
+                  }}
+                >
+                  <div className="text-lg mb-1">{opt.icon}</div>
+                  <div className="text-xs font-medium" style={{ color: mode === opt.value ? "white" : "var(--foreground)" }}>
                     {opt.label}
-                  </button>
-                ))}
-              </div>
+                  </div>
+                </button>
+              ))}
             </div>
 
             <DeviceSelector
