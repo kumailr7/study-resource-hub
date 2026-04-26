@@ -16,7 +16,7 @@ export default function WatchPage() {
       return;
     }
 
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webm$/.test(key)) {
+    if (!/^[0-9a-z-]+\.webm$/.test(key)) {
       setNotFound(true);
       setLoading(false);
       return;
@@ -24,7 +24,9 @@ export default function WatchPage() {
 
     async function fetchVideo() {
       try {
-        const videoRes = await fetch(`${API_BASE_URL}/screen-record/video/${key}`);
+        // Check if key needs screen-recordings/ prefix
+        const fullKey = key.includes('/') ? key : `screen-recordings/${key}`;
+        const videoRes = await fetch(`${API_BASE_URL}/screen-record/video/${fullKey}`);
         if (!videoRes.ok) {
           setNotFound(true);
           return;

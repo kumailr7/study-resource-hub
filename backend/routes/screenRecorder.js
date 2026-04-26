@@ -29,6 +29,7 @@ router.post('/screen-record/auth', async (req, res) => {
 
 // POST /api/screen-record/upload-url
 // Headers: x-upload-password
+// Body: { author?, title?, tags? }
 // Returns: { presignedUrl, key }
 router.post('/screen-record/upload-url', async (req, res) => {
   const password = req.headers['x-upload-password'];
@@ -38,17 +39,24 @@ router.post('/screen-record/upload-url', async (req, res) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const key = `${crypto.randomUUID()}.webm`;
+  const { author = 'user', title = 'recording', tags = '' } = req.body;
+  
+  // Generate filename: author-tags-title-date.webm
+  const date = new Date().toISOString().split('T')[0];
+  const safeTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30);
+  const safeTags = tags ? `-${tags.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : '';
+  const uuid = crypto.randomUUID().slice(0, 8);
+  const key = `${author}${safeTags}-${safeTitle}-${date}-${uuid}.webm`;
   
   const command = new PutObjectCommand({
     Bucket: process.env.R2_BUCKET,
-    Key: `screen-recordings/${key}`,
+    Key: key,
     ContentType: 'video/webm',
   });
 
   const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 600 });
 
-  res.json({ presignedUrl, key: `screen-recordings/${key}` });
+  res.json({ presignedUrl, key });
 });
 
 // GET /api/screen-record/video/:key

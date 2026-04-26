@@ -341,7 +341,15 @@ export function Recorder({ password }: RecorderProps) {
       console.log("[Yoom] Fetching upload URL from:", `${API_BASE_URL}/screen-record/upload-url`);
       const res = await fetch(`${API_BASE_URL}/screen-record/upload-url`, {
         method: "POST",
-        headers: { "x-upload-password": password },
+        headers: { 
+          "x-upload-password": password,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          author: "kumail", // TODO: get from auth
+          title: "session",
+          tags: mode,
+        }),
       });
 
       console.log("[Yoom] Response status:", res.status);
