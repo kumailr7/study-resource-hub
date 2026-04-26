@@ -3556,7 +3556,7 @@ END:VCALENDAR`;
                             {isFuture && selectedSession.willRecord && (
                               <div className="space-y-2">
                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Record Your Session</p>
-                                <a href="https://hub.devops-dojo.ninja" target="_blank" rel="noreferrer"
+                                <a href="/recorder" target="_blank" rel="noreferrer"
                                   className="flex items-center justify-center gap-2 w-full py-3 text-[10px] font-black uppercase tracking-widest bg-secondary text-on-secondary hover:opacity-90 transition-all">
                                   <Video size={13} />
                                   Open Yoom Screen Recorder
