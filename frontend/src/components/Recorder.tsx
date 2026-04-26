@@ -205,10 +205,26 @@ export function Recorder({ password }: RecorderProps) {
             width: { ideal: 3840 },
             height: { ideal: 2160 },
           },
-          audio: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
         });
         screenStreamRef.current = screen;
         setScreenStream(screen);
+
+        // Add microphone to screen capture for better audio
+        if (micId) {
+          try {
+            const micStream = await navigator.mediaDevices.getUserMedia({
+              audio: { deviceId: { exact: micId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            });
+            micStream.getAudioTracks().forEach(track => screen.addTrack(track));
+          } catch (e) {
+            console.log("[Yoom] Mic not added to screen:", e);
+          }
+        }
 
         screen.getVideoTracks()[0].addEventListener("ended", () => {
           stopRecording();
