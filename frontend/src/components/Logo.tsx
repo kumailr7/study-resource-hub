@@ -1,4 +1,4 @@
-interface YoomLogoProps {
+interface DojoYoshiLogoProps {
   size?: "sm" | "md" | "lg";
   showText?: boolean;
   className?: string;
@@ -10,7 +10,7 @@ const sizes = {
   lg: { mark: 48, text: "text-2xl", gap: "gap-3" },
 };
 
-export function YoomLogo({ size = "md", showText = true, className = "" }: YoomLogoProps) {
+export function DojoYoshiLogo({ size = "md", showText = true, className = "" }: DojoYoshiLogoProps) {
   const s = sizes[size];
 
   return (
@@ -47,7 +47,7 @@ export function YoomLogo({ size = "md", showText = true, className = "" }: YoomL
           className={`${s.text} font-bold`}
           style={{ color: "var(--foreground)", letterSpacing: "-0.02em" }}
         >
-          Yoom
+          Dojo-Yoshi
         </span>
       )}
     </div>

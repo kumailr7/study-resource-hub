@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { YoomLogo } from "./Logo";
+import { DojoYoshiLogo } from "./Logo";
 import { API_BASE_URL } from "../config";
 
 interface PasswordGateProps {
@@ -34,7 +34,7 @@ export function PasswordGate({ onAuthenticated }: PasswordGateProps) {
     <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundColor: "var(--surface)" }}>
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6 rounded-2xl border p-8" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}>
         <div className="space-y-2 flex flex-col items-center">
-          <YoomLogo size="lg" />
+          <DojoYoshiLogo size="lg" />
           <p className="text-sm" style={{ color: "var(--muted)" }}>
             Enter password to start recording
           </p>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { YoomLogo } from "./Logo";
+import { DojoYoshiLogo } from "./Logo";
 
 interface VideoPlayerProps {
   src: string;
@@ -22,7 +22,7 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
   return (
     <div className="w-full max-w-4xl space-y-4">
       <div className="flex justify-center mb-2">
-        <YoomLogo size="sm" />
+        <DojoYoshiLogo size="sm" />
       </div>
       <video
         src={src}

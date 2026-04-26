@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { DeviceSelector } from "./DeviceSelector";
 import { RecordingPreview } from "./RecordingPreview";
-import { YoomLogo } from "./Logo";
+import { DojoYoshiLogo } from "./Logo";
 import { API_BASE_URL } from "../config";
 
 type RecordingMode = "screen" | "camera" | "screen+camera";
@@ -539,7 +539,7 @@ export function Recorder({ password }: RecorderProps) {
         {state === "idle" && (
           <>
             <div className="flex justify-center">
-              <YoomLogo size="sm" />
+              <DojoYoshiLogo size="sm" />
             </div>
 
             {/* Live preview */}
