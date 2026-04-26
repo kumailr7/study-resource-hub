@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #1a1a1e;
+  --color-surface: #232328;
+  --color-surface-raised: #2c2c32;
+  --color-border: #38383f;
+  --color-border-subtle: #2e2e35;
+  --color-foreground: #f0f0f2;
+  --color-muted: #8b8b96;
+  --color-muted-dim: #5c5c66;
+  --color-accent: #e85a4f;
+  --color-accent-hover: #f06b60;
+}
+
+/* Body gradient and grain */
+body {
+  background: radial-gradient(ellipse at 50% 0%, #232328 0%, #1a1a1e 70%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  z-index: 9999;
+}
+
+/* Smooth scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #38383f transparent;
+}
+
+/* Custom select arrow */
+select.device-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8b96' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  padding-right: 36px;
+}
+
+/* Progress bar glow */
+.progress-bar {
+  box-shadow: 0 0 12px rgba(232, 90, 79, 0.25);
+}
+
+/* Recording dot pulse */
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+.recording-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}

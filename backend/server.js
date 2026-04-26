@@ -68,6 +68,7 @@ app.use(expressMongoSanitize());
 app.use("/api", loginRoutes); // Prefix login routes with `/api`
 app.use("/api", userRoutes);   // Prefix user routes with `/api`
 app.use("/api", uploadRoutes); // R2 presigned upload URLs
+app.use("/api", require("./routes/screenRecorder")); // Screen recorder routes
 
 
 // MongoDB connection
