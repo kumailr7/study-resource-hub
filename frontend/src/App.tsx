@@ -38,10 +38,24 @@ const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const RedirectToRecorder: React.FC = () => {
+  const [opened, setOpened] = useState(false);
+  
   useEffect(() => {
-    window.open('https://hub.devops-dojo.ninja/recorder', '_blank');
-  }, []);
-  return <div className="min-h-screen bg-surface flex items-center justify-center"><p className="text-slate-500">Opening recorder...</p></div>;
+    if (!opened) {
+      setOpened(true);
+      window.open('https://hub.devops-dojo.ninja/recorder', '_blank');
+    }
+  }, [opened]);
+  
+  return <div className="min-h-screen bg-surface flex items-center justify-center">
+    <div className="text-center">
+      <p className="text-slate-500 mb-4">Opening recorder...</p>
+      <a href="https://hub.devops-dojo.ninja/recorder" target="_blank" rel="noreferrer" 
+        className="text-primary hover:underline">
+        Click here if recorder doesn't open
+      </a>
+    </div>
+  </div>;
 };
 
 interface Resource {
