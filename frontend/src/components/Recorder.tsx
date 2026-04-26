@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { DeviceSelector } from "./DeviceSelector";
 import { RecordingPreview } from "./RecordingPreview";
 import { YoomLogo } from "./Logo";
@@ -20,6 +20,7 @@ export function Recorder({ password }: RecorderProps) {
   const [shareUrl, setShareUrl] = useState("");
   const [error, setError] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -33,6 +34,37 @@ export function Recorder({ password }: RecorderProps) {
 
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+
+  const startPreview = useCallback(async () => {
+    if (mode === "screen" || mode === "screen+camera") {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: { ideal: 30 }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+        setPreviewStream(stream);
+      } catch (err) {
+        console.log("[Yoom] Preview permission denied");
+      }
+    } else if (mode === "camera") {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { frameRate: { ideal: 30 }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+        setPreviewStream(stream);
+      } catch (err) {
+        console.log("[Yoom] Preview permission denied");
+      }
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    startPreview();
+    return () => {
+      previewStream?.getTracks().forEach(t => t.stop());
+    };
+  }, [mode]);
 
   const stopAllStreams = useCallback(() => {
     screenStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -292,11 +324,12 @@ export function Recorder({ password }: RecorderProps) {
 
   async function handleRecordingComplete() {
     setState("uploading");
-    console.log("[Yoom] Recording complete, processing upload...");
+    console.log("[Yoom] handleRecordingComplete called");
+    console.log("[Yoom] Chunks:", chunksRef.current.length, "total bytes:", chunksRef.current.reduce((a, b) => a + b.size, 0));
     stopAllStreams();
 
     const blob = new Blob(chunksRef.current, { type: "video/webm" });
-    console.log("[Yoom] Blob size:", blob.size);
+    console.log("[Yoom] Blob created, size:", blob.size, "type:", blob.type);
 
     if (blob.size === 0) {
       setError("Recording captured no data. Please try again.");
@@ -305,17 +338,21 @@ export function Recorder({ password }: RecorderProps) {
     }
 
     try {
+      console.log("[Yoom] Fetching upload URL from:", `${API_BASE_URL}/screen-record/upload-url`);
       const res = await fetch(`${API_BASE_URL}/screen-record/upload-url`, {
         method: "POST",
         headers: { "x-upload-password": password },
       });
 
+      console.log("[Yoom] Response status:", res.status);
+      const data = await res.json();
+      console.log("[Yoom] Response data:", data);
+
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData?.error || `Server error: ${res.status}`);
+        throw new Error(data?.error || `Server error: ${res.status}`);
       }
 
-      const { presignedUrl, key } = await res.json();
+      const { presignedUrl, key } = data;
 
       if (!presignedUrl || !key) {
         throw new Error("Invalid response: missing presignedUrl or key");
@@ -458,6 +495,20 @@ export function Recorder({ password }: RecorderProps) {
             <div className="flex justify-center">
               <YoomLogo size="sm" />
             </div>
+
+            {/* Live preview */}
+            {previewStream && state === "idle" && (
+              <div className="w-full rounded-xl overflow-hidden border shadow-lg" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
+                <video
+                  autoPlay
+                  muted
+                  playsInline
+                  ref={(el) => { if (el) el.srcObject = previewStream; }}
+                  className="w-full aspect-video object-contain"
+                  style={mode === "camera" ? { transform: "scaleX(-1)" } : {}}
+                />
+              </div>
+            )}
 
             {/* Preview thumbnails */}
             <div className="grid grid-cols-3 gap-2">
