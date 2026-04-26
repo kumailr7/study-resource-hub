@@ -366,7 +366,7 @@ export function Recorder({ password }: RecorderProps) {
         throw new Error(data?.error || `Server error: ${res.status}`);
       }
 
-      const { presignedUrl, key } = data;
+      const { presignedUrl, key, publicUrl } = data;
 
       if (!presignedUrl || !key) {
         throw new Error("Invalid response: missing presignedUrl or key");
@@ -405,8 +405,7 @@ export function Recorder({ password }: RecorderProps) {
       });
 
       const appUrl = window.location.origin;
-      const keyForUrl = key.replace('screen-recordings/', '');
-      setShareUrl(`${appUrl}/watch/${keyForUrl}`);
+      setShareUrl(publicUrl || `${appUrl}/watch/${key}`);
       setState("done");
     } catch (err: any) {
       console.error("Upload error:", err);
@@ -484,10 +483,13 @@ export function Recorder({ password }: RecorderProps) {
     return (
       <div className="flex min-h-screen items-center justify-center p-8" style={{ backgroundColor: "var(--surface)" }}>
         <div className="w-full max-w-md space-y-5 text-center">
-          <p className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--muted)", opacity: 0.7 }}>Uploading</p>
-          <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ backgroundColor: "var(--surface)" }}>
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-8 h-8 border-2 border-t-2 border-t-accent rounded-full animate-spin" style={{ borderColor: "var(--border)", borderTopColor: "var(--accent)" }} />
+            <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Uploading...</span>
+          </div>
+          <div className="w-full rounded-full h-2 overflow-hidden" style={{ backgroundColor: "var(--border)" }}>
             <div
-              className="h-1.5 rounded-full transition-all duration-500 ease-out"
+              className="h-full rounded-full transition-all duration-300 ease-out"
               style={{ width: `${uploadProgress}%`, backgroundColor: "var(--accent)" }}
             />
           </div>

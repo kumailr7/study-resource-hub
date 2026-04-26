@@ -48,6 +48,8 @@ router.post('/screen-record/upload-url', async (req, res) => {
   const uuid = crypto.randomUUID().slice(0, 8);
   const key = `${author}${safeTags}-${safeTitle}-${date}-${uuid}.webm`;
   
+  const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || `https://${process.env.R2_BUCKET}.${process.env.R2_ACCOUNT_ID}.r2.cloudflare-dev.com`;
+  
   const command = new PutObjectCommand({
     Bucket: process.env.R2_BUCKET,
     Key: key,
@@ -55,8 +57,9 @@ router.post('/screen-record/upload-url', async (req, res) => {
   });
 
   const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 600 });
+  const publicUrl = `${R2_PUBLIC_URL}/${key}`;
 
-  res.json({ presignedUrl, key });
+  res.json({ presignedUrl, key, publicUrl });
 });
 
 // GET /api/screen-record/video/:key
