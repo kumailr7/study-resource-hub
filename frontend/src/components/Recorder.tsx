@@ -157,6 +157,7 @@ export function Recorder({ password }: RecorderProps) {
     chunksRef.current = [];
 
     try {
+      console.log("[Yoom] Starting recording, mode:", mode);
       let recordStream: MediaStream;
 
       if (mode === "screen" || mode === "screen+camera") {
@@ -266,6 +267,7 @@ export function Recorder({ password }: RecorderProps) {
       mediaRecorder.start(250);
       mediaRecorderRef.current = mediaRecorder;
       setState("recording");
+      console.log("[Yoom] State set to recording, chunks:", chunksRef.current.length);
 
       setElapsed(0);
       timerRef.current = setInterval(() => {
@@ -290,9 +292,11 @@ export function Recorder({ password }: RecorderProps) {
 
   async function handleRecordingComplete() {
     setState("uploading");
+    console.log("[Yoom] Recording complete, processing upload...");
     stopAllStreams();
 
     const blob = new Blob(chunksRef.current, { type: "video/webm" });
+    console.log("[Yoom] Blob size:", blob.size);
 
     if (blob.size === 0) {
       setError("Recording captured no data. Please try again.");
@@ -306,9 +310,16 @@ export function Recorder({ password }: RecorderProps) {
         headers: { "x-upload-password": password },
       });
 
-      if (!res.ok) throw new Error("Failed to get upload URL");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.error || `Server error: ${res.status}`);
+      }
 
       const { presignedUrl, key } = await res.json();
+
+      if (!presignedUrl || !key) {
+        throw new Error("Invalid response: missing presignedUrl or key");
+      }
 
       const xhr = new XMLHttpRequest();
       xhr.open("PUT", presignedUrl);
@@ -332,8 +343,9 @@ export function Recorder({ password }: RecorderProps) {
       const appUrl = window.location.origin;
       setShareUrl(`${appUrl}/watch/${key}`);
       setState("done");
-    } catch {
-      setError("Upload failed. Please try again.");
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      setError(err?.message || "Upload failed. Please try again.");
       setState("idle");
     }
   }
