@@ -16,13 +16,14 @@ export default function WatchPage() {
       return;
     }
 
-    if (!/^[0-9a-z-]+\.webm$/.test(key)) {
+    if (!key || !key.endsWith('.webm')) {
       setNotFound(true);
       setLoading(false);
       return;
     }
 
     async function fetchVideo() {
+      if (!key) return;
       try {
         // Check if key needs screen-recordings/ prefix
         const fullKey = key.includes('/') ? key : `screen-recordings/${key}`;
@@ -59,7 +60,7 @@ export default function WatchPage() {
     );
   }
 
-  const baseUrl = "https://hub.devops-dojo.ninja";
+  const baseUrl = window.location.origin;
   const shareUrl = `${baseUrl}/watch/${key}`;
 
   return (

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DeviceSelector } from "./DeviceSelector";
 import { RecordingPreview } from "./RecordingPreview";
 import { YoomLogo } from "./Logo";
@@ -21,6 +22,11 @@ export function Recorder({ password }: RecorderProps) {
   const [error, setError] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get("session") || "";
+  const author = searchParams.get("author") || "user";
+  const title = searchParams.get("title") || "session";
+  const tags = searchParams.get("tags") || "";
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -346,9 +352,9 @@ export function Recorder({ password }: RecorderProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          author: "kumail", // TODO: get from auth
-          title: "session",
-          tags: mode,
+          author,
+          title: title || "session",
+          tags,
         }),
       });
 
@@ -370,21 +376,31 @@ export function Recorder({ password }: RecorderProps) {
       xhr.open("PUT", presignedUrl);
       xhr.setRequestHeader("Content-Type", "video/webm");
 
+      // Force progress updates
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
           const progress = Math.round((e.loaded / e.total) * 100);
-          console.log("[Yoom] Upload progress:", progress + "%");
           setUploadProgress(progress);
         }
       };
 
+// Also log progress periodically
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => prev < 100 ? prev + 5 : 100);
+      }, 250);
+
       await new Promise<void>((resolve, reject) => {
         xhr.onload = () => {
-          console.log("[Yoom] Upload complete, status:", xhr.status);
+          clearInterval(progressInterval);
+          setUploadProgress(100);
+          console.log("[Yoom] Upload complete:", xhr.status);
           if (xhr.status >= 200 && xhr.status < 300) resolve();
           else reject(new Error(`Upload failed: ${xhr.status}`));
         };
-        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.onerror = () => {
+          clearInterval(progressInterval);
+          reject(new Error("Upload failed"));
+        };
         xhr.send(blob);
       });
 
