@@ -1,0 +1,19 @@
+{
+  "configs": {
+    "dev": {
+      "UPLOAD_PASSWORD": "",
+      "NEXT_PUBLIC_APP_URL": "",
+      "NEXT_PUBLIC_API_URL": ""
+    },
+    "stg": {
+      "UPLOAD_PASSWORD": "",
+      "NEXT_PUBLIC_APP_URL": "",
+      "NEXT_PUBLIC_API_URL": ""
+    },
+    "prd": {
+      "UPLOAD_PASSWORD": "",
+      "NEXT_PUBLIC_APP_URL": "https://hub.devops-dojo.ninja",
+      "NEXT_PUBLIC_API_URL": "https://hub.devops-dojo.ninja/api"
+    }
+  }
+}
