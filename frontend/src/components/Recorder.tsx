@@ -364,12 +364,15 @@ export function Recorder({ password }: RecorderProps) {
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
-          setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          const progress = Math.round((e.loaded / e.total) * 100);
+          console.log("[Yoom] Upload progress:", progress + "%");
+          setUploadProgress(progress);
         }
       };
 
       await new Promise<void>((resolve, reject) => {
         xhr.onload = () => {
+          console.log("[Yoom] Upload complete, status:", xhr.status);
           if (xhr.status >= 200 && xhr.status < 300) resolve();
           else reject(new Error(`Upload failed: ${xhr.status}`));
         };
@@ -378,7 +381,8 @@ export function Recorder({ password }: RecorderProps) {
       });
 
       const appUrl = window.location.origin;
-      setShareUrl(`${appUrl}/watch/${key}`);
+      const keyForUrl = key.replace('screen-recordings/', '');
+      setShareUrl(`${appUrl}/watch/${keyForUrl}`);
       setState("done");
     } catch (err: any) {
       console.error("Upload error:", err);
