@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import { YoomLogo } from "./logo";
+import { YoomLogo } from "./Logo";
 
 interface VideoPlayerProps {
   src: string;
@@ -17,7 +15,7 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for insecure contexts
+      // Fallback
     }
   }
 
@@ -30,15 +28,17 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
         src={src}
         controls
         autoPlay
-        className="w-full rounded-xl border border-border shadow-lg shadow-black/30"
+        className="w-full rounded-xl border shadow-lg"
+        style={{ borderColor: "var(--border)" }}
       />
       <div className="flex items-center gap-2">
-        <div className="flex-1 rounded-lg border border-border bg-surface px-3 py-2">
-          <span className="text-sm text-muted truncate block">{shareUrl}</span>
+        <div className="flex-1 rounded-lg border px-3 py-2" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
+          <span className="text-sm truncate block" style={{ color: "var(--muted)" }}>{shareUrl}</span>
         </div>
         <button
           onClick={copyToClipboard}
-          className="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover transition-all"
+          className="shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-all"
+          style={{ backgroundColor: "var(--accent)", color: "white" }}
         >
           {copied ? "Copied!" : "Copy link"}
         </button>

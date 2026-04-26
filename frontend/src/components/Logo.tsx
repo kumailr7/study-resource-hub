@@ -22,7 +22,6 @@ export function YoomLogo({ size = "md", showText = true, className = "" }: YoomL
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Geometric Y: two diagonal strokes converging to a vertical */}
         <path
           d="M10 8L24 26L38 8"
           stroke="#e85a4f"
@@ -36,7 +35,6 @@ export function YoomLogo({ size = "md", showText = true, className = "" }: YoomL
           strokeWidth="4.5"
           strokeLinecap="round"
         />
-        {/* Record dot at the junction */}
         <circle
           cx="24"
           cy="26"
@@ -46,8 +44,8 @@ export function YoomLogo({ size = "md", showText = true, className = "" }: YoomL
       </svg>
       {showText && (
         <span
-          className={`${s.text} font-bold text-foreground`}
-          style={{ letterSpacing: "-0.02em" }}
+          className={`${s.text} font-bold`}
+          style={{ color: "var(--foreground)", letterSpacing: "-0.02em" }}
         >
           Yoom
         </span>

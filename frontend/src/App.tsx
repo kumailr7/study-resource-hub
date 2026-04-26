@@ -18,6 +18,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import SignupPage from './pages/SignupPage';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import ScreenRecorder from './components/ScreenRecorder';
+import WatchPage from './components/WatchPage';
 import { API_BASE_URL } from './config';
 
 
@@ -35,27 +37,6 @@ const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (!isLoaded) return <div className="min-h-screen bg-surface flex items-center justify-center"><p className="text-slate-500 text-sm animate-pulse">Loading…</p></div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
-};
-
-const RedirectToRecorder: React.FC = () => {
-  const [opened, setOpened] = useState(false);
-  
-  useEffect(() => {
-    if (!opened) {
-      setOpened(true);
-      window.open('https://hub.devops-dojo.ninja/recorder', '_blank');
-    }
-  }, [opened]);
-  
-  return <div className="min-h-screen bg-surface flex items-center justify-center">
-    <div className="text-center">
-      <p className="text-slate-500 mb-4">Opening recorder...</p>
-      <a href="https://hub.devops-dojo.ninja/recorder" target="_blank" rel="noreferrer" 
-        className="text-primary hover:underline">
-        Click here if recorder doesn't open
-      </a>
-    </div>
-  </div>;
 };
 
 interface Resource {
@@ -489,7 +470,8 @@ const App: React.FC = () => {
             <Route path="/:username/suggestions" element={<RequireAuth><ResourceTable /></RequireAuth>} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/recorder" element={<RequireAuth><RedirectToRecorder /></RequireAuth>} />
+            <Route path="/recorder" element={<RequireAuth><ScreenRecorder /></RequireAuth>} />
+            <Route path="/watch/:key" element={<WatchPage />} />
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
@@ -3574,7 +3556,7 @@ END:VCALENDAR`;
                             {isFuture && selectedSession.willRecord && (
                               <div className="space-y-2">
                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Record Your Session</p>
-                                <a href="/recorder" target="_blank" rel="noreferrer"
+                                <a href="https://hub.devops-dojo.ninja" target="_blank" rel="noreferrer"
                                   className="flex items-center justify-center gap-2 w-full py-3 text-[10px] font-black uppercase tracking-widest bg-secondary text-on-secondary hover:opacity-90 transition-all">
                                   <Video size={13} />
                                   Open Yoom Screen Recorder

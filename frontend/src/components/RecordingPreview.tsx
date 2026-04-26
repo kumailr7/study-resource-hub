@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef } from "react";
 
 interface RecordingPreviewProps {
@@ -29,8 +27,7 @@ export function RecordingPreview({
   }, [cameraStream]);
 
   return (
-    <div className="relative w-full max-w-2xl aspect-video rounded-xl overflow-hidden bg-surface border border-border shadow-lg shadow-black/30">
-      {/* Screen-only preview */}
+    <div className="relative w-full max-w-2xl aspect-video rounded-xl overflow-hidden border shadow-lg" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
       {mode === "screen" && (
         <video
           ref={screenVideoRef}
@@ -41,14 +38,13 @@ export function RecordingPreview({
         />
       )}
 
-      {/* Camera-only preview */}
       {mode === "camera" && (
         <video
           ref={cameraVideoRef}
           autoPlay
           muted
           playsInline
-          className="w-full h-full object-contain mirror"
+          className="w-full h-full object-contain"
           style={{ transform: "scaleX(-1)" }}
         />
       )}

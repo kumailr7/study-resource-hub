@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import { YoomLogo } from "./logo";
+import { YoomLogo } from "./Logo";
 
 interface PasswordGateProps {
   onAuthenticated: (password: string) => void;
@@ -17,7 +15,7 @@ export function PasswordGate({ onAuthenticated }: PasswordGateProps) {
     setLoading(true);
     setError("");
 
-    const apiUrl = process.env.REACT_APP_API_BASE_URL || 'https://study-resource-hub-d18p.onrender.com/api';
+    const apiUrl = (window as any).REACT_APP_API_BASE_URL || "https://study-resource-hub-d18p.onrender.com/api";
     const res = await fetch(`${apiUrl}/screen-record/auth`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -33,11 +31,11 @@ export function PasswordGate({ onAuthenticated }: PasswordGateProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-surface/50 p-8 backdrop-blur">
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundColor: "var(--surface)" }}>
+      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6 rounded-2xl border p-8" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}>
         <div className="space-y-2 flex flex-col items-center">
           <YoomLogo size="lg" />
-          <p className="text-sm text-muted">
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
             Enter password to start recording
           </p>
         </div>
@@ -46,16 +44,18 @@ export function PasswordGate({ onAuthenticated }: PasswordGateProps) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground placeholder-muted-dim outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+          className="w-full rounded-lg border px-4 py-2.5 text-sm outline-none focus:ring-1 transition-all"
+          style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
           autoFocus
         />
         {error && (
-          <p className="text-sm text-red-400/90 text-center">{error}</p>
+          <p className="text-sm text-center" style={{ color: "#f87171" }}>{error}</p>
         )}
         <button
           type="submit"
           disabled={loading || !password}
-          className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover shadow-lg shadow-accent/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ backgroundColor: "var(--accent)", color: "white" }}
         >
           {loading ? "Checking..." : "Continue"}
         </button>

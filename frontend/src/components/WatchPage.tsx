@@ -1,0 +1,68 @@
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { VideoPlayer } from "./VideoPlayer";
+import { API_BASE_URL } from "../config";
+
+export default function WatchPage() {
+  const { key } = useParams<{ key: string }>();
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!key) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webm$/.test(key)) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    async function fetchVideo() {
+      try {
+        const videoRes = await fetch(`${API_BASE_URL}/screen-record/video/${key}`);
+        if (!videoRes.ok) {
+          setNotFound(true);
+          return;
+        }
+        const { url } = await videoRes.json();
+        setVideoUrl(url);
+      } catch {
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchVideo();
+  }, [key]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: "var(--surface)" }}>
+        <p style={{ color: "var(--muted)" }}>Loading...</p>
+      </div>
+    );
+  }
+
+  if (notFound || !videoUrl) {
+    return (
+      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: "var(--surface)" }}>
+        <p style={{ color: "var(--muted)" }}>Recording not found</p>
+      </div>
+    );
+  }
+
+  const baseUrl = "https://hub.devops-dojo.ninja";
+  const shareUrl = `${baseUrl}/watch/${key}`;
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-8" style={{ backgroundColor: "var(--surface)" }}>
+      <VideoPlayer src={videoUrl} shareUrl={shareUrl} />
+    </div>
+  );
+}

@@ -1,9 +1,7 @@
-"use client";
-
 import { useState, useRef, useCallback } from "react";
-import { DeviceSelector } from "./device-selector";
-import { RecordingPreview } from "./recording-preview";
-import { YoomLogo } from "./logo";
+import { DeviceSelector } from "./DeviceSelector";
+import { RecordingPreview } from "./RecordingPreview";
+import { YoomLogo } from "./Logo";
 
 type RecordingMode = "screen" | "camera" | "screen+camera";
 type RecorderState = "idle" | "recording" | "uploading" | "done";
@@ -208,7 +206,7 @@ export function Recorder({ password }: RecorderProps) {
           const micStream = await navigator.mediaDevices.getUserMedia({
             audio: { deviceId: { exact: micId } },
           });
-          cameraStreamRef.current!.getAudioTracks().forEach((t) => t.stop());
+          cameraStreamRef.current!.getVideoTracks().forEach((t) => t.stop());
           recordStream = new MediaStream([
             ...cameraStreamRef.current!.getVideoTracks(),
             ...micStream.getAudioTracks(),
@@ -302,7 +300,8 @@ export function Recorder({ password }: RecorderProps) {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/screen-record/upload-url`, {
+      const apiUrl = (window as any).REACT_APP_API_BASE_URL || "https://study-resource-hub-d18p.onrender.com/api";
+      const res = await fetch(`${apiUrl}/screen-record/upload-url`, {
         method: "POST",
         headers: { "x-upload-password": password },
       });
@@ -330,7 +329,7 @@ export function Recorder({ password }: RecorderProps) {
         xhr.send(blob);
       });
 
-      const appUrl = process.env.FRONTEND_URL || window.location.origin;
+      const appUrl = (window as any).FRONTEND_URL || window.location.origin;
       setShareUrl(`${appUrl}/watch/${key}`);
       setState("done");
     } catch {
@@ -362,77 +361,77 @@ export function Recorder({ password }: RecorderProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for insecure contexts
+      // Fallback
     }
   }
 
-  // ----- RENDER -----
-
   if (state === "done") {
     return (
-      <main className="flex min-h-screen items-center justify-center p-8">
+      <div className="flex min-h-screen items-center justify-center p-8" style={{ backgroundColor: "var(--surface)" }}>
         <div className="w-full max-w-md space-y-6 text-center">
-          <div className="rounded-full w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <div className="rounded-full w-10 h-10 flex items-center justify-center mx-auto" style={{ backgroundColor: "var(--surface)", border: "1px solid var(--accent)" }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4" stroke={getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#10b981"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </div>
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-foreground">Recording uploaded</h2>
-            <p className="text-sm text-muted">Share the link below</p>
+            <h2 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>Recording uploaded</h2>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>Share the link below</p>
           </div>
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-surface p-2.5">
+          <div className="flex items-center gap-2 rounded-lg border p-2.5" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
             <input
               readOnly
               value={shareUrl}
-              className="flex-1 bg-transparent text-sm text-muted outline-none truncate"
+              className="flex-1 bg-transparent text-sm outline-none truncate"
+              style={{ color: "var(--muted)" }}
             />
             <button
               onClick={copyToClipboard}
-              className="shrink-0 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-hover transition-all"
+              className="shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-all"
+              style={{ backgroundColor: "var(--accent)", color: "white" }}
             >
               {copied ? "Copied!" : "Copy"}
             </button>
           </div>
           <button
             onClick={reset}
-            className="text-sm text-muted hover:text-foreground transition-colors"
+            className="text-sm transition-colors"
+            style={{ color: "var(--muted)" }}
           >
             Record another
           </button>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (state === "uploading") {
     return (
-      <main className="flex min-h-screen items-center justify-center p-8">
+      <div className="flex min-h-screen items-center justify-center p-8" style={{ backgroundColor: "var(--surface)" }}>
         <div className="w-full max-w-md space-y-5 text-center">
-          <p className="text-xs font-medium text-muted-dim uppercase tracking-wider">Uploading</p>
-          <div className="w-full rounded-full bg-surface h-1.5 overflow-hidden">
+          <p className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--muted)", opacity: 0.7 }}>Uploading</p>
+          <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ backgroundColor: "var(--surface)" }}>
             <div
-              className="h-1.5 rounded-full bg-accent progress-bar transition-all duration-500 ease-out"
-              style={{ width: `${uploadProgress}%` }}
+              className="h-1.5 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${uploadProgress}%`, backgroundColor: "var(--accent)" }}
             />
           </div>
-          <p className="text-sm font-mono text-muted tabular-nums">{uploadProgress}%</p>
+          <p className="text-sm font-mono tabular-nums" style={{ color: "var(--muted)" }}>{uploadProgress}%</p>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
-      {/* Canvas for screen+camera compositing */}
+    <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-8" style={{ backgroundColor: "var(--surface)" }}>
       {mode === "screen+camera" && (
         <canvas
           ref={canvasRef}
           className={state === "recording"
-            ? "w-full max-w-2xl aspect-video rounded-xl overflow-hidden bg-surface border border-border shadow-lg shadow-black/30"
+            ? "w-full max-w-2xl aspect-video rounded-xl overflow-hidden border shadow-lg"
             : "hidden"}
+          style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
         />
       )}
 
-      {/* Preview (for screen-only and camera-only modes) */}
       {state === "recording" && mode !== "screen+camera" && (
         <RecordingPreview
           mode={mode}
@@ -444,17 +443,15 @@ export function Recorder({ password }: RecorderProps) {
       <div className="w-full max-w-md space-y-6">
         {state === "idle" && (
           <>
-            {/* Brand */}
             <div className="flex justify-center">
               <YoomLogo size="sm" />
             </div>
 
-            {/* Mode selector */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-dim uppercase tracking-wider">
+              <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--muted)", opacity: 0.7 }}>
                 Mode
               </label>
-              <div className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-surface p-1">
+              <div className="grid grid-cols-3 gap-1 rounded-lg border p-1" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
                 {([
                   { value: "screen", label: "Screen" },
                   { value: "camera", label: "Camera" },
@@ -465,9 +462,13 @@ export function Recorder({ password }: RecorderProps) {
                     onClick={() => setMode(opt.value)}
                     className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                       mode === opt.value
-                        ? "bg-accent text-white shadow-sm"
-                        : "text-muted hover:text-foreground hover:bg-surface-raised"
+                        ? ""
+                        : ""
                     }`}
+                    style={{
+                      backgroundColor: mode === opt.value ? "var(--accent)" : "transparent",
+                      color: mode === opt.value ? "white" : "var(--muted)",
+                    }}
                   >
                     {opt.label}
                   </button>
@@ -475,7 +476,6 @@ export function Recorder({ password }: RecorderProps) {
               </div>
             </div>
 
-            {/* Device selectors */}
             <DeviceSelector
               kind="audioinput"
               label="Microphone"
@@ -493,17 +493,16 @@ export function Recorder({ password }: RecorderProps) {
           </>
         )}
 
-        {/* Error */}
         {error && (
-          <p className="text-sm text-red-400/90 text-center">{error}</p>
+          <p className="text-sm text-center" style={{ color: "#f87171" }}>{error}</p>
         )}
 
-        {/* Controls */}
         <div className="flex items-center justify-center gap-4">
           {state === "idle" && (
             <button
               onClick={startRecording}
-              className="rounded-lg bg-accent px-8 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover shadow-lg shadow-accent/20 hover:shadow-accent/30 transition-all"
+              className="rounded-lg px-8 py-2.5 text-sm font-semibold transition-all shadow-lg"
+              style={{ backgroundColor: "var(--accent)", color: "white" }}
             >
               Start Recording
             </button>
@@ -511,13 +510,14 @@ export function Recorder({ password }: RecorderProps) {
 
           {state === "recording" && (
             <>
-              <span className="flex items-center gap-2 text-sm font-mono text-muted tabular-nums">
-                <span className="h-2 w-2 rounded-full bg-accent recording-dot" />
+              <span className="flex items-center gap-2 text-sm font-mono tabular-nums" style={{ color: "var(--muted)" }}>
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                 {formatTime(elapsed)}
               </span>
               <button
                 onClick={stopRecording}
-                className="rounded-lg border border-border bg-surface-raised px-6 py-2.5 text-sm font-medium text-foreground hover:bg-surface-raised hover:brightness-110 transition-all"
+                className="rounded-lg border px-6 py-2.5 text-sm font-medium transition-all"
+                style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", color: "var(--foreground)" }}
               >
                 Stop
               </button>
@@ -525,6 +525,6 @@ export function Recorder({ password }: RecorderProps) {
           )}
         </div>
       </div>
-    </main>
+    </div>
   );
 }
