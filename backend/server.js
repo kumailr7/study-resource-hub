@@ -1055,12 +1055,22 @@ app.get('/api/added-resources', asyncHandler(async (req, res) => {
 
 // Create a new added resource
 app.post('/api/added-resources', asyncHandler(async (req, res) => {
+  console.log("[API] POST /added-resources body:", JSON.stringify(req.body));
   const { error } = validateResource(req.body);
-  if (error) return res.status(400).json({ error: error.details[0].message });
+  if (error) {
+    console.log("[API] Validation error:", error.details[0].message);
+    return res.status(400).json({ error: error.details[0].message });
+  }
 
-  const newResource = new AddedResource(req.body);
-  await newResource.save();
-  res.status(201).json(newResource);
+  try {
+    const newResource = new AddedResource(req.body);
+    const saved = await newResource.save();
+    console.log("[API] Resource saved successfully, id:", saved._id);
+    res.status(201).json(saved);
+  } catch (saveErr) {
+    console.error("[API] Save error:", saveErr);
+    res.status(500).json({ error: "Failed to save resource: " + saveErr.message });
+  }
 }));
 
 // Update a resource
