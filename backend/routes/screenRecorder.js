@@ -197,4 +197,33 @@ router.post('/screen-record/transcribe', async (req, res) => {
   }
 });
 
+// GET /api/screen-record/captions/:key
+// Returns VTT file content
+router.get('/screen-record/captions/:key', async (req, res) => {
+  const { key } = req.params;
+  
+  try {
+    const command = new GetObjectCommand({
+      Bucket: process.env.R2_BUCKET,
+      Key: key,
+    });
+
+    const response = await s3.send(command);
+    
+    // Convert stream to string
+    const stream = response.Body;
+    const chunks = [];
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+    const body = Buffer.concat(chunks).toString('utf-8');
+    
+    res.set('Content-Type', 'text/vtt');
+    res.send(body);
+  } catch (err) {
+    console.error('Error getting captions:', err);
+    res.status(404).json({ error: 'Captions not found' });
+  }
+});
+
 module.exports = router;

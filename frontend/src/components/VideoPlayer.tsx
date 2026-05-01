@@ -73,8 +73,8 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
   // Get VTT URL from video key
   function getVTTUrl(key: string): string {
     const vttKey = key.replace('.webm', '.vtt');
-    // VTT files are stored at R2 root
-    return `https://pub-06887d867b864cb3ae5f4d29399c676c.r2.dev/${vttKey}`;
+    // Fetch through backend API to avoid CORS
+    return `https://study-resource-hub-d18p.onrender.com/api/screen-record/captions/${vttKey}`;
   }
 
   async function loadCaptions() {
