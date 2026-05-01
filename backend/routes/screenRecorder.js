@@ -168,7 +168,7 @@ router.post('/screen-record/transcribe', async (req, res) => {
     // Submit transcription request
     const transcript = await aai.transcripts.transcribe({
       audio: videoUrl,
-      speech_model: 'universal-3-pro',
+      speech_models: ['universal-3-pro'],
     });
     
     console.log('[Transcribe] Completed, id:', transcript.id);
