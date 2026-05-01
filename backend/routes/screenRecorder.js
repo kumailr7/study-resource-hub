@@ -153,7 +153,7 @@ router.post('/screen-record/transcribe', async (req, res) => {
   }
 
   try {
-    const AssemblyAI = require('assemblyai').default || require('assemblyai');
+    const { AssemblyAI } = require('assemblyai');
     const aai = new AssemblyAI({ apiKey });
     
     console.log('[Transcribe] Starting transcription for:', videoKey);
