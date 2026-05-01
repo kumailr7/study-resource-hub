@@ -134,14 +134,20 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
           });
           
           if (transcribeRes.ok) {
-            const { captionsUrl } = await transcribeRes.json();
-            setCaptionsUrl(captionsUrl);
+            const data = await transcribeRes.json();
+            console.log('[Transcribe] Success:', data);
+            setCaptionsUrl(data.captionsUrl);
             // Fetch and parse the new VTT
-            const vttRes = await fetch(captionsUrl);
+            const vttRes = await fetch(data.captionsUrl);
             const vttText = await vttRes.text();
+            console.log('[Transcribe] VTT length:', vttText.length);
             const parsed = parseVTT(vttText);
+            console.log('[Transcribe] Cues:', parsed.length);
             setCues(parsed);
             setShowCaptions(true);
+          } else {
+            const err = await transcribeRes.json();
+            console.error('[Transcribe] Failed:', err);
           }
         }
       } catch (transErr) {

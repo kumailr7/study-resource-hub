@@ -142,9 +142,15 @@ router.post('/screen-record/transcribe', async (req, res) => {
     return res.status(400).json({ error: 'videoKey is required' });
   }
 
+  const apiKey = process.env.ASSEMBLYAI_API_KEY;
+  if (!apiKey) {
+    console.error('[Transcribe] ASSEMBLYAI_API_KEY not configured');
+    return res.status(500).json({ error: 'Transcription not configured. Please add ASSEMBLYAI_API_KEY to environment.' });
+  }
+
   try {
     const AssemblyAI = require('assemblyai').default || require('assemblyai');
-    const aai = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY });
+    const aai = new AssemblyAI({ apiKey });
     
     console.log('[Transcribe] Starting transcription for:', videoKey);
     
