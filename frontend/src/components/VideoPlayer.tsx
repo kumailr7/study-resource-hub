@@ -98,13 +98,14 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
       }
       if (!key) throw new Error('Cannot extract video key');
       
-      // For direct R2 URLs, VTT is in same location with .vtt extension
-      // For watch URLs, check captions folder
-      const isWatchUrl = shareUrl.includes('/watch/');
+      // For R2 URLs (both direct and watch), VTT is in root with .vtt extension
       const captionKey = key.replace('.webm', '.vtt');
-      const potentialUrl = isWatchUrl 
-        ? `${shareUrl.split('/watch/')[0]}/captions/${captionKey}`
-        : shareUrl.replace('.webm', '.vtt');
+      const baseUrl = shareUrl.includes('.r2.dev') 
+        ? shareUrl.split('/' + key)[0] 
+        : shareUrl.split('/watch/')[0];
+      const potentialUrl = `${baseUrl}/${captionKey}`;
+      
+      console.log('[Captions] Checking for VTT at:', potentialUrl);
       
       // Check if captions exist
       const check = await fetch(potentialUrl, { method: 'HEAD' });
@@ -166,17 +167,22 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
   }
 
   useEffect(() => {
+    console.log('[Captions] useEffect triggered', { showCaptions, cues: cues.length, videoRef: !!videoRef.current });
     if (!showCaptions || !videoRef.current || cues.length === 0) {
       setCurrentCue('');
       return;
     }
 
     const video = videoRef.current;
+    console.log('[Captions] Adding timeupdate listener to video');
+    
     const handleTimeUpdate = () => {
       const currentTime = video.currentTime * 1000; // Convert to ms
+      console.log('[Captions] currentTime:', currentTime, 'cues[0]:', cues[0]);
       const activeCue = cues.find(cue => 
         currentTime >= cue.start && currentTime <= cue.end
       );
+      console.log('[Captions] activeCue:', activeCue?.text);
       setCurrentCue(activeCue?.text || '');
     };
 
