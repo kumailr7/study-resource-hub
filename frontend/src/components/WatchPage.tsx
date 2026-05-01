@@ -25,9 +25,12 @@ export default function WatchPage() {
     async function fetchVideo() {
       if (!key) return;
       try {
-        // Check if key needs screen-recordings/ prefix
-        const fullKey = key.includes('/') ? key : `screen-recordings/${key}`;
-        const videoRes = await fetch(`${API_BASE_URL}/screen-record/video/${fullKey}`);
+        // Try direct key first (for new recordings in root)
+        let videoRes = await fetch(`${API_BASE_URL}/screen-record/video/${key}`);
+        if (!videoRes.ok) {
+          // Try with screen-recordings prefix (for old recordings)
+          videoRes = await fetch(`${API_BASE_URL}/screen-record/video/screen-recordings/${key}`);
+        }
         if (!videoRes.ok) {
           setNotFound(true);
           return;
@@ -61,7 +64,9 @@ export default function WatchPage() {
   }
 
   const baseUrl = window.location.origin;
-  const shareUrl = `${baseUrl}/watch/${key}`;
+  // Extract clean key without prefix
+  const cleanKey = key?.includes('/') ? key.split('/').pop() : key;
+  const shareUrl = `${baseUrl}/watch/${cleanKey}`;
 
   return (
     <div className="flex min-h-screen items-center justify-center p-8" style={{ backgroundColor: "var(--surface)" }}>

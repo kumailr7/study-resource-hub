@@ -167,10 +167,10 @@ router.post('/screen-record/transcribe', async (req, res) => {
     const vttContent = toVTT(transcript);
     const vttKey = videoKey.replace('.webm', '.vtt');
     
-    // Upload VTT to R2
+    // Upload VTT to R2 - save in root for direct R2 URL access
     const vttCommand = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET,
-      Key: `captions/${vttKey}`,
+      Key: vttKey,
       Body: vttContent,
       ContentType: 'text/vtt',
     });
@@ -178,7 +178,7 @@ router.post('/screen-record/transcribe', async (req, res) => {
     await s3.send(vttCommand);
     
     const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
-    const captionsUrl = `${R2_PUBLIC_URL}/captions/${vttKey}`;
+    const captionsUrl = `${R2_PUBLIC_URL}/${vttKey}`;
     
     res.json({ captionsUrl, vttKey });
   } catch (err) {

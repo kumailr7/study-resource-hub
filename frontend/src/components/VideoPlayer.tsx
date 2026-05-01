@@ -79,7 +79,7 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
       setShowCaptions(false);
       return;
     }
-    
+
     if (captionsUrl) {
       setShowCaptions(true);
       return;
@@ -87,14 +87,24 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
     
     setLoadingCaptions(true);
     try {
-      // Extract video key from src/shareUrl
-      const key = shareUrl.split('/watch/')[1] || shareUrl.split('/').pop();
+      // Extract video key from shareUrl - handle multiple formats
+      let key = '';
+      if (shareUrl.includes('/watch/')) {
+        key = shareUrl.split('/watch/')[1] || '';
+      } else if (shareUrl.includes('.r2.dev/')) {
+        key = shareUrl.split('.r2.dev/')[1] || '';
+      } else {
+        key = shareUrl.split('/').pop() || '';
+      }
       if (!key) throw new Error('Cannot extract video key');
       
-      // Try to get captions URL
+      // For direct R2 URLs, VTT is in same location with .vtt extension
+      // For watch URLs, check captions folder
+      const isWatchUrl = shareUrl.includes('/watch/');
       const captionKey = key.replace('.webm', '.vtt');
-      const captionsBaseUrl = shareUrl.split('/watch/')[0];
-      const potentialUrl = `${captionsBaseUrl}/captions/${captionKey}`;
+      const potentialUrl = isWatchUrl 
+        ? `${shareUrl.split('/watch/')[0]}/captions/${captionKey}`
+        : shareUrl.replace('.webm', '.vtt');
       
       // Check if captions exist
       const check = await fetch(potentialUrl, { method: 'HEAD' });
