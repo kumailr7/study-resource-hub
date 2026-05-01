@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DojoYoshiLogo } from "./Logo";
 
 interface VideoPlayerProps {
@@ -18,18 +18,15 @@ function parseVTT(vttText: string): Cue[] {
   let i = 0;
   
   while (i < lines.length) {
-    // Skip index line
     if (/^\d+$/.test(lines[i].trim())) {
       i++;
     }
-    // Parse timing line
     if (lines[i] && lines[i].includes('-->')) {
       const timing = lines[i];
       const times = timing.split('-->');
       const start = parseVTTTime(times[0].trim());
       const end = parseVTTTime(times[1].trim());
       i++;
-      // Collect text lines
       let text = '';
       while (i < lines.length && lines[i].trim() !== '') {
         text += (text ? ' ' : '') + lines[i].trim();
@@ -45,7 +42,6 @@ function parseVTT(vttText: string): Cue[] {
 }
 
 function parseVTTTime(time: string): number {
-  // Format: 00:00:00.000
   const parts = time.split(':');
   const hours = parseInt(parts[0]) || 0;
   const minutes = parseInt(parts[1]) || 0;
@@ -58,138 +54,108 @@ function parseVTTTime(time: string): number {
 export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
   const [copied, setCopied] = useState(false);
   const [showCaptions, setShowCaptions] = useState(false);
-  const [captionsUrl, setCaptionsUrl] = useState<string | null>(null);
-  const [loadingCaptions, setLoadingCaptions] = useState(false);
   const [cues, setCues] = useState<Cue[]>([]);
-  const [currentCue, setCurrentCue] = useState<string>('');
+  const [currentCue, setCurrentCue] = useState('');
+  const [loading, setLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Extract video key from URL
+  function getVideoKey(url: string): string {
+    if (url.includes('/watch/')) {
+      return url.split('/watch/')[1] || '';
+    }
+    if (url.includes('.r2.dev/')) {
+      return url.split('.r2.dev/')[1] || '';
+    }
+    return url.split('/').pop() || '';
+  }
+
+  // Get VTT URL from video key
+  function getVTTUrl(key: string): string {
+    const vttKey = key.replace('.webm', '.vtt');
+    // VTT files are stored at R2 root
+    return `https://pub-06887d867b864cb3ae5f4d29399c676c.r2.dev/${vttKey}`;
+  }
+
+  async function loadCaptions() {
+    const key = getVideoKey(shareUrl);
+    if (!key) return;
+    
+    const vttUrl = getVTTUrl(key);
+    console.log('[Captions] Loading from:', vttUrl);
+    
+    try {
+      const res = await fetch(vttUrl);
+      if (res.ok) {
+        const text = await res.text();
+        const parsed = parseVTT(text);
+        console.log('[Captions] Loaded cues:', parsed.length);
+        setCues(parsed);
+        setShowCaptions(true);
+      } else {
+        console.log('[Captions] VTT not found, triggering transcription');
+        // Trigger transcription
+        const apiBase = 'https://study-resource-hub-d18p.onrender.com/api';
+        const transcribeRes = await fetch(`${apiBase}/screen-record/transcribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ videoKey: key }),
+        });
+        if (transcribeRes.ok) {
+          // Wait and try again
+          setTimeout(async () => {
+            const retryRes = await fetch(vttUrl);
+            if (retryRes.ok) {
+              const retryText = await retryRes.text();
+              const retryParsed = parseVTT(retryText);
+              setCues(retryParsed);
+              setShowCaptions(true);
+            }
+          }, 5000);
+        }
+      }
+    } catch (err) {
+      console.log('[Captions] Error:', err);
+    }
+  }
+
+  function toggleCaptions() {
+    if (showCaptions) {
+      setShowCaptions(false);
+    } else {
+      if (cues.length === 0) {
+        setLoading(true);
+        loadCaptions().finally(() => setLoading(false));
+      } else {
+        setShowCaptions(true);
+      }
+    }
+  }
 
   async function copyToClipboard() {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
-    }
+    } catch {}
   }
 
-  async function toggleCaptions() {
-    if (showCaptions) {
-      setShowCaptions(false);
-      return;
-    }
-
-    if (captionsUrl) {
-      setShowCaptions(true);
-      return;
-    }
-    
-    setLoadingCaptions(true);
-    try {
-      // Extract video key from shareUrl - handle multiple formats
-      let key = '';
-      if (shareUrl.includes('/watch/')) {
-        key = shareUrl.split('/watch/')[1] || '';
-      } else if (shareUrl.includes('.r2.dev/')) {
-        key = shareUrl.split('.r2.dev/')[1] || '';
-      } else {
-        key = shareUrl.split('/').pop() || '';
-      }
-      if (!key) throw new Error('Cannot extract video key');
-      
-      // For R2 URLs (both direct and watch), VTT is in root with .vtt extension
-      const captionKey = key.replace('.webm', '.vtt');
-      const baseUrl = shareUrl.includes('.r2.dev') 
-        ? shareUrl.split('/' + key)[0] 
-        : shareUrl.split('/watch/')[0];
-      const potentialUrl = `${baseUrl}/${captionKey}`;
-      
-      console.log('[Captions] Checking for VTT at:', potentialUrl);
-      
-      // Check if captions exist
-      const check = await fetch(potentialUrl, { method: 'HEAD' });
-      if (check.ok) {
-        setCaptionsUrl(potentialUrl);
-        // Fetch and parse VTT
-        const vttRes = await fetch(potentialUrl);
-        const vttText = await vttRes.text();
-        const parsed = parseVTT(vttText);
-        setCues(parsed);
-        setShowCaptions(true);
-      } else {
-        // Need to transcribe
-        throw new Error('Captions not found');
-      }
-    } catch (err) {
-      console.log('[Captions] Error or not available:', err);
-      // Try to trigger transcription
-      try {
-        console.log('[Transcribe] Extracting key from shareUrl:', shareUrl);
-        const key = shareUrl.includes('/watch/') 
-          ? shareUrl.split('/watch/')[1] 
-          : shareUrl.split('/').pop();
-        console.log('[Transcribe] Using key:', key);
-        
-        if (key) {
-          const apiBase = (window as any).REACT_APP_API_BASE_URL || 'https://study-resource-hub-d18p.onrender.com/api';
-          console.log('[Transcribe] Calling API:', `${apiBase}/screen-record/transcribe`);
-          const transcribeRes = await fetch(`${apiBase}/screen-record/transcribe`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoKey: key }),
-          });
-          
-          console.log('[Transcribe] Response status:', transcribeRes.status);
-          if (transcribeRes.ok) {
-            const data = await transcribeRes.json();
-            console.log('[Transcribe] Success:', data);
-            setCaptionsUrl(data.captionsUrl);
-            // Fetch and parse the new VTT
-            const vttRes = await fetch(data.captionsUrl);
-            const vttText = await vttRes.text();
-            console.log('[Transcribe] VTT length:', vttText.length);
-            const parsed = parseVTT(vttText);
-            console.log('[Transcribe] Cues:', parsed.length);
-            setCues(parsed);
-            setShowCaptions(true);
-          } else {
-            const err = await transcribeRes.json();
-            console.error('[Transcribe] Failed:', err);
-          }
-        }
-      } catch (transErr) {
-        console.log('[Transcribe] Failed:', transErr);
-      }
-    } finally {
-      setLoadingCaptions(false);
-    }
-  }
-
+  // Update current caption based on video time
   useEffect(() => {
-    console.log('[Captions] useEffect triggered', { showCaptions, cues: cues.length, videoRef: !!videoRef.current });
     if (!showCaptions || !videoRef.current || cues.length === 0) {
       setCurrentCue('');
       return;
     }
 
     const video = videoRef.current;
-    console.log('[Captions] Adding timeupdate listener to video');
-    
-    const handleTimeUpdate = () => {
-      const currentTime = video.currentTime * 1000; // Convert to ms
-      console.log('[Captions] currentTime:', currentTime, 'cues[0]:', cues[0]);
-      const activeCue = cues.find(cue => 
-        currentTime >= cue.start && currentTime <= cue.end
-      );
-      console.log('[Captions] activeCue:', activeCue?.text);
-      setCurrentCue(activeCue?.text || '');
+    const updateCue = () => {
+      const time = video.currentTime * 1000;
+      const cue = cues.find(c => time >= c.start && time <= c.end);
+      setCurrentCue(cue?.text || '');
     };
 
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
-    };
+    video.addEventListener('timeupdate', updateCue);
+    return () => video.removeEventListener('timeupdate', updateCue);
   }, [showCaptions, cues]);
 
   return (
@@ -207,7 +173,7 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
           style={{ borderColor: "var(--border)" }}
         />
         {showCaptions && currentCue && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-white text-lg font-medium text-center max-w-[80%] bg-black/80">
+          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-white text-lg font-medium text-center max-w-[80%] bg-black/80">
             {currentCue}
           </div>
         )}
@@ -215,7 +181,7 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
       <div className="flex items-center gap-2">
         <button
           onClick={toggleCaptions}
-          disabled={loadingCaptions}
+          disabled={loading}
           className="shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-all"
           style={{ 
             backgroundColor: showCaptions ? "var(--accent)" : "var(--surface)", 
@@ -223,7 +189,7 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
             border: "1px solid var(--border)"
           }}
         >
-          {loadingCaptions ? "Loading..." : showCaptions ? "CC ✓" : "CC"}
+          {loading ? "Loading..." : showCaptions ? "CC ✓" : "CC"}
         </button>
         <div className="flex-1 rounded-lg border px-3 py-2" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
           <span className="text-sm truncate block" style={{ color: "var(--muted)" }}>{shareUrl}</span>
