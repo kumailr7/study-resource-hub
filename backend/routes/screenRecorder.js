@@ -138,11 +138,15 @@ router.get('/screen-record/video/:key', async (req, res) => {
 router.post('/screen-record/transcribe', async (req, res) => {
   const { videoKey } = req.body;
   
+  console.log('[Transcribe] Received request for:', videoKey);
+  
   if (!videoKey) {
     return res.status(400).json({ error: 'videoKey is required' });
   }
 
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
+  console.log('[Transcribe] API Key exists:', !!apiKey, 'Key prefix:', apiKey?.slice(0, 8));
+  
   if (!apiKey) {
     console.error('[Transcribe] ASSEMBLYAI_API_KEY not configured');
     return res.status(500).json({ error: 'Transcription not configured. Please add ASSEMBLYAI_API_KEY to environment.' });

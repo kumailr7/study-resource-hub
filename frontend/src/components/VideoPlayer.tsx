@@ -124,15 +124,22 @@ export function VideoPlayer({ src, shareUrl }: VideoPlayerProps) {
       console.log('[Captions] Error or not available:', err);
       // Try to trigger transcription
       try {
-        const key = shareUrl.split('/watch/')[1] || shareUrl.split('/').pop();
+        console.log('[Transcribe] Extracting key from shareUrl:', shareUrl);
+        const key = shareUrl.includes('/watch/') 
+          ? shareUrl.split('/watch/')[1] 
+          : shareUrl.split('/').pop();
+        console.log('[Transcribe] Using key:', key);
+        
         if (key) {
           const apiBase = (window as any).REACT_APP_API_BASE_URL || 'https://study-resource-hub-d18p.onrender.com/api';
+          console.log('[Transcribe] Calling API:', `${apiBase}/screen-record/transcribe`);
           const transcribeRes = await fetch(`${apiBase}/screen-record/transcribe`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ videoKey: key }),
           });
           
+          console.log('[Transcribe] Response status:', transcribeRes.status);
           if (transcribeRes.ok) {
             const data = await transcribeRes.json();
             console.log('[Transcribe] Success:', data);
