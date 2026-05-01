@@ -70,6 +70,11 @@ app.use("/api", userRoutes);   // Prefix user routes with `/api`
 app.use("/api", uploadRoutes); // R2 presigned upload URLs
 app.use("/api", require("./routes/screenRecorder")); // Screen recorder routes
 
+// Test route to verify transcription endpoint exists
+app.get('/api/test-transcribe', (req, res) => {
+  res.json({ message: 'Transcribe endpoint exists', time: new Date() });
+});
+
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
